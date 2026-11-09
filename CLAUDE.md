@@ -42,4 +42,8 @@
 - 작업 범위를 넘는 파일 변경과 의존성 도입은 먼저 이유를 보고한다.
 
 ## Commands
-- 실제 프로젝트 생성 후 확인한 명령만 추가한다. 현재 명령은 **미정**.
+- 실제 프로젝트 생성 후 확인한 명령만 추가한다(아래는 2026-11-09 개발 1단계에서 실행해 확인함).
+- 의존성 설치: `npx -y npm@12.2.2 install` (전역 npm 11.0.0은 NestJS 12 템플릿 설치 중 내부 오류. 새 패키지도 `npx -y npm@12.2.2 install <pkg> -w <workspace>`)
+- DB: `npm run db:up` / 마이그레이션 생성 `npm run migrate:dev -w backend` / 적용 `npm run migrate:deploy -w backend`
+- 개발 서버: `npm run dev` (backend 4000, frontend 3000, `/api/*` 프록시)
+- 검사: `npm run format:check` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run test:e2e`(DATABASE_URL_TEST 필요, DB 이름은 `_test`로 끝나야 함) · `npm run build -w frontend`
