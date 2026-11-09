@@ -1,0 +1,36 @@
+// MysteryTalk DB 스키마 (docs/SPEC.md §4).
+// 변경은 반드시 `npm run migrate:dev -w backend`로 마이그레이션 파일을 만든다(prisma db push 금지).
+// 적용·커밋된 마이그레이션은 수정하지 않고 새 파일을 추가한다.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PlayerKind {
+  GUEST
+  USER
+}
+
+/// 플레이어(게스트 또는 구글 로그인 사용자). 토큰 원문은 저장하지 않고 해시만 저장한다(SPEC §3.1).
+model Player {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  kind           PlayerKind
+  guestTokenHash String?    @unique @map("guest_token_hash")
+  googleSub      String?    @unique @map("google_sub")
+  /// 화면 고정 문구에만 쓰고 AI에 전달하지 않는다(PRD D40)
+  detectiveName  String     @map("detective_name")
+  settings       Json       @default("{}") @map("settings_json")
+  ageConfirmedAt DateTime?  @map("age_confirmed_at") @db.Timestamptz
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  lastActiveAt   DateTime   @default(now()) @map("last_active_at") @db.Timestamptz
+  /// 게스트 → 로그인 기록 이전 후 대상 사용자(SPEC §3.2)
+  mergedIntoId   String?    @map("merged_into") @db.Uuid
+
+  @@index([kind, lastActiveAt])
+  @@map("player")
+}

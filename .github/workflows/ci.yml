@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: mysterytalk
+          POSTGRES_PASSWORD: ci_only_password
+          POSTGRES_DB: mysterytalk
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mysterytalk"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # CI 전용 임시 DB(외부에 노출되지 않는 서비스 컨테이너). 실제 비밀값이 아니다.
+      DATABASE_URL: postgresql://mysterytalk:ci_only_password@localhost:5432/mysterytalk
+      DATABASE_URL_TEST: postgresql://mysterytalk:ci_only_password@localhost:5432/mysterytalk_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      # npm 11.0.0 은 NestJS 12 템플릿 의존성 설치 중 내부 오류가 나서 npm 12 를 사용한다.
+      - run: npm install -g npm@12.2.2
+      - run: npm ci
+      - run: npm run build:shared
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:e2e
+      - run: npm run build -w frontend

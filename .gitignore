@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# build outputs
+.next/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+backend/src/generated/
+
+# test artifacts
+playwright-report/
+test-results/
+eval-reports/
+
+# logs / OS / editor
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+
+# local Claude settings
+.claude/settings.local.json
