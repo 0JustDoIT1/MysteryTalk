@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { exploreContentSchema, exploreIssues } from './explore.js';
 
 /**
  * 사건 데이터 파일(`case.json`) 형식(SPEC §11).
@@ -79,6 +80,8 @@ export const caseContentSchema = z
     hints: z.array(hintSchema).length(3),
     explanation: z.string().min(1).max(2000),
     isPublished: z.boolean(),
+    /** 현장 조사(4단계): 맵·조사 대상·NPC·단서 */
+    ...exploreContentSchema.shape,
   })
   .superRefine((c, ctx) => {
     const dup = (values: string[]) => values.filter((v, i) => values.indexOf(v) !== i);
@@ -99,6 +102,8 @@ export const caseContentSchema = z
       ctx.addIssue({ code: 'custom', message: 'at least one required answer element' });
     }
     for (const message of personNamingIssues(c)) ctx.addIssue({ code: 'custom', message });
+    for (const message of exploreIssues(c, { factIds: c.facts.map((f) => f.id) }))
+      ctx.addIssue({ code: 'custom', message });
   });
 export type CaseContent = z.infer<typeof caseContentSchema>;
 

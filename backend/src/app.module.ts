@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { validateEnv } from './config/env.js';
 import { CasesService } from './game/cases.service.js';
+import { ExploreService } from './game/explore.service.js';
 import { GameController } from './game/game.controller.js';
 import { QuestionsService } from './game/questions.service.js';
 import { SessionsService } from './game/sessions.service.js';
@@ -33,6 +34,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     SessionsService,
     QuestionsService,
     SubmissionsService,
+    ExploreService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

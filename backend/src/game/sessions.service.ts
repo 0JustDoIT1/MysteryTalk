@@ -3,6 +3,7 @@ import {
   MAX_SUBMISSIONS,
   type Ending,
   type HintState,
+  type ViewHintResponse,
   type QuestionLabel,
   type QuestionLogItem,
   type SessionState,
@@ -13,6 +14,7 @@ import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { loadVersion, questionCap, type CaseVersionData } from './case-data.js';
 import { finishSession } from './finish.js';
+import { unlockZones } from './zones.js';
 import { computeScore, hintUnlockAt } from './scoring.js';
 
 const uuid = z.uuid();
@@ -87,7 +89,7 @@ export class SessionsService {
    * 힌트 열람(SPEC §9.1, PRD D15). 해금된 힌트만, 순서대로만 열 수 있다.
    * 이미 연 힌트를 다시 요청하면 같은 내용을 돌려준다(PK로 이중 감점 없음 → 자연 멱등).
    */
-  async viewHint(player: Player, sessionId: string, no: number): Promise<HintState> {
+  async viewHint(player: Player, sessionId: string, no: number): Promise<ViewHintResponse> {
     const s = await this.loadOwned(player, sessionId);
     if (s.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
     const data = await loadVersion(this.prisma, s.case.id, s.case.currentVersion);
@@ -95,18 +97,24 @@ export class SessionsService {
     const hints = this.hintStates(data, s.case.baseQuestions, s.questionsUsed, viewed);
     const target = hints.find((h) => h.no === no);
     if (!target) throw new AppException(404, 'NOT_FOUND');
-    if (target.viewed) return target;
+    if (target.viewed) return { ...target, unlockedMaps: [] };
     const previousViewed = hints.filter((h) => h.no < no).every((h) => h.viewed);
     if (!target.unlocked || !previousViewed) throw new AppException(409, 'HINT_LOCKED');
-    await this.prisma.hintView.createMany({
-      data: [{ sessionId: s.id, hintNo: no }],
-      skipDuplicates: true,
+    const unlockedMaps = await this.prisma.$transaction(async (tx) => {
+      const inserted = await tx.hintView.createMany({
+        data: [{ sessionId: s.id, hintNo: no }],
+        skipDuplicates: true,
+      });
+      await tx.playSession.update({ where: { id: s.id }, data: { lastActiveAt: new Date() } });
+      // 사실 해금 맵은 연결된 힌트를 열면 함께 열린다(D26)
+      return inserted.count > 0 ? unlockZones(tx, s.id, data.explore, { kind: 'HINT', no }) : [];
     });
-    await this.prisma.playSession.update({
-      where: { id: s.id },
-      data: { lastActiveAt: new Date() },
-    });
-    return { ...target, viewed: true, text: data.hints.find((h) => h.no === no)?.text ?? null };
+    return {
+      ...target,
+      viewed: true,
+      text: data.hints.find((h) => h.no === no)?.text ?? null,
+      unlockedMaps,
+    };
   }
 
   /** 메모 저장(PRD D62). AI에 전달하지 않는다. 같은 내용을 다시 보내도 결과가 같다(PUT). */
@@ -158,6 +166,14 @@ export class SessionsService {
       orderBy: { createdAt: 'desc' },
       select: { matched: true },
     });
+    const found = new Set(
+      (
+        await this.prisma.sessionClue.findMany({
+          where: { sessionId: s.id },
+          select: { clueKey: true },
+        })
+      ).map((c) => c.clueKey),
+    );
     const matched = matchedSchema.safeParse(last?.matched ?? []);
     const matchedIds = new Set(
       (matched.success ? matched.data : []).filter((m) => m.agreement === 'MATCH').map((m) => m.id),
@@ -185,6 +201,12 @@ export class SessionsService {
         matched: matchedIds.has(e.id),
       })),
       explanation: s.case.explanation,
+      clues: (data.explore?.clues ?? []).map((c) => ({
+        title: c.title,
+        kind: c.kind,
+        decoy: c.decoy,
+        found: found.has(c.key),
+      })),
     };
   }
 

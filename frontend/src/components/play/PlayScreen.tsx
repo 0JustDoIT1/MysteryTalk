@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { useCaseDetail, useQuestionLog, useSessionState } from '@/lib/api/queries';
+import { useCaseDetail, useExploreState, useQuestionLog, useSessionState } from '@/lib/api/queries';
 import { tutorialStep } from '@/lib/play/tutorial';
 import { t } from '@/i18n/ko';
 import { AbandonDialog, SubmitDialog } from './Dialogs';
+import { ExploreView } from './explore/ExploreView';
 import { HintPanel } from './HintPanel';
 import { Notebook } from './Notebook';
 import { QuestionPanel } from './QuestionPanel';
@@ -17,6 +18,7 @@ export function PlayScreen() {
   const session = useSessionState(sessionId);
   const detail = useCaseDetail(session.data?.caseSlug ?? '');
   const log = useQuestionLog(sessionId);
+  const explore = useExploreState(sessionId);
   const [dialog, setDialog] = useState<'submit' | 'abandon' | null>(null);
   const [guideClosed, setGuideClosed] = useState(false);
 
@@ -35,7 +37,7 @@ export function PlayScreen() {
   const c = detail.data!;
   const active = s.status === 'ACTIVE';
   const viewed = s.hints.filter((h) => h.viewed).length;
-  const step = tutorialStep(s, (log.data?.length ?? 0) > 0);
+  const step = tutorialStep(s, (log.data?.length ?? 0) > 0, explore.data?.clues.length ?? 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -86,7 +88,12 @@ export function PlayScreen() {
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_22rem]">
+      {/* PC: 현장 조사 맵과 질문창을 나란히(4단계 결정). 좁은 화면에서는 위아래로 쌓인다. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,auto)_minmax(22rem,1fr)]">
+        <div className="flex flex-col gap-6">
+          <ExploreView session={s} />
+          <HintPanel session={s} />
+        </div>
         <div className="flex flex-col gap-6">
           <QuestionPanel session={s} />
           {active && (
@@ -107,9 +114,8 @@ export function PlayScreen() {
               </button>
             </div>
           )}
-          <HintPanel session={s} />
+          <Notebook session={s} caseFile={c.caseFile} />
         </div>
-        <Notebook session={s} caseFile={c.caseFile} />
       </div>
 
       {/* 확인 창은 항상 렌더링한다. 종료 직후 상태가 바뀌어도 사라지지 않아야 엔딩으로 이동할 수 있다. */}

@@ -4,3 +4,4 @@ export * from './player.js';
 export * from './content.js';
 export * from './question.js';
 export * from './play.js';
+export * from './explore.js';

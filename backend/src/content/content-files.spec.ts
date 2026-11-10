@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { personNamingIssues } from '@mysterytalk/shared';
+import { exploreIssues, personNamingIssues, type ExploreContent } from '@mysterytalk/shared';
 import { evalSetSchema } from '../eval/eval-set.js';
 import { readCaseDirs } from './content-files.js';
 
@@ -105,6 +105,76 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
         'A1: keyword group with "문태성" must also include "태성"',
         'A1: keyword group with "문태성" must also include "조카"',
       ]);
+    });
+  });
+
+  describe('현장 조사 데이터 검사(SPEC §11)', () => {
+    const base = (): ExploreContent => ({
+      maps: [
+        {
+          key: 'a',
+          name: '방',
+          grid: ['#####', '#...#', '#....', '#####'],
+          exits: [{ x: 4, y: 2, to: 'b', toX: 1, toY: 1 }],
+          unlock: { type: 'OPEN' },
+        },
+        {
+          key: 'b',
+          name: '복도',
+          grid: ['####', '#..#', '####'],
+          exits: [],
+          unlock: { type: 'CLUE', clue: 'note' },
+        },
+      ],
+      spawn: { x: 1, y: 1 },
+      objects: [
+        { key: 'desk', map: 'a', x: 3, y: 1, name: '책상', description: '책상', clue: 'note' },
+      ],
+      npcs: [],
+      clues: [{ key: 'note', kind: 'ITEM', title: '쪽지', content: '쪽지', decoy: false }],
+    });
+
+    it('올바른 데이터는 문제가 없다', () => {
+      expect(exploreIssues(base(), { factIds: [] })).toEqual([]);
+    });
+
+    it('격자 너비·글자, 출입구 도착 칸, 시작 위치를 검사한다', () => {
+      const e = base();
+      e.maps[0]!.grid[1] = '#..x#';
+      e.maps[1]!.grid.push('#');
+      e.maps[0]!.exits[0]!.toX = 0;
+      e.spawn = { x: 0, y: 0 };
+      expect(exploreIssues(e, { factIds: [] })).toEqual(
+        expect.arrayContaining([
+          "map a: only '#' and '.' allowed",
+          'map b: rows must be same width',
+          'map a: exit destination (0,1) in b is not walkable',
+          'spawn must be walkable on the first map',
+        ]),
+      );
+    });
+
+    it('단서는 대상 하나에만 연결되고, 해금 조건이 가리키는 단서·사실이 있어야 한다', () => {
+      const e = base();
+      e.objects[0]!.clue = undefined;
+      e.maps[1]!.unlock = { type: 'FACT', fact: 'F99', keywords: [['x']], hint: 1 };
+      expect(exploreIssues(e, { factIds: ['F01'] })).toEqual(
+        expect.arrayContaining([
+          'clue note: must be linked to exactly one object or npc',
+          'map b: unlock fact F99 not found',
+        ]),
+      );
+    });
+
+    it('해금 단서를 그 맵 안에서만 얻을 수 있으면(순환) 도달할 수 없다고 알려 준다', () => {
+      const e = base();
+      e.objects[0]! = { ...e.objects[0]!, map: 'b', x: 2, y: 1 };
+      expect(exploreIssues(e, { factIds: [] })).toEqual(
+        expect.arrayContaining([
+          'map b: unreachable',
+          'desk: no walkable tile next to it is reachable',
+        ]),
+      );
     });
   });
 });

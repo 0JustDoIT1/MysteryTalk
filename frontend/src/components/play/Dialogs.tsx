@@ -9,7 +9,7 @@ import { keyFor, type PendingRequest } from '@/lib/play/idempotency';
 import { t } from '@/i18n/ko';
 
 /** 네이티브 <dialog> 모달: 포커스 가두기·ESC 닫기를 브라우저가 처리한다(D66 키보드 조작). */
-function Modal({
+export function Modal({
   open,
   onClose,
   labelledBy,

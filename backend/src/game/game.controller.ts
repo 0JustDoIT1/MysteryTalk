@@ -12,10 +12,17 @@ import {
 } from '@nestjs/common';
 import {
   askQuestionRequestSchema,
+  inspectRequestSchema,
+  moveRequestSchema,
+  type ExploreState,
+  type InspectRequest,
+  type InspectResponse,
+  type MoveRequest,
+  type MoveResponse,
+  type ViewHintResponse,
   memoRequestSchema,
   submitAnswerRequestSchema,
   type Ending,
-  type HintState,
   type MemoRequest,
   type SubmitAnswerRequest,
   type SubmitAnswerResponse,
@@ -34,6 +41,7 @@ import type { Player } from '../generated/prisma/client.js';
 import { CurrentPlayer } from '../player/current-player.decorator.js';
 import { PlayerGuard } from '../player/player.guard.js';
 import { CasesService } from './cases.service.js';
+import { ExploreService } from './explore.service.js';
 import { QuestionsService } from './questions.service.js';
 import { SessionsService } from './sessions.service.js';
 import { SubmissionsService } from './submissions.service.js';
@@ -48,6 +56,7 @@ export class GameController {
     private readonly sessions: SessionsService,
     private readonly questions: QuestionsService,
     private readonly submissions: SubmissionsService,
+    private readonly explore: ExploreService,
   ) {}
 
   @Get('cases')
@@ -101,7 +110,7 @@ export class GameController {
     @CurrentPlayer() player: Player,
     @Param('id') id: string,
     @Param('no', { schema: hintNoSchema }) no: number,
-  ): Promise<HintState> {
+  ): Promise<ViewHintResponse> {
     return this.sessions.viewHint(player, id, no);
   }
 
@@ -139,5 +148,33 @@ export class GameController {
   @Get('sessions/:id/ending')
   ending(@CurrentPlayer() player: Player, @Param('id') id: string): Promise<Ending> {
     return this.sessions.ending(player, id);
+  }
+
+  /** 현장 조사 상태(맵·위치·얻은 단서) */
+  @Get('sessions/:id/explore')
+  exploreState(@CurrentPlayer() player: Player, @Param('id') id: string): Promise<ExploreState> {
+    return this.explore.state(player, id);
+  }
+
+  /** 위치 저장·맵 이동(출입구). 같은 요청을 다시 보내도 결과가 같다. */
+  @Post('sessions/:id/move')
+  @HttpCode(200)
+  move(
+    @CurrentPlayer() player: Player,
+    @Param('id') id: string,
+    @Body({ schema: moveRequestSchema }) body: MoveRequest,
+  ): Promise<MoveResponse> {
+    return this.explore.move(player, id, body);
+  }
+
+  /** 조사·대화(인접한 대상만). 처음이면 단서 획득, 다시 조사하면 newClue=false. */
+  @Post('sessions/:id/inspect')
+  @HttpCode(200)
+  inspect(
+    @CurrentPlayer() player: Player,
+    @Param('id') id: string,
+    @Body({ schema: inspectRequestSchema }) body: InspectRequest,
+  ): Promise<InspectResponse> {
+    return this.explore.inspect(player, id, { map: body.map, x: body.x, y: body.y }, body.target);
   }
 }

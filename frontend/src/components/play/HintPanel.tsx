@@ -2,11 +2,13 @@
 
 import type { SessionState } from '@mysterytalk/shared';
 import { useViewHint } from '@/lib/api/queries';
+import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
 
 /** 힌트(PRD D15·D17·D81): 해금된 것만 순서대로 열고, 다음 힌트까지 남은 질문 수를 보여 준다. */
 export function HintPanel({ session }: { session: SessionState }) {
   const view = useViewHint(session.sessionId);
+  const pushToast = useToastStore((s) => s.push);
   const active = session.status === 'ACTIVE';
 
   return (
@@ -45,7 +47,13 @@ export function HintPanel({ session }: { session: SessionState }) {
               <button
                 type="button"
                 disabled={!active || view.isPending}
-                onClick={() => view.mutate(h.no)}
+                onClick={() =>
+                  view.mutate(h.no, {
+                    onSuccess: (r) => {
+                      if (r.unlockedMaps.length) pushToast(t.explore.unlocked(r.unlockedMaps));
+                    },
+                  })
+                }
                 className="rounded border border-amber-300 px-3 py-1 text-sm text-amber-200 hover:bg-amber-300/10 disabled:opacity-50"
               >
                 {t.hints.open(h.no)}

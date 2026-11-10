@@ -54,6 +54,12 @@ export const hintStateSchema = z.object({
 });
 export type HintState = z.infer<typeof hintStateSchema>;
 
+/** POST /sessions/{id}/hints/{no}: 연결된 사실 해금 맵도 함께 열린다(D26) */
+export const viewHintResponseSchema = hintStateSchema.extend({
+  unlockedMaps: z.array(z.string()),
+});
+export type ViewHintResponse = z.infer<typeof viewHintResponseSchema>;
+
 /** GET /sessions/{id}: 화면 복원용 진행 상태(D53, D76). 점수·등급은 넣지 않는다. */
 export const sessionStateSchema = z.object({
   sessionId: z.uuid(),
@@ -116,6 +122,10 @@ export const endingSchema = z.object({
     }),
   ),
   explanation: z.string(),
+  /** 단서 전체(엔딩에서만): 미끼 여부와 획득 여부(D61) */
+  clues: z.array(
+    z.object({ title: z.string(), kind: z.string(), decoy: z.boolean(), found: z.boolean() }),
+  ),
 });
 export type Ending = z.infer<typeof endingSchema>;
 

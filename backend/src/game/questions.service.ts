@@ -14,7 +14,8 @@ import { prefilterAbuse } from '../judge/prefilter.js';
 import { JUDGE, PROMPT_VERSION, type Judge, type JudgeResult } from '../judge/judge.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { recordAiCalls } from './ai-calls.js';
-import { loadFacts, questionCap } from './case-data.js';
+import { loadVersion, questionCap } from './case-data.js';
+import { unlockZones } from './zones.js';
 import { claimLease, leaseMsFor, releaseLease } from './session-lease.js';
 import { SessionsService } from './sessions.service.js';
 
@@ -82,6 +83,7 @@ export class QuestionsService {
         questionsUsed: session.questionsUsed,
         baseQuestions: base,
         questionCap: cap,
+        unlockedMaps: [],
       };
     }
 
@@ -99,13 +101,17 @@ export class QuestionsService {
     // 7. 사전 필터(욕설·조작 지시) → AI 없이 '다시 질문'. 9. 아니면 AI 판정(트랜잭션 밖)
     // 사건 내용이 수정됐으면 진행 중 세션에도 최신 버전을 적용하고, 판정 당시 버전을 기록한다(D59).
     const caseVersion = session.case.currentVersion;
+    const data = await loadVersion(this.prisma, session.case.id, caseVersion);
     let result: JudgeResult;
     let model: string | null = null;
     if (prefilterAbuse(question)) {
       result = { label: 'RETRY', retryReason: 'ABUSE', factIds: [] };
     } else {
-      const facts = await loadFacts(this.prisma, session.case.id, caseVersion);
-      const outcome = await this.judge.judge({ intro: session.case.intro, facts, question });
+      const outcome = await this.judge.judge({
+        intro: session.case.intro,
+        facts: data.facts,
+        question,
+      });
       await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls);
       if (!outcome.ok) {
         // 10. 실패: 선점 해제, 미차감, 기록 없음 → 같은 키로 재시도 가능(D6)
@@ -131,6 +137,15 @@ export class QuestionsService {
       }
       const counted = COUNTED_LABELS.includes(result.label);
       const used = row.questions_used + (counted ? 1 : 0);
+      // 사실 해금(D26, D74): '예' 판정만, 근거 사실 + 질문 키워드 검사. 이유는 응답에 넣지 않는다(D81).
+      const unlockedMaps =
+        result.label === 'YES'
+          ? await unlockZones(tx, session.id, data.explore, {
+              kind: 'FACT',
+              factIds: result.factIds,
+              question,
+            })
+          : [];
       const response: AskQuestionResponse = {
         label: result.label,
         retryReason: result.retryReason,
@@ -140,6 +155,7 @@ export class QuestionsService {
         questionsUsed: used,
         baseQuestions: base,
         questionCap: cap,
+        unlockedMaps,
       };
       await tx.playSession.update({
         where: { id: session.id },

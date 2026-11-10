@@ -38,7 +38,7 @@
 | 요청 검증 | zod(`shared`에서 FE·BE 공용) | 같은 스키마로 요청·AI 출력·사건 데이터를 검증 | class-validator |
 | 구글 로그인 | Passport(Google OAuth 2.0) + 서버 세션 쿠키 | NestJS 표준 조합, 토큰을 브라우저 JS에 노출하지 않음 | Auth.js(Next 쪽 처리) |
 | 호출 제한 | @nestjs/throttler + 자체 일일 한도 테이블 | IP 단위 순간 제한은 throttler, 일일 질문 한도는 DB로 정확히 계산 | 직접 구현 |
-| 맵 제작 | Tiled(JSON 내보내기) | 무료, Phaser 타일맵과 호환 | 직접 편집기 |
+| 맵 제작 | **case.json 안의 글자 격자**(4단계 결정, 이전 안: Tiled JSON) | 읽고 고치기 쉽고 diff로 검토, 자동 검사가 쉬움. 에셋이 정해지면 같은 데이터로 타일을 그린다 | Tiled |
 | 로컬 AI | Ollama | 무료·무제한 개발·평가 [PRD D45] | — |
 | 테스트 | 단위·통합 Vitest(또는 생성기 기본), E2E Playwright | | Jest |
 | 서버 상태(프론트) | TanStack Query | 서버 데이터 캐시·요청 후 갱신·로딩/오류 상태. 서버가 원본이라는 원칙과 맞음(§12.1) | SWR, 직접 구현 |
@@ -87,11 +87,7 @@
 |---|---|
 | `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_file_json(수사 자료: 개요·관련자·타임라인), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
 | `case_version` | case_id, version, facts_json, elements_json(정답 요소·키워드), hints_json, content_hash, published_at |
-| `case_map` | id, case_id, map_key, width, height, blocked_tiles_json, entrances_json(맵 간 출입구), spawn |
-| `case_zone` | id, case_id, map_id, unlock_type(OPEN/CLUE/FACT), unlock_clue_id NULL, unlock_fact_id NULL, unlock_keywords_json, linked_hint_no NULL |
-| `case_object` | id, case_id, map_id, object_key, x, y, description, clue_id NULL |
-| `case_npc` | id, case_id, map_id, npc_key, x, y, lines_json(1~3줄), clue_id(진술 단서) |
-| `clue` | id, case_id, clue_key, kind(ITEM/RECORD/TESTIMONY), title, content, is_decoy |
+| (현장 조사) | 4단계 구현: 맵·구역 해금 조건·조사 대상·NPC·단서·시작 위치는 별도 테이블 대신 `case_version.explore_json`에 버전과 함께 저장한다(사실 목록처럼 D59 버전 규칙을 그대로 따르고, 적재 전 검사로 정합성을 보장) |
 
 ### 4.3 플레이
 | 테이블 | 주요 필드 |
@@ -100,8 +96,8 @@
 | `question_log` | id, session_id, idempotency_key, question, normalized, label(YES/NO/MAYBE/IRRELEVANT/RETRY), retry_reason NULL, fact_ids_json, counted(bool), turn_no NULL, case_version, model, latency_ms, tokens_in, tokens_out, created_at. UNIQUE(session_id, idempotency_key), UNIQUE(session_id, turn_no) |
 | `submission` | id, session_id, idempotency_key, answer, result(SOLVED/WRONG/NEEDS_DETAIL), matched_json(요소별 판정), matched_count, total_count, created_at |
 | `hint_view` | session_id, hint_no, viewed_at. PK(session_id, hint_no) |
-| `session_clue` | session_id, clue_id, found_at. PK |
-| `session_zone` | session_id, zone_id, unlocked_by(CLUE/FACT/HINT/OPEN), unlocked_at. PK |
+| `session_clue` | session_id, clue_key, found_at. PK |
+| `session_zone` | session_id, map_key, unlocked_by(CLUE/FACT/HINT), unlocked_at. PK (처음부터 열린 맵은 기록하지 않음) |
 | `case_record` | player_id, case_id, best_grade, best_score, best_play_no, total_plays, solved(bool). PK(player_id, case_id) [PRD D18] |
 | `idempotency` | scope(엔드포인트), session_id 또는 player_id, key, response_json, created_at. UNIQUE(scope, owner, key) — 질문·제출 외 요청(힌트·조사·이동·포기·메모)용 |
 
@@ -221,12 +217,17 @@ grade = SOLVED  → score >= 90 ? S : >= 80 ? A : >= 70 ? B : C
 - 사건은 여러 맵으로 구성되고 각 맵은 하나의 구역이다 [D56]. 첫 맵은 OPEN.
 - 맵 간 이동은 출입구 칸에서만 가능. 서버는 이동 요청 시 대상 맵의 구역이 열렸는지 확인(닫혀 있으면 409 `ZONE_LOCKED`).
 - 위치 저장: 맵 이동 시, 조사 시, 주기적(예: 10초, 움직였을 때) [확정]. 서버는 맵 경계·막힌 칸·직전 위치 대비 이동 거리를 검증한다(완전한 치트 방지는 목표 아님).
+  - 구현(4단계): 허용 거리 = 6칸 + 경과 초 × 12칸(화면은 0.11초마다 한 칸). 경과 시간 기준은 마지막 저장 시각, 저장한 적이 없으면 세션 시작 시각. 어긋나면 409 `INVALID_MOVE`, 클라이언트는 서버 위치로 다시 맞춘다.
+  - 조사 요청은 현재 위치를 함께 보내고 서버가 위치·인접을 함께 검증한다. 이동·조사는 같은 요청을 다시 보내도 결과가 같아 멱등성 키를 쓰지 않는다.
+  - 공개 응답: 닫힌 맵은 이름만, 열린 맵은 격자·출입구·대상 위치와 이름만. 설명·대사·단서는 조사했을 때만, 미끼 여부는 엔딩에서만.
+  - 사건 수정(D59)으로 저장 위치에 설 수 없게 되면 시작 위치로 돌린다.
 - 조사: 플레이어와 대상이 인접(맨해튼 거리 1)해야 함. 처음 조사하면 설명 + 단서(있으면) 획득, 다시 조사하면 설명과 "이미 조사함" [확정].
 - NPC: 대화하면 대사 1~3줄을 보여 주고 처음 대화 시 진술 단서 획득 [D28, D75].
 - 단서 해금: 단서 획득 직후 그 단서로 열리는 구역을 개방.
 
 ### 9.3 Phaser·React 경계 [확정]
 - Phaser는 이동·애니메이션·충돌·상호작용 키 입력만 처리하고 **API를 직접 호출하지 않는다**. 조사·이동 요청은 이벤트로 React에 넘기고, React가 API를 호출해 결과(모달 등)를 표시한다.
+  - 구현(4단계): 키 입력은 **맵 영역에 포커스가 있을 때 React가 받고**(질문 입력과 충돌 방지, Phaser 키 캡처 끔), 이동 판단은 서버와 같은 규칙의 순수 함수로 한다. Phaser는 그리기만 맡는다. 조사·맵 이동은 Zustand 명령으로 넘겨 React가 API를 호출한다. 현재 위치와 근처 조사 대상은 글자로도 표시한다.
 - 조작 [확정, PRD [미정] 해소]: 방향키/WASD 이동, E/Enter 조사·대화, ESC 닫기. 모바일은 가상 방향키 + 조사 버튼 [D42]. 텍스트 입력에 포커스가 있으면 Phaser 키 입력을 멈춘다.
 
 ---
@@ -241,16 +242,16 @@ grade = SOLVED  → score >= 90 ? S : >= 80 ? A : >= 70 ? B : C
 ---
 
 ## 11. 사건 데이터 형식 [확정]
-사건 하나 = 디렉터리 하나: `case.json` + 맵 파일(Tiled JSON) + 평가 세트.
+사건 하나 = 디렉터리 하나: `case.json`(맵 포함) + 평가 세트.
 
 ```
 content/public/tutorial/
   case.json        # 메타·도입·수사 자료·사실 목록·정답 요소·힌트·구역·오브젝트·NPC·단서·해설
-  maps/*.json      # Tiled 맵
   eval.json        # 평가 질문(30개 이상)·평가 답안
 ```
 
-`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text,linkedZone?}], maps[{key,file,unlock:{type,clue?,fact?,keywords?,hint?}}], objects[], npcs[], clues[], explanation`.
+`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?}}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy}], explanation`.
+- 맵 격자: '#' 벽, '.' 바닥. 조사 대상·NPC는 바닥 칸에 서고 그 칸은 지나갈 수 없다. 출입구 칸에 들어서면 대상 맵의 도착 좌표로 이동한다.
 
 - **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 연결된 오브젝트/NPC가 정확히 1개, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
 - 버전: 내용이 바뀌면 `version`을 올리고 `case_version`에 저장, 진행 중 세션은 새 버전 적용 + 세션에 판정 당시 버전 기록 [D59].
@@ -271,7 +272,7 @@ content/public/tutorial/
 | 이어서 | 진행 중인 사건 목록 [D54] |
 | 추리 화면 | 도입 이야기(첫 진입), 질문 입력(마이크 버튼은 지원 브라우저만), 판정 표시, 진행 수치, 힌트 버튼(다음 힌트까지 N개), 수첩 열기, 현장 조사, 정답 제출, 사건 메뉴(포기) |
 | 수첩 | 수사 자료 / 단서(진술 포함) / 질문 기록(필터) / 메모 [D77, D48, D62] |
-| 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키 |
+| 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키(6단계). **PC에서는 추리 화면 안에 맵과 질문창을 나란히 배치**(4단계 결정), 좁은 화면에서는 위아래로 쌓음. 그림은 임시 도형, 에셋은 별도 결정 |
 | 정답 제출 | 입력(10~300자), 확인 창, 결과(오답 개수·재작성 요청) |
 | 엔딩 | 결과·등급, 점수 내역, 요소별 충족, 해설, 미끼·놓친 단서, 다시 하기 [D61] |
 | 설정 | 탐정 이름, BGM·효과음 볼륨, 구글 로그인/로그아웃, 버그 제보(외부 폼), 언어 선택은 숨김 [D39~D41, D64] |

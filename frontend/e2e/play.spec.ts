@@ -82,9 +82,9 @@ test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수와 �
 }) => {
   await openCase(page, '사라진 금고 열쇠');
   const guide = page.getByRole('complementary', { name: '튜토리얼 안내' });
-  await expect(guide.getByText(/1\/4/)).toBeVisible();
+  await expect(guide.getByText(/1\/5/)).toBeVisible();
   await ask(page, '열쇠를 도둑맞았나요?', 1);
-  await expect(guide.getByText(/2\/4/)).toBeVisible();
+  await expect(guide.getByText(/2\/5/)).toBeVisible();
 
   await submitAnswer(
     page,
@@ -120,4 +120,56 @@ test('질문 입력 경계: 같은 문장 재질문은 차감되지 않는다', 
   await input.press('Enter');
   await expect(page.getByText('이미 한 질문이에요. 질문 수는 차감되지 않았어요.')).toBeVisible();
   await expect(page.getByText(/질문 1 \/ 기준 20/)).toBeVisible();
+});
+
+/** 맵에 포커스를 두고 같은 방향으로 n칸 걷는다(한 칸 간격 0.11초보다 길게 기다림). */
+async function walk(page: Page, key: string, n: number) {
+  for (let i = 0; i < n; i += 1) {
+    await page.keyboard.press(key);
+    await page.waitForTimeout(140);
+  }
+}
+
+test('현장 조사: 걸어가 조사 → 단서 획득 → 새 장소 열림 → 수첩 단서 → 맵 이동 → 위치 복원', async ({
+  page,
+}) => {
+  await openCase(page, '302호의 정전');
+  const map = page.getByRole('application', { name: '현장 조사' });
+  await expect(page.getByText('현재 위치: 302호 거실')).toBeVisible();
+  await map.click();
+
+  // 시작 (6,6) → 위로 5칸 (6,1) → 오른쪽 5칸 (11,1): 전등 스위치 옆
+  await walk(page, 'ArrowUp', 5);
+  await walk(page, 'ArrowRight', 5);
+  await expect(page.getByText('가까이: 전등 스위치 — E·Enter로 조사')).toBeVisible();
+  await page.keyboard.press('e');
+  const dialog = page.getByRole('dialog', { name: '전등 스위치' });
+  await expect(dialog.getByText(/단서를 찾았어요: 켜져 있는 전등 스위치/)).toBeVisible();
+  await expect(page.getByRole('status').getByText('새 장소가 열렸어요: 현관·복도')).toBeVisible();
+  await dialog.getByRole('button', { name: '닫기' }).click();
+
+  // 다시 조사하면 '이미 조사함'
+  await map.click();
+  await page.keyboard.press('e');
+  await expect(page.getByText('이미 조사한 곳이에요. 단서는 수첩에 있어요.')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.getByRole('tab', { name: '단서' }).click();
+  await expect(page.getByRole('tabpanel').getByText('켜져 있는 전등 스위치')).toBeVisible();
+
+  // 질문창에 입력할 때는 캐릭터가 움직이지 않는다
+  const input = page.getByLabel('예/아니오로 답할 수 있는 질문');
+  await input.fill('dddd');
+  await expect(page.getByText('가까이: 전등 스위치 — E·Enter로 조사')).toBeVisible();
+  await input.fill('');
+
+  // 출입구 (6,8)로 걸어가 현관·복도로 이동
+  await map.click();
+  await walk(page, 'ArrowLeft', 5);
+  await walk(page, 'ArrowDown', 7);
+  await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
+
+  // 새로고침해도 서버에 저장된 위치에서 이어진다(D53)
+  await page.reload();
+  await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
 });

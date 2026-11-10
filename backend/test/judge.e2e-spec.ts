@@ -121,6 +121,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
         questionsUsed: 1,
         baseQuestions: 15,
         questionCap: 45,
+        unlockedMaps: [],
       });
       expect((await ask(cookie, id, '열쇠를 도둑맞았나요?')).body).toMatchObject({
         label: 'NO',

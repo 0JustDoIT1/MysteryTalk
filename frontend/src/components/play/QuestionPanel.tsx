@@ -43,6 +43,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
           setPending(null);
           setShown({ question, response });
           setText('');
+          if (response.unlockedMaps.length) pushToast(t.explore.unlocked(response.unlockedMaps));
           if (response.counted) {
             for (const h of session.hints) {
               if (h.unlockAt === response.questionsUsed) pushToast(t.hints.unlockedToast(h.no));

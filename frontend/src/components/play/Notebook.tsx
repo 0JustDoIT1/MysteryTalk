@@ -11,15 +11,15 @@ import {
 } from '@mysterytalk/shared';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { useQuestionLog, useSaveMemo } from '@/lib/api/queries';
+import { useExploreState, useQuestionLog, useSaveMemo } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
 import { CaseFileView } from './CaseFileView';
 import { VerdictBadge } from './VerdictBadge';
 
-const TABS = ['file', 'questions', 'memo'] as const;
+const TABS = ['file', 'clues', 'questions', 'memo'] as const;
 type Tab = (typeof TABS)[number];
 
-/** 수첩(PRD D77·D48·D62). 탭과 질문 기록 필터는 URL 상태(?tab=&filter=). 단서 탭은 4단계에서 추가한다. */
+/** 수첩(PRD D77·D75·D48·D62): 수사 자료·단서(진술 포함)·질문 기록·메모. 탭과 필터는 URL 상태(?tab=&filter=). */
 export function Notebook({ session, caseFile }: { session: SessionState; caseFile: CaseFile }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -69,6 +69,7 @@ export function Notebook({ session, caseFile }: { session: SessionState; caseFil
         className="rounded-b rounded-tr bg-stone-800/60 p-3"
       >
         {tab === 'file' && <CaseFileView caseFile={caseFile} />}
+        {tab === 'clues' && <ClueList sessionId={session.sessionId} />}
         {tab === 'questions' && (
           <QuestionLog
             sessionId={session.sessionId}
@@ -178,5 +179,28 @@ function Memo({ session }: { session: SessionState }) {
         </p>
       )}
     </form>
+  );
+}
+
+/** 찾은 단서(조사·NPC 진술). 미끼 여부는 엔딩에서만 공개한다. */
+function ClueList({ sessionId }: { sessionId: string }) {
+  const explore = useExploreState(sessionId);
+  if (explore.isPending) return <p className="text-sm text-stone-400">{t.common.loading}</p>;
+  const clues = explore.data?.clues ?? [];
+  if (!clues.length) return <p className="text-sm text-stone-400">{t.notebook.noClues}</p>;
+  return (
+    <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
+      {clues.map((c) => (
+        <li key={c.key} className="rounded bg-stone-900 p-2">
+          <p className="font-semibold text-amber-100">
+            <span className="mr-2 rounded bg-stone-700 px-1.5 py-0.5 text-xs text-stone-200">
+              {t.notebook.clueKind[c.kind]}
+            </span>
+            {c.title}
+          </p>
+          <p className="mt-1 text-stone-300">{c.content}</p>
+        </li>
+      ))}
+    </ul>
   );
 }

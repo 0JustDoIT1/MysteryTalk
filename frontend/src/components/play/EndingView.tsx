@@ -8,7 +8,6 @@ import { t } from '@/i18n/ko';
 /**
  * 엔딩(PRD D19·D61): 결과·등급, 점수 내역, 요소별 충족, 진상 해설, 다시 하기.
  * 튜토리얼은 같은 내역에 감점 규칙 설명을 붙이고 기록에 남지 않음을 알린다(PRD v1.3).
- * 미끼·놓친 단서는 현장 조사(4단계)와 함께 추가한다.
  */
 export function EndingView() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -143,6 +142,31 @@ export function EndingView() {
           ))}
         </ul>
       </section>
+
+      {e.clues.length > 0 && (
+        <section aria-labelledby="clues-heading">
+          <h2 id="clues-heading" className="mb-2 font-semibold text-amber-100">
+            {t.ending.clues}
+          </h2>
+          <ul className="flex flex-col gap-1 text-sm">
+            {e.clues.map((c) => (
+              <li key={c.title} className="flex items-center gap-2">
+                <span
+                  className={`shrink-0 rounded px-2 py-0.5 text-xs ${c.found ? 'bg-emerald-900 text-emerald-100' : 'bg-stone-700 text-stone-200'}`}
+                >
+                  {c.found ? `○ ${t.ending.clueFound}` : `✕ ${t.ending.clueMissed}`}
+                </span>
+                <span>{c.title}</span>
+                {c.decoy && (
+                  <span className="rounded bg-rose-900 px-2 py-0.5 text-xs text-rose-100">
+                    {t.ending.decoy}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="explanation-heading">
         <h2 id="explanation-heading" className="mb-2 font-semibold text-amber-100">

@@ -6,7 +6,11 @@ import {
   caseSummarySchema,
   createSessionResponseSchema,
   endingSchema,
-  hintStateSchema,
+  exploreStateSchema,
+  inspectResponseSchema,
+  moveResponseSchema,
+  viewHintResponseSchema,
+  type Position,
   questionLogItemSchema,
   sessionStateSchema,
   submitAnswerResponseSchema,
@@ -28,6 +32,7 @@ export const keys = {
   questions: (id: string, label?: QuestionLabel) =>
     ['sessions', id, 'questions', label ?? 'ALL'] as const,
   ending: (id: string) => ['sessions', id, 'ending'] as const,
+  explore: (id: string) => ['sessions', id, 'explore'] as const,
 };
 
 export function useCases() {
@@ -110,7 +115,7 @@ export function useViewHint(id: string) {
   const refresh = useRefreshSession(id);
   return useMutation({
     mutationFn: (no: number) =>
-      apiOrThrow(`/sessions/${id}/hints/${no}`, hintStateSchema, { method: 'POST' }),
+      apiOrThrow(`/sessions/${id}/hints/${no}`, viewHintResponseSchema, { method: 'POST' }),
     onSuccess: refresh,
   });
 }
@@ -148,6 +153,38 @@ export function useAbandon(id: string) {
       apiOrThrow(`/sessions/${id}/abandon`, z.object({ status: z.literal('ABANDONED') }), {
         method: 'POST',
       }),
+    onSuccess: refresh,
+  });
+}
+
+export function useExploreState(id: string) {
+  return useQuery({
+    queryKey: keys.explore(id),
+    queryFn: () => apiOrThrow(`/sessions/${id}/explore`, exploreStateSchema),
+  });
+}
+
+/** 위치 저장·맵 이동. 결과 위치는 현장 조사 화면이 직접 반영한다. */
+export function useMove(id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (to: Position) =>
+      apiOrThrow(`/sessions/${id}/move`, moveResponseSchema, { method: 'POST', body: to }),
+    onSuccess: (_r, to) => {
+      // 다른 맵으로 옮겼을 때만 맵 정보를 다시 받는다(주기 저장은 다시 받지 않음).
+      const current = qc.getQueryData<{ position: Position }>(keys.explore(id));
+      if (current && current.position.map !== to.map) {
+        void qc.invalidateQueries({ queryKey: keys.explore(id) });
+      }
+    },
+  });
+}
+
+export function useInspect(id: string) {
+  const refresh = useRefreshSession(id);
+  return useMutation({
+    mutationFn: (v: Position & { target: string }) =>
+      apiOrThrow(`/sessions/${id}/inspect`, inspectResponseSchema, { method: 'POST', body: v }),
     onSuccess: refresh,
   });
 }

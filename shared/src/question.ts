@@ -52,6 +52,8 @@ export const askQuestionResponseSchema = z.object({
   questionsUsed: z.number().int(),
   baseQuestions: z.number().int(),
   questionCap: z.number().int(),
+  /** 이번 판정으로 새로 열린 맵 이름(이유는 밝히지 않음, D81). 이전에 저장된 응답에는 없을 수 있다. */
+  unlockedMaps: z.array(z.string()).default([]),
 });
 export type AskQuestionResponse = z.infer<typeof askQuestionResponseSchema>;
 
