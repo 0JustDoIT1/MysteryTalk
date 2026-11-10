@@ -33,6 +33,10 @@ export class CasesService {
         tags: true,
         genres: true,
         sessions: { where: { playerId: player.id, status: 'ACTIVE' }, select: { id: true } },
+        records: {
+          where: { playerId: player.id },
+          select: { bestGrade: true, bestPlayNo: true, totalPlays: true, solved: true },
+        },
       },
     });
     return cases.map((c) => ({
@@ -45,6 +49,7 @@ export class CasesService {
       tags: c.tags,
       genres: genresSchema.parse(c.genres),
       activeSessionId: c.sessions[0]?.id ?? null,
+      record: c.records[0] ?? null,
     }));
   }
 

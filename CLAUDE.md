@@ -47,3 +47,5 @@
 - DB: `npm run db:up` / 마이그레이션 생성 `npm run migrate:dev -w backend` / 적용 `npm run migrate:deploy -w backend`
 - 개발 서버: `npm run dev` (backend 4000, frontend 3000, `/api/*` 프록시)
 - 검사: `npm run format:check` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run test:e2e`(DATABASE_URL_TEST 필요, DB 이름은 `_test`로 끝나야 함) · `npm run build -w frontend`
+- 브라우저 E2E: `npm run test:browser`(DATABASE_URL_BROWSER 필요, `_test`로 끝나는 DB. 최초 1회 `npx playwright install chromium`. 3100/4100 포트, AI는 Mock) (2026-11-11 3단계에서 확인)
+- 사건 적재: `npm run content:load -w backend` / AI 평가(로컬 Ollama): 판정 `npm run eval -w backend -- --case sample --repeat 3`, 채점 `npm run eval:grade -w backend -- --case sample --repeat 3`

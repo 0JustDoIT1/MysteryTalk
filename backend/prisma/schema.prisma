@@ -32,6 +32,7 @@ model Player {
   mergedIntoId   String?    @map("merged_into") @db.Uuid
 
   sessions PlaySession[]
+  records  CaseRecord[]
 
   @@index([kind, lastActiveAt])
   @@map("player")
@@ -72,6 +73,23 @@ enum RetryReason {
   ABUSE
 }
 
+/// 등급(PRD §8.1). D는 부분 해결, F는 미해결·포기
+enum Grade {
+  S
+  A
+  B
+  C
+  D
+  F
+}
+
+/// 제출 결과(SPEC §7). NEEDS_DETAIL = 채점 미확정 → 재작성 요청(미차감, D23)
+enum SubmissionResult {
+  SOLVED
+  WRONG
+  NEEDS_DETAIL
+}
+
 enum AiPurpose {
   JUDGE
   GRADE
@@ -101,6 +119,7 @@ model MysteryCase {
 
   versions CaseVersion[]
   sessions PlaySession[]
+  records  CaseRecord[]
 
   @@map("mystery_case")
 }
@@ -123,23 +142,34 @@ model CaseVersion {
 
 /// 사건 1회 플레이. 사건당 진행 중(ACTIVE) 세션은 1개(PRD D54) → 마이그레이션의 부분 고유 인덱스로 강제한다.
 model PlaySession {
-  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  playerId      String        @map("player_id") @db.Uuid
-  caseId        String        @map("case_id") @db.Uuid
-  caseVersion   Int           @map("case_version")
-  playNo        Int           @map("play_no")
-  status        SessionStatus @default(ACTIVE)
-  questionsUsed Int           @default(0) @map("questions_used")
-  inFlightKey   String?       @map("in_flight_key") @db.Uuid
-  inFlightUntil DateTime?     @map("in_flight_until") @db.Timestamptz
-  startedAt     DateTime      @default(now()) @map("started_at") @db.Timestamptz
-  lastActiveAt  DateTime      @default(now()) @map("last_active_at") @db.Timestamptz
-  finishedAt    DateTime?     @map("finished_at") @db.Timestamptz
+  id                 String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  playerId           String        @map("player_id") @db.Uuid
+  caseId             String        @map("case_id") @db.Uuid
+  caseVersion        Int           @map("case_version")
+  playNo             Int           @map("play_no")
+  status             SessionStatus @default(ACTIVE)
+  questionsUsed      Int           @default(0) @map("questions_used")
+  /// 해결 전 오답 횟수(3회면 종료, D12)
+  wrongSubmissions   Int           @default(0) @map("wrong_submissions")
+  /// 채점 미확정 재작성 요청 횟수(최대 2회, D23)
+  detailRequestsUsed Int           @default(0) @map("detail_requests_used")
+  /// 사건별 자유 메모 1개. AI에 전달하지 않는다(D62)
+  memo               String        @default("")
+  /// 종료 시 계산(SOLVED만 점수, D·F는 null)
+  score              Int?
+  grade              Grade?
+  inFlightKey        String?       @map("in_flight_key") @db.Uuid
+  inFlightUntil      DateTime?     @map("in_flight_until") @db.Timestamptz
+  startedAt          DateTime      @default(now()) @map("started_at") @db.Timestamptz
+  lastActiveAt       DateTime      @default(now()) @map("last_active_at") @db.Timestamptz
+  finishedAt         DateTime?     @map("finished_at") @db.Timestamptz
 
-  player    Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
-  case      MysteryCase   @relation(fields: [caseId], references: [id], onDelete: Restrict)
-  questions QuestionLog[]
-  aiCalls   AiCall[]
+  player      Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  case        MysteryCase   @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  questions   QuestionLog[]
+  aiCalls     AiCall[]
+  submissions Submission[]
+  hintViews   HintView[]
 
   @@index([playerId, caseId])
   @@map("play_session")
@@ -190,4 +220,59 @@ model AiCall {
 
   @@index([createdAt])
   @@map("ai_call")
+}
+
+/// 정답 제출 기록(SPEC §7). 같은 멱등성 키는 한 번만 저장된다.
+model Submission {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId      String           @map("session_id") @db.Uuid
+  idempotencyKey String           @map("idempotency_key") @db.Uuid
+  answer         String
+  result         SubmissionResult
+  /// 요소별 판정(키워드·AI·합의 결과). 종료 전에는 응답에 넣지 않는다(D84)
+  matched        Json             @map("matched_json")
+  matchedCount   Int              @map("matched_count")
+  totalCount     Int              @map("total_count")
+  caseVersion    Int              @map("case_version")
+  model          String?
+  promptVersion  String?          @map("prompt_version")
+  /// 같은 키 재요청 시 그대로 돌려줄 응답
+  response       Json             @map("response_json")
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz
+
+  session PlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, idempotencyKey])
+  @@index([sessionId, createdAt])
+  @@map("submission")
+}
+
+/// 힌트 열람 기록. PK로 같은 힌트의 이중 감점을 막는다(SPEC §9.1).
+model HintView {
+  sessionId String   @map("session_id") @db.Uuid
+  hintNo    Int      @map("hint_no")
+  viewedAt  DateTime @default(now()) @map("viewed_at") @db.Timestamptz
+
+  session PlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@id([sessionId, hintNo])
+  @@map("hint_view")
+}
+
+/// 사건별 개인 기록(PRD D18): 최고 등급·달성 회차·총 플레이 횟수. 튜토리얼은 기록하지 않는다(D24).
+model CaseRecord {
+  playerId   String   @map("player_id") @db.Uuid
+  caseId     String   @map("case_id") @db.Uuid
+  bestGrade  Grade    @map("best_grade")
+  bestScore  Int?     @map("best_score")
+  bestPlayNo Int      @map("best_play_no")
+  totalPlays Int      @map("total_plays")
+  solved     Boolean
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  player Player      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  case   MysteryCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@id([playerId, caseId])
+  @@map("case_record")
 }

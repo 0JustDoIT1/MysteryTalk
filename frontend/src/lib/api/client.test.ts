@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { healthResponseSchema, meResponseSchema } from '@mysterytalk/shared';
-import { apiGet } from './client';
+import { ApiError, apiGet, apiOrThrow, apiRequest, isRetryable } from './client';
 
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
@@ -16,7 +16,13 @@ describe('apiGet', () => {
       status: 200,
       data: { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false },
     });
-    expect(f).toHaveBeenCalledWith('/api/me', { cache: 'no-store', credentials: 'same-origin' });
+    expect(f).toHaveBeenCalledWith('/api/me', {
+      method: 'GET',
+      headers: {},
+      body: undefined,
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
   });
 
   it('서버 오류 코드는 고정 문구로 바꾼다', async () => {
@@ -51,5 +57,41 @@ describe('apiGet', () => {
       status: 0,
       code: 'NETWORK',
     });
+  });
+});
+
+describe('apiRequest (상태 변경 요청)', () => {
+  it('본문은 JSON으로, 멱등성 키는 헤더로 보낸다', async () => {
+    const f = vi
+      .fn()
+      .mockResolvedValue(json(200, { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false }));
+    await apiRequest(
+      '/sessions/s/questions',
+      meResponseSchema,
+      { method: 'POST', body: { question: '질문' }, idempotencyKey: 'k-1' },
+      f,
+    );
+    expect(f).toHaveBeenCalledWith('/api/sessions/s/questions', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'idempotency-key': 'k-1' },
+      body: JSON.stringify({ question: '질문' }),
+      cache: 'no-store',
+      credentials: 'same-origin',
+    });
+  });
+
+  it('apiOrThrow 는 실패를 ApiError 로 던지고, 판정 지연·네트워크만 재시도 대상이다', async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(json(503, { code: 'AI_UNAVAILABLE', message: 'x' })) as typeof fetch;
+    try {
+      const error = await apiOrThrow('/x', meResponseSchema).catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(ApiError);
+      expect(isRetryable(error)).toBe(true);
+      expect(isRetryable(new ApiError('SESSION_FINISHED', 409, ''))).toBe(false);
+    } finally {
+      globalThis.fetch = original;
+    }
   });
 });

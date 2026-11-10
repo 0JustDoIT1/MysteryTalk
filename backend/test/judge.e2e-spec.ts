@@ -325,7 +325,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const original = tutorialCase();
       const updated = {
         ...original.content,
-        version: 2,
+        version: original.content.version + 1,
         facts: [
           ...original.content.facts,
           { id: 'F99', kind: 'FACT' as const, text: '새로 추가된 사실이다.' },
@@ -336,7 +336,8 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
 
       expect(judge.received[1]!.facts.map((f) => f.id)).toContain('F99');
       const logs = await prisma.questionLog.findMany({ orderBy: { createdAt: 'asc' } });
-      expect(logs.map((l) => l.caseVersion)).toEqual([1, 2]);
+      const v = original.content.version;
+      expect(logs.map((l) => l.caseVersion)).toEqual([v, v + 1]);
     });
 
     it('같은 버전으로 내용만 바꾸면 적재를 거부한다(버전을 올려야 함)', async () => {

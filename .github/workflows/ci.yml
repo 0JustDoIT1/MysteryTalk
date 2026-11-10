@@ -25,6 +25,7 @@ jobs:
       # CI 전용 임시 DB(외부에 노출되지 않는 서비스 컨테이너). 실제 비밀값이 아니다.
       DATABASE_URL: postgresql://mysterytalk:ci_only_password@localhost:5432/mysterytalk
       DATABASE_URL_TEST: postgresql://mysterytalk:ci_only_password@localhost:5432/mysterytalk_test
+      DATABASE_URL_BROWSER: postgresql://mysterytalk:ci_only_password@localhost:5432/mysterytalk_browser_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -41,3 +42,12 @@ jobs:
       - run: npm test
       - run: npm run test:e2e
       - run: npm run build -w frontend
+      # 브라우저 E2E(Playwright, AI는 Mock). 실패 시 추적 파일을 올린다.
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-traces
+          path: frontend/test-results/
+          retention-days: 7

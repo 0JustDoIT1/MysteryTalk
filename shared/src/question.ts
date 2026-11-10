@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { difficultySchema, genreSchema, ratingSchema, caseFileSchema } from './content.js';
+import { caseRecordSchema } from './play.js';
 
 /** 판정 라벨(PRD §5.2). RETRY = '다시 질문해 주세요'(질문 수 미차감, D1) */
 export const QUESTION_LABELS = ['YES', 'NO', 'MAYBE', 'IRRELEVANT', 'RETRY'] as const;
@@ -63,20 +64,6 @@ export const questionLogItemSchema = z.object({
 });
 export type QuestionLogItem = z.infer<typeof questionLogItemSchema>;
 
-export const sessionStatusSchema = z.enum(['ACTIVE', 'SOLVED', 'PARTIAL', 'FAILED', 'ABANDONED']);
-export type SessionStatus = z.infer<typeof sessionStatusSchema>;
-
-/** GET /sessions/{id} (2단계 범위: 질문 진행 상태) */
-export const sessionStateSchema = z.object({
-  sessionId: z.uuid(),
-  caseSlug: z.string(),
-  status: sessionStatusSchema,
-  questionsUsed: z.number().int(),
-  baseQuestions: z.number().int(),
-  questionCap: z.number().int(),
-});
-export type SessionState = z.infer<typeof sessionStateSchema>;
-
 /** GET /cases 항목 */
 export const caseSummarySchema = z.object({
   slug: z.string(),
@@ -88,6 +75,8 @@ export const caseSummarySchema = z.object({
   tags: z.array(z.string()),
   genres: z.array(genreSchema),
   activeSessionId: z.uuid().nullable(),
+  /** 개인 기록(튜토리얼·미플레이는 null) */
+  record: caseRecordSchema.nullable(),
 });
 export type CaseSummary = z.infer<typeof caseSummarySchema>;
 

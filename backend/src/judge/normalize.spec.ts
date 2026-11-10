@@ -1,4 +1,4 @@
-import { duplicateKey, normalizeQuestion } from './normalize.js';
+import { duplicateKey, normalizeAnswer, normalizeQuestion } from './normalize.js';
 
 describe('normalizeQuestion (SPEC §6-3, PRD D8)', () => {
   it('앞뒤 공백 제거, 연속 공백·제어문자를 한 칸으로', () => {
@@ -23,6 +23,15 @@ describe('normalizeQuestion (SPEC §6-3, PRD D8)', () => {
 
   it('이모지는 한 글자로 센다', () => {
     expect(normalizeQuestion(`${'가'.repeat(99)}👩‍👩‍👧`)).not.toBeNull();
+  });
+});
+
+describe('normalizeAnswer (SPEC §7-1, PRD D79)', () => {
+  it('길이 경계: 9자 거부, 10자 허용, 300자 허용, 301자 거부(공백 정리 후)', () => {
+    expect(normalizeAnswer('가'.repeat(9))).toBeNull();
+    expect(normalizeAnswer(`  ${'가'.repeat(10)}  `)).toBe('가'.repeat(10));
+    expect(normalizeAnswer('가'.repeat(300))).toBe('가'.repeat(300));
+    expect(normalizeAnswer('가'.repeat(301))).toBeNull();
   });
 });
 

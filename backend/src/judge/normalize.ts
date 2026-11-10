@@ -1,22 +1,36 @@
-import { QUESTION_MAX_LENGTH, QUESTION_MIN_LENGTH } from '@mysterytalk/shared';
+import {
+  ANSWER_MAX_LENGTH,
+  ANSWER_MIN_LENGTH,
+  QUESTION_MAX_LENGTH,
+  QUESTION_MIN_LENGTH,
+} from '@mysterytalk/shared';
 
 const GRAPHEMES = new Intl.Segmenter('ko', { granularity: 'grapheme' });
 
 /**
- * 질문 입력 정규화(SPEC §6-3): NFC, 제어문자 제거, 연속 공백 정리, 앞뒤 공백 제거.
- * 길이(2~100자, PRD D8)를 벗어나면 null.
+ * 입력 정규화(SPEC §6-3, §7-1): NFC, 제어문자 제거, 연속 공백 정리, 앞뒤 공백 제거.
+ * 사람이 보는 글자 단위(grapheme)로 길이를 세고 [min, max]를 벗어나면 null.
  */
-export function normalizeQuestion(raw: string): string | null {
+export function normalizeText(raw: string, min: number, max: number): string | null {
   const text = raw
     .normalize('NFC')
     // eslint-disable-next-line no-control-regex
     .replace(/[\u0000-\u001F\u007F]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-  // 사람이 보는 글자 단위로 센다(이모지·결합 문자도 1글자).
   const length = Array.from(GRAPHEMES.segment(text)).length;
-  if (length < QUESTION_MIN_LENGTH || length > QUESTION_MAX_LENGTH) return null;
+  if (length < min || length > max) return null;
   return text;
+}
+
+/** 질문 입력 정규화. 길이 2~100자(PRD D8) */
+export function normalizeQuestion(raw: string): string | null {
+  return normalizeText(raw, QUESTION_MIN_LENGTH, QUESTION_MAX_LENGTH);
+}
+
+/** 정답 입력 정규화. 길이 10~300자(PRD D79) */
+export function normalizeAnswer(raw: string): string | null {
+  return normalizeText(raw, ANSWER_MIN_LENGTH, ANSWER_MAX_LENGTH);
 }
 
 /**

@@ -7,7 +7,9 @@ import { CasesService } from './game/cases.service.js';
 import { GameController } from './game/game.controller.js';
 import { QuestionsService } from './game/questions.service.js';
 import { SessionsService } from './game/sessions.service.js';
+import { SubmissionsService } from './game/submissions.service.js';
 import { HealthController } from './health/health.controller.js';
+import { GradeModule } from './grade/grade.module.js';
 import { JudgeModule } from './judge/judge.module.js';
 import { PlayerController } from './player/player.controller.js';
 import { PlayerGuard } from './player/player.guard.js';
@@ -21,6 +23,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     ThrottlerModule.forRoot({ throttlers: [{ name: 'default', ttl: 60_000, limit: 120 }] }),
     PrismaModule,
     JudgeModule,
+    GradeModule,
   ],
   controllers: [HealthController, PlayerController, GameController],
   providers: [
@@ -29,6 +32,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     CasesService,
     SessionsService,
     QuestionsService,
+    SubmissionsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

@@ -98,5 +98,65 @@ export const caseContentSchema = z
     if (!c.elements.some((e) => e.required)) {
       ctx.addIssue({ code: 'custom', message: 'at least one required answer element' });
     }
+    for (const message of personNamingIssues(c)) ctx.addIssue({ code: 'custom', message });
   });
 export type CaseContent = z.infer<typeof caseContentSchema>;
+
+/** 인물 지칭 = 관련자 역할에서 괄호 앞부분(예: '사장(의뢰인)' → '사장') */
+export function designationOf(role: string): string {
+  return role.split('(')[0]!.trim();
+}
+
+const compact = (v: string) => v.replace(/\s/g, '');
+
+/**
+ * 인물 표기 규칙(사건 작성 규칙): 지칭 중심 + 이름 병기.
+ * 1) 인물마다 지칭이 겹치지 않는다.
+ * 2) AI가 읽는 사실·정답 요소 설명과 힌트에서 이름은 항상 '지칭 이름'으로 쓴다(예: '제빵사 강민호').
+ * 3) 정답 키워드 그룹에 성명이 있으면 이름만(성 제외)과 지칭도 함께 넣는다(예: 조카 / 문태성 / 태성).
+ * 도입 이야기·해설은 플레이어가 읽는 이야기라 자유롭게 쓴다.
+ */
+export function personNamingIssues(c: {
+  caseFile: { people: { name: string; role: string }[] };
+  facts: { id: string; text: string }[];
+  hints: { no: number; text: string }[];
+  elements: { id: string; description: string; keywordGroups: string[][] }[];
+}): string[] {
+  const issues: string[] = [];
+  const people = c.caseFile.people.map((p) => ({
+    name: p.name,
+    designation: designationOf(p.role),
+  }));
+  const designations = people.map((p) => p.designation);
+  const dup = designations.filter((d, i) => designations.indexOf(d) !== i);
+  if (dup.length) issues.push(`duplicate person designation: ${[...new Set(dup)].join(', ')}`);
+  const texts = [
+    ...c.facts.map((f) => [f.id, f.text] as const),
+    ...c.hints.map((h) => [`hint ${h.no}`, h.text] as const),
+    ...c.elements.map((e) => [e.id, e.description] as const),
+  ];
+  for (const { name, designation } of people) {
+    for (const [where, text] of texts) {
+      let from = 0;
+      for (let i = text.indexOf(name, from); i !== -1; i = text.indexOf(name, from)) {
+        if (!text.slice(0, i).endsWith(`${designation} `)) {
+          issues.push(`${where}: write "${designation} ${name}" instead of "${name}"`);
+          break;
+        }
+        from = i + name.length;
+      }
+    }
+    for (const e of c.elements) {
+      for (const group of e.keywordGroups) {
+        const keys = group.map(compact);
+        if (!keys.includes(compact(name))) continue;
+        for (const need of [name.slice(1), designation]) {
+          if (!keys.includes(compact(need))) {
+            issues.push(`${e.id}: keyword group with "${name}" must also include "${need}"`);
+          }
+        }
+      }
+    }
+  }
+  return issues;
+}

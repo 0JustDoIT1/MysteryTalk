@@ -21,6 +21,7 @@
     "typecheck": "npm run build:shared && npm run typecheck -w backend && npm run typecheck -w frontend",
     "test": "npm run build:shared && npm run test -w backend && npm run test -w frontend",
     "test:e2e": "npm run build:shared && npm run test:e2e -w backend",
+    "test:browser": "npm run build:shared && npm run test:browser -w frontend",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

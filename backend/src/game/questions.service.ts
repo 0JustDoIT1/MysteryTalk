@@ -11,15 +11,11 @@ import type { Env } from '../config/env.js';
 import type { Player } from '../generated/prisma/client.js';
 import { duplicateKey, normalizeQuestion } from '../judge/normalize.js';
 import { prefilterAbuse } from '../judge/prefilter.js';
-import {
-  JUDGE,
-  PROMPT_VERSION,
-  type Judge,
-  type JudgeCallMeta,
-  type JudgeResult,
-} from '../judge/judge.types.js';
+import { JUDGE, PROMPT_VERSION, type Judge, type JudgeResult } from '../judge/judge.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { recordAiCalls } from './ai-calls.js';
 import { loadFacts, questionCap } from './case-data.js';
+import { claimLease, leaseMsFor, releaseLease } from './session-lease.js';
 import { SessionsService } from './sessions.service.js';
 
 const uuid = z.uuid();
@@ -93,16 +89,12 @@ export class QuestionsService {
     if (session.questionsUsed >= cap) throw new AppException(409, 'QUESTION_CAP_REACHED');
 
     // 8. 처리 중 선점(원자적). 다른 요청이 처리 중이면 409.
-    const leaseMs = this.config.get('LLM_TIMEOUT_MS', { infer: true }) * 2 + 15_000;
-    const claimed = await this.prisma.playSession.updateMany({
-      where: {
-        id: session.id,
-        status: 'ACTIVE',
-        OR: [{ inFlightKey: null }, { inFlightUntil: { lt: new Date() } }],
-      },
-      data: { inFlightKey: idempotencyKey, inFlightUntil: new Date(Date.now() + leaseMs) },
-    });
-    if (claimed.count === 0) throw new AppException(409, 'SESSION_BUSY');
+    await claimLease(
+      this.prisma,
+      session.id,
+      idempotencyKey,
+      leaseMsFor(this.config.get('LLM_TIMEOUT_MS', { infer: true })),
+    );
 
     // 7. 사전 필터(욕설·조작 지시) → AI 없이 '다시 질문'. 9. 아니면 AI 판정(트랜잭션 밖)
     // 사건 내용이 수정됐으면 진행 중 세션에도 최신 버전을 적용하고, 판정 당시 버전을 기록한다(D59).
@@ -114,11 +106,11 @@ export class QuestionsService {
     } else {
       const facts = await loadFacts(this.prisma, session.case.id, caseVersion);
       const outcome = await this.judge.judge({ intro: session.case.intro, facts, question });
-      await this.recordCalls(session.id, outcome.calls);
+      await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls);
       if (!outcome.ok) {
         // 10. 실패: 선점 해제, 미차감, 기록 없음 → 같은 키로 재시도 가능(D6)
         this.logger.warn(`judge failed (${outcome.reason}) session=${session.id}`);
-        await this.release(session.id, idempotencyKey);
+        await releaseLease(this.prisma, session.id, idempotencyKey);
         throw new AppException(503, 'AI_UNAVAILABLE');
       }
       result = outcome.result;
@@ -127,9 +119,12 @@ export class QuestionsService {
 
     // 11. 확정(짧은 트랜잭션): 선점 소유 재확인 → 차감·순번 → 기록 → 선점 해제
     return this.prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<{ questions_used: number; in_flight_key: string | null }[]>`
-        SELECT questions_used, in_flight_key FROM play_session WHERE id = ${session.id}::uuid FOR UPDATE`;
+      const rows = await tx.$queryRaw<
+        { status: string; questions_used: number; in_flight_key: string | null }[]
+      >`SELECT status, questions_used, in_flight_key FROM play_session WHERE id = ${session.id}::uuid FOR UPDATE`;
       const row = rows[0];
+      // 판정 중에 포기 등으로 세션이 끝났으면 결과를 버린다.
+      if (row && row.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
       if (!row || row.in_flight_key !== idempotencyKey) {
         // 선점이 만료돼 다른 요청이 가져갔다면 이 결과는 버린다(이중 차감 방지).
         throw new AppException(409, 'SESSION_BUSY');
@@ -174,29 +169,6 @@ export class QuestionsService {
         },
       });
       return response;
-    });
-  }
-
-  private async release(sessionId: string, key: string): Promise<void> {
-    await this.prisma.playSession.updateMany({
-      where: { id: sessionId, inFlightKey: key },
-      data: { inFlightKey: null, inFlightUntil: null },
-    });
-  }
-
-  /** AI 호출 기록(SPEC §10). 로컬 Ollama는 비용 0원. 단가표는 7단계에서 추가. */
-  private async recordCalls(sessionId: string, calls: JudgeCallMeta[]): Promise<void> {
-    if (!calls.length) return;
-    await this.prisma.aiCall.createMany({
-      data: calls.map((c) => ({
-        purpose: 'JUDGE' as const,
-        sessionId,
-        model: c.model,
-        tokensIn: c.tokensIn,
-        tokensOut: c.tokensOut,
-        latencyMs: c.latencyMs,
-        ok: c.ok,
-      })),
     });
   }
 }
