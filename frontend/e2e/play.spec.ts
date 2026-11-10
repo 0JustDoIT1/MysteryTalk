@@ -130,7 +130,7 @@ async function walk(page: Page, key: string, n: number) {
   }
 }
 
-test('현장 조사: 걸어가 조사 → 단서 획득 → 새 장소 열림 → 수첩 단서 → 맵 이동 → 위치 복원', async ({
+test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → 맵 이동 → 단서로 새 장소 열림 → 위치 복원', async ({
   page,
 }) => {
   await openCase(page, '302호의 정전');
@@ -145,7 +145,6 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 새 장소 열림 �
   await page.keyboard.press('e');
   const dialog = page.getByRole('dialog', { name: '전등 스위치' });
   await expect(dialog.getByText(/단서를 찾았어요: 켜져 있는 전등 스위치/)).toBeVisible();
-  await expect(page.getByRole('status').getByText('새 장소가 열렸어요: 현관·복도')).toBeVisible();
   await dialog.getByRole('button', { name: '닫기' }).click();
 
   // 다시 조사하면 '이미 조사함'
@@ -163,13 +162,24 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 새 장소 열림 �
   await expect(page.getByText('가까이: 전등 스위치 — E·Enter로 조사')).toBeVisible();
   await input.fill('');
 
-  // 출입구 (6,8)로 걸어가 현관·복도로 이동
+  // 출입구 (6,8)로 걸어가 현관·복도(6,1)로 이동
   await map.click();
   await walk(page, 'ArrowLeft', 5);
   await walk(page, 'ArrowDown', 7);
   await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
 
+  // 두꺼비집 옆 (2,1)에서 조사 → 빌라 관리실이 열린다(단서 해금)
+  await walk(page, 'ArrowLeft', 4);
+  await expect(page.getByText('가까이: 두꺼비집 — E·Enter로 조사')).toBeVisible();
+  await page.keyboard.press('e');
+  await expect(
+    page.getByRole('dialog', { name: '두꺼비집' }).getByText(/내려진 차단기/),
+  ).toBeVisible();
+  await expect(page.getByRole('status').getByText('새 장소가 열렸어요: 빌라 관리실')).toBeVisible();
+  await page.keyboard.press('Escape');
+
   // 새로고침해도 서버에 저장된 위치에서 이어진다(D53)
   await page.reload();
   await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
+  await expect(page.getByText('가까이: 두꺼비집 — E·Enter로 조사')).toBeVisible();
 });
