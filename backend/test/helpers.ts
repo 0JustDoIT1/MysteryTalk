@@ -1,20 +1,23 @@
+import { resolve } from 'node:path';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import type { Response } from 'supertest';
 import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
+import { readCaseDirs, type LoadedCase } from '../src/content/content-files.js';
+import { syncCase } from '../src/content/content-sync.js';
+import { JUDGE, type Judge } from '../src/judge/judge.types.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
-export async function createTestApp(): Promise<{
+/** 테스트용 앱. judge 를 넘기면 실제 AI 대신 그 판정기를 쓴다. */
+export async function createTestApp(options: { judge?: Judge } = {}): Promise<{
   app: NestExpressApplication;
   prisma: PrismaService;
 }> {
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-  const app = moduleRef.createNestApplication<NestExpressApplication>({
-    bodyParser: false,
-  });
+  let builder = Test.createTestingModule({ imports: [AppModule] });
+  if (options.judge) builder = builder.overrideProvider(JUDGE).useValue(options.judge);
+  const moduleRef = await builder.compile();
+  const app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false });
   configureApp(app);
   await app.init();
   return { app, prisma: app.get(PrismaService) };
@@ -22,7 +25,23 @@ export async function createTestApp(): Promise<{
 
 /** 테스트마다 DB를 비운다. 테이블이 늘면 이 목록에 추가한다. */
 export async function resetDb(prisma: PrismaService): Promise<void> {
-  await prisma.$executeRawUnsafe('TRUNCATE TABLE player RESTART IDENTITY CASCADE');
+  await prisma.$executeRawUnsafe(
+    'TRUNCATE TABLE ai_call, question_log, play_session, case_version, mystery_case, player RESTART IDENTITY CASCADE',
+  );
+}
+
+/** 공개 저장소의 튜토리얼 사건 데이터(실제 파일) */
+export function tutorialCase(): LoadedCase {
+  const loaded = readCaseDirs([resolve(import.meta.dirname, '../../content/public')]);
+  const tutorial = loaded.find((c) => c.content.isTutorial);
+  if (!tutorial) throw new Error('tutorial case not found');
+  return tutorial;
+}
+
+export async function loadTutorial(prisma: PrismaService): Promise<LoadedCase> {
+  const tutorial = tutorialCase();
+  await syncCase(prisma, tutorial);
+  return tutorial;
 }
 
 /** 응답의 Set-Cookie 에서 특정 쿠키의 원본 헤더 문자열을 찾는다. */

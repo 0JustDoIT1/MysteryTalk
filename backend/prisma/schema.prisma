@@ -31,6 +31,163 @@ model Player {
   /// 게스트 → 로그인 기록 이전 후 대상 사용자(SPEC §3.2)
   mergedIntoId   String?    @map("merged_into") @db.Uuid
 
+  sessions PlaySession[]
+
   @@index([kind, lastActiveAt])
   @@map("player")
+}
+
+enum Difficulty {
+  EASY
+  NORMAL
+  HARD
+}
+
+enum Rating {
+  NORMAL
+  STRONG
+}
+
+enum SessionStatus {
+  ACTIVE
+  SOLVED
+  PARTIAL
+  FAILED
+  ABANDONED
+}
+
+enum QuestionLabel {
+  YES
+  NO
+  MAYBE
+  IRRELEVANT
+  RETRY
+}
+
+enum RetryReason {
+  COMPOUND
+  OPEN
+  ASKS_ANSWER
+  UNCLEAR
+  ABUSE
+}
+
+enum AiPurpose {
+  JUDGE
+  GRADE
+}
+
+/// 사건 메타데이터. 판정용 사실 목록·정답 요소·힌트는 case_version 에 버전별로 둔다(SPEC §4.2, PRD D59).
+/// 테이블명 case 는 SQL 예약어라 mystery_case 를 쓴다.
+model MysteryCase {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug           String     @unique
+  isTutorial     Boolean    @map("is_tutorial")
+  title          String
+  summary        String
+  intro          String
+  caseFile       Json       @map("case_file_json")
+  difficulty     Difficulty
+  baseQuestions  Int        @map("base_questions")
+  rating         Rating
+  tags           String[]
+  genres         String[]
+  /// 종료 후에만 공개한다
+  explanation    String
+  currentVersion Int        @map("current_version")
+  isPublished    Boolean    @map("is_published")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+
+  versions CaseVersion[]
+  sessions PlaySession[]
+
+  @@map("mystery_case")
+}
+
+/// 사건 버전별 비공개 데이터. 공개 API로 내보내지 않는다.
+model CaseVersion {
+  caseId      String   @map("case_id") @db.Uuid
+  version     Int
+  facts       Json     @map("facts_json")
+  elements    Json     @map("elements_json")
+  hints       Json     @map("hints_json")
+  contentHash String   @map("content_hash")
+  publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz
+
+  case MysteryCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+
+  @@id([caseId, version])
+  @@map("case_version")
+}
+
+/// 사건 1회 플레이. 사건당 진행 중(ACTIVE) 세션은 1개(PRD D54) → 마이그레이션의 부분 고유 인덱스로 강제한다.
+model PlaySession {
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  playerId      String        @map("player_id") @db.Uuid
+  caseId        String        @map("case_id") @db.Uuid
+  caseVersion   Int           @map("case_version")
+  playNo        Int           @map("play_no")
+  status        SessionStatus @default(ACTIVE)
+  questionsUsed Int           @default(0) @map("questions_used")
+  inFlightKey   String?       @map("in_flight_key") @db.Uuid
+  inFlightUntil DateTime?     @map("in_flight_until") @db.Timestamptz
+  startedAt     DateTime      @default(now()) @map("started_at") @db.Timestamptz
+  lastActiveAt  DateTime      @default(now()) @map("last_active_at") @db.Timestamptz
+  finishedAt    DateTime?     @map("finished_at") @db.Timestamptz
+
+  player    Player        @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  case      MysteryCase   @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  questions QuestionLog[]
+  aiCalls   AiCall[]
+
+  @@index([playerId, caseId])
+  @@map("play_session")
+}
+
+/// 질문·판정 기록. 같은 멱등성 키는 한 번만 저장된다.
+model QuestionLog {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId      String        @map("session_id") @db.Uuid
+  idempotencyKey String        @map("idempotency_key") @db.Uuid
+  question       String
+  /// 같은 문장 판정용(공백·문장부호 제거, D5)
+  normalized     String
+  label          QuestionLabel
+  retryReason    RetryReason?  @map("retry_reason")
+  factIds        Json          @default("[]") @map("fact_ids_json")
+  counted        Boolean
+  turnNo         Int?          @map("turn_no")
+  caseVersion    Int           @map("case_version")
+  model          String?
+  promptVersion  String?       @map("prompt_version")
+  /// 같은 키 재요청 시 그대로 돌려줄 응답
+  response       Json          @map("response_json")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  session PlaySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, idempotencyKey])
+  @@unique([sessionId, turnNo])
+  @@index([sessionId, normalized])
+  @@map("question_log")
+}
+
+/// AI 호출 기록(비용·지연 측정, 월 예산 관리용, SPEC §10). 질문 원문은 저장하지 않는다.
+model AiCall {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  purpose    AiPurpose
+  sessionId  String?   @map("session_id") @db.Uuid
+  model      String
+  tokensIn   Int?      @map("tokens_in")
+  tokensOut  Int?      @map("tokens_out")
+  estCostKrw Decimal   @default(0) @map("est_cost_krw") @db.Decimal(10, 4)
+  latencyMs  Int       @map("latency_ms")
+  ok         Boolean
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  session PlaySession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@map("ai_call")
 }
