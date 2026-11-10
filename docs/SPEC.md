@@ -155,7 +155,7 @@
 6. **한도 확인**: 게스트는 IP 일일 한도, 로그인은 계정 일일 한도. 튜토리얼은 IP 한도에서 제외하고 튜토리얼 상한만 적용 [D58, D83]. 월 질문 예산 소진 시 429 [D72]. (한도 수치는 [미정])
 7. **사전 필터**: 금칙어·조작 시도 패턴에 걸리면 AI 호출 없이 '다시 질문'(사유 ABUSE), 미차감 [D57].
 8. **처리 중 선점**: 세션 행에 `in_flight_key`를 원자적으로 설정(다른 요청 진행 중이면 409 `SESSION_BUSY`). 만료 시간은 AI 타임아웃 합보다 길게.
-9. **AI 판정**(트랜잭션 밖): 입력은 사실 목록 + 질문 1개(이전 기록·탐정 이름·메모 제외). 출력 형식 `{label: YES|NO|MAYBE|IRRELEVANT|RETRY, retryReason?: COMPOUND|OPEN|ASKS_ANSWER|UNCLEAR|ABUSE, factIds: string[]}`. 서버가 형식·허용 값·존재하는 factId인지 재검증. 타임아웃·형식 오류는 1회 재시도 후 실패.
+9. **AI 판정**(트랜잭션 밖): 입력은 사실 목록 + 질문 1개(이전 기록·탐정 이름·메모 제외). 출력 형식 `{retryReason: COMPOUND|OPEN|ASKS_ANSWER|UNCLEAR|ABUSE|NONE, claim: string, factIds: string[], label: YES|NO|MAYBE|IRRELEVANT|RETRY}`(이 순서로 생성: '다시 질문' 여부 → 질문의 명제 → 근거 → 라벨, judge-v2). `claim`은 판정 과정용이라 저장·응답하지 않는다. 서버가 형식·허용 값·존재하는 factId인지 재검증. 타임아웃·형식 오류는 1회 재시도 후 실패.
 10. **실패 시**: 선점 해제, 503 `AI_UNAVAILABLE`, 미차감, 기록 저장 안 함(같은 키로 재시도 가능) [D6].
 11. **확정**(짧은 트랜잭션): 선점이 아직 내 것인지 확인 → 차감 대상(YES/NO/MAYBE/IRRELEVANT)이면 questions_used + 1, turn_no 부여 [D68] → 기록 저장 → **사실 해금 검사**(label=YES이고 factIds에 구역의 해금 사실이 포함되고 질문이 해금 키워드 검사를 통과하면 구역 개방, [D26, D74]) → **힌트 해금 검사**(questions_used가 ⌈B/3⌉, ⌈2B/3⌉, B에 도달) → 선점 해제.
 12. **응답**: 판정 라벨(고정 문구 코드), 진행 수치, 새로 열린 힌트·구역 알림(사실 해금은 이유 없이) [D81].
