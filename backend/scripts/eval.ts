@@ -10,6 +10,7 @@ import {
   type EvalRun,
   type QuestionReport,
 } from '../src/eval/metrics.js';
+import { interleavedOrder } from '../src/eval/schedule.js';
 import { normalizeQuestion } from '../src/judge/normalize.js';
 import { OllamaJudge } from '../src/judge/ollama.judge.js';
 import { prefilterAbuse } from '../src/judge/prefilter.js';
@@ -27,6 +28,7 @@ const { values } = parseArgs({
     model: { type: 'string' },
     'base-url': { type: 'string' },
     'timeout-ms': { type: 'string', default: '30000' },
+    seed: { type: 'string', default: '1' },
   },
 });
 
@@ -100,9 +102,13 @@ const reports: QuestionReport[] = [];
 const invalidSamples: string[] = [];
 // 모델 적재 시간이 첫 측정에 섞이지 않도록 한 번 미리 호출한다.
 await runOnce('예열 질문입니다');
-for (const q of evalSet.questions) {
-  const runs: EvalRun[] = [];
-  for (let i = 0; i < repeat; i += 1) runs.push(await runOnce(q.q));
+// 같은 질문을 연달아 묻지 않고 회차마다 섞어 한 바퀴씩 돈다(실행마다 달라지는 판정까지 잡기 위해).
+const runsByQuestion = evalSet.questions.map((): EvalRun[] => []);
+for (const i of interleavedOrder(evalSet.questions.length, repeat, Number(values.seed))) {
+  runsByQuestion[i]!.push(await runOnce(evalSet.questions[i]!.q));
+}
+for (const [qi, q] of evalSet.questions.entries()) {
+  const runs = runsByQuestion[qi]!;
   const r = reportQuestion(q, runs);
   reports.push(r);
   const labels = runs.map((x) => x.label ?? 'FAIL').join('/');
@@ -116,7 +122,7 @@ const pct = (x: number | null) => (x === null ? '-' : `${(x * 100).toFixed(1)}%`
 const lines = [
   `# AI 판정 평가: ${evalSet.caseSlug}`,
   '',
-  `- 모델: ${model} / 프롬프트: ${PROMPT_VERSION} / 반복: ${repeat}회 / 질문: ${summary.questions}개 / 일시: ${new Date().toISOString()}`,
+  `- 모델: ${model} / 프롬프트: ${PROMPT_VERSION} / 반복: ${repeat}회(섞어서, 시드 ${values.seed}) / 질문: ${summary.questions}개 / 일시: ${new Date().toISOString()}`,
   '',
   '| 지표 | 값 |',
   '|---|---|',

@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 import { readCaseDirs } from '../src/content/content-files.js';
 import { evalSetSchema } from '../src/eval/eval-set.js';
 import { percentile } from '../src/eval/metrics.js';
+import { interleavedOrder } from '../src/eval/schedule.js';
 import { decide, type AiVerdict } from '../src/grade/decide.js';
 import { GRADE_PROMPT_VERSION } from '../src/grade/grader.types.js';
 import { OllamaGrader } from '../src/grade/ollama.grader.js';
@@ -24,6 +25,7 @@ const { values } = parseArgs({
     'timeout-ms': { type: 'string', default: '60000' },
     /** 재작성 요청을 다 쓴 뒤의 마지막 판정(MATCH/NO_MATCH만)으로 평가 */
     final: { type: 'boolean', default: false },
+    seed: { type: 'string', default: '1' },
   },
 });
 
@@ -103,9 +105,13 @@ const rows: {
   runs: Run[];
   correct: boolean;
 }[] = [];
-for (const a of evalSet.answers) {
-  const runs: Run[] = [];
-  for (let i = 0; i < repeat; i += 1) runs.push(await runOnce(a.answer));
+// 같은 답안을 연달아 채점하지 않고 회차마다 섞어 한 바퀴씩 돈다.
+const runsByAnswer = evalSet.answers.map((): Run[] => []);
+for (const i of interleavedOrder(evalSet.answers.length, repeat, Number(values.seed))) {
+  runsByAnswer[i]!.push(await runOnce(evalSet.answers[i]!.answer));
+}
+for (const [ai, a] of evalSet.answers.entries()) {
+  const runs = runsByAnswer[ai]!;
   const top = majority(runs.map((r) => r.result));
   const expected = values.final ? (a.expectedFinal ?? a.expected) : a.expected;
   if (values.final && expected === 'NEEDS_DETAIL')
