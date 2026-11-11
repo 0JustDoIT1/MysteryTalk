@@ -13,7 +13,17 @@ describe('validateEnv', () => {
       OLLAMA_BASE_URL: 'http://localhost:11434',
       OLLAMA_MODEL: 'gemma3:12b',
       LLM_TIMEOUT_MS: 12000,
+      NODE_ENV: 'development',
+      AUTH_PROVIDER: 'google',
+      PUBLIC_BASE_URL: 'http://localhost:3000',
     });
+  });
+
+  it('가짜 로그인은 운영(NODE_ENV=production)에서 쓸 수 없다', () => {
+    expect(validateEnv({ DATABASE_URL: url, AUTH_PROVIDER: 'fake' }).AUTH_PROVIDER).toBe('fake');
+    expect(() =>
+      validateEnv({ DATABASE_URL: url, AUTH_PROVIDER: 'fake', NODE_ENV: 'production' }),
+    ).toThrow(/AUTH_PROVIDER=fake is not allowed in production/);
   });
 
   it('판정 AI 설정을 검증한다', () => {

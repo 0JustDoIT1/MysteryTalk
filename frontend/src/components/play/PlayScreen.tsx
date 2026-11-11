@@ -28,7 +28,7 @@ export function PlayScreen() {
     return (
       <p role="alert" className="text-red-300">
         {(session.error ?? detail.error)?.message}{' '}
-        <Link href="/" className="underline">
+        <Link href="/cases" className="underline">
           {t.common.back}
         </Link>
       </p>

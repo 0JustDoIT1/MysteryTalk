@@ -1,8 +1,16 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { validateEnv } from './config/env.js';
+import { AuthController } from './auth/auth.controller.js';
+import {
+  AUTH_PROVIDER,
+  FakeAuthProvider,
+  GoogleAuthProvider,
+  type AuthProvider,
+} from './auth/auth-provider.js';
+import { AuthService } from './auth/auth.service.js';
+import { validateEnv, type Env } from './config/env.js';
 import { CasesService } from './game/cases.service.js';
 import { ExploreService } from './game/explore.service.js';
 import { GameController } from './game/game.controller.js';
@@ -26,10 +34,26 @@ import { PrismaModule } from './prisma/prisma.module.js';
     JudgeModule,
     GradeModule,
   ],
-  controllers: [HealthController, PlayerController, GameController],
+  controllers: [HealthController, PlayerController, GameController, AuthController],
   providers: [
     PlayerService,
     PlayerGuard,
+    AuthService,
+    {
+      // 로그인 제공자: 구글(실제) 또는 가짜(개발·테스트, 운영 금지 — 환경 변수 검증)
+      provide: AUTH_PROVIDER,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService<Env, true>): AuthProvider => {
+        const publicBaseUrl = config.get('PUBLIC_BASE_URL', { infer: true });
+        return config.get('AUTH_PROVIDER', { infer: true }) === 'fake'
+          ? new FakeAuthProvider(publicBaseUrl)
+          : new GoogleAuthProvider({
+              clientId: config.get('GOOGLE_CLIENT_ID', { infer: true }),
+              clientSecret: config.get('GOOGLE_CLIENT_SECRET', { infer: true }),
+              publicBaseUrl,
+            });
+      },
+    },
     CasesService,
     SessionsService,
     QuestionsService,

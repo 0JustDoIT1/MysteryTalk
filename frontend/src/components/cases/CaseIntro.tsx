@@ -20,7 +20,7 @@ export function CaseIntro() {
     return (
       <p role="alert" className="text-red-300">
         {detail.error.message}{' '}
-        <Link href="/" className="underline">
+        <Link href="/cases" className="underline">
           {t.common.back}
         </Link>
       </p>
@@ -29,7 +29,7 @@ export function CaseIntro() {
 
   return (
     <article className="flex flex-col gap-6">
-      <Link href="/" className="text-sm text-stone-400 hover:text-stone-200">
+      <Link href="/cases" className="text-sm text-stone-400 hover:text-stone-200">
         ← {t.common.back}
       </Link>
       <header className="flex flex-col gap-2">

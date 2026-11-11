@@ -31,8 +31,9 @@ model Player {
   /// 게스트 → 로그인 기록 이전 후 대상 사용자(SPEC §3.2)
   mergedIntoId   String?    @map("merged_into") @db.Uuid
 
-  sessions PlaySession[]
-  records  CaseRecord[]
+  sessions     PlaySession[]
+  records      CaseRecord[]
+  authSessions AuthSession[]
 
   @@index([kind, lastActiveAt])
   @@map("player")
@@ -316,4 +317,20 @@ model SessionZone {
 
   @@id([sessionId, mapKey])
   @@map("session_zone")
+}
+
+/// 로그인 세션(SPEC §3.1). 쿠키 mt_session 의 토큰 원문은 저장하지 않고 해시만 저장한다. 30일, 쓰면 연장.
+model AuthSession {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  playerId   String   @map("player_id") @db.Uuid
+  tokenHash  String   @unique @map("token_hash")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lastUsedAt DateTime @default(now()) @map("last_used_at") @db.Timestamptz
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId])
+  @@index([expiresAt])
+  @@map("auth_session")
 }

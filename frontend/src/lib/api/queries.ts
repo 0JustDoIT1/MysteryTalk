@@ -6,6 +6,7 @@ import {
   caseSummarySchema,
   createSessionResponseSchema,
   endingSchema,
+  meResponseSchema,
   exploreStateSchema,
   inspectResponseSchema,
   moveResponseSchema,
@@ -26,6 +27,7 @@ import { apiOrThrow } from './client';
  * 질문·제출은 자동 재시도를 끄고, 사용자가 다시 누를 때 같은 멱등성 키로 보낸다.
  */
 export const keys = {
+  me: ['me'] as const,
   cases: ['cases'] as const,
   caseDetail: (slug: string) => ['cases', slug] as const,
   session: (id: string) => ['sessions', id] as const,
@@ -186,5 +188,27 @@ export function useInspect(id: string) {
     mutationFn: (v: Position & { target: string }) =>
       apiOrThrow(`/sessions/${id}/inspect`, inspectResponseSchema, { method: 'POST', body: v }),
     onSuccess: refresh,
+  });
+}
+
+export function useMe() {
+  return useQuery({ queryKey: keys.me, queryFn: () => apiOrThrow('/me', meResponseSchema) });
+}
+
+/** 로그아웃 후에는 모든 서버 상태를 비운다(이 브라우저는 빈 새 게스트가 된다). */
+export function useLogout() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiOrThrow('/auth/logout', z.null(), { method: 'POST' }),
+    onSuccess: () => qc.clear(),
+  });
+}
+
+/** 로그인 사용자의 18세 확인 기록(PRD D33) */
+export function useConfirmAge() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiOrThrow('/me/age-confirmation', z.null(), { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.me }),
   });
 }

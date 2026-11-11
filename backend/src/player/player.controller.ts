@@ -1,5 +1,8 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, HttpCode, Inject, Post, UseGuards } from '@nestjs/common';
 import type { MeResponse } from '@mysterytalk/shared';
+import { AUTH_PROVIDER, type AuthProvider } from '../auth/auth-provider.js';
+import { AuthService } from '../auth/auth.service.js';
+import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { CurrentPlayer } from './current-player.decorator.js';
 import { PlayerGuard } from './player.guard.js';
@@ -8,11 +11,23 @@ import { PlayerService } from './player.service.js';
 @Controller('me')
 @UseGuards(PlayerGuard)
 export class PlayerController {
-  constructor(private readonly players: PlayerService) {}
+  constructor(
+    private readonly players: PlayerService,
+    private readonly auth: AuthService,
+    @Inject(AUTH_PROVIDER) private readonly provider: AuthProvider,
+  ) {}
 
   /** 현재 플레이어 정보. 쿠키가 없으면 새 게스트가 발급된다. */
   @Get()
   me(@CurrentPlayer() player: Player): MeResponse {
-    return this.players.toMe(player);
+    return { ...this.players.toMe(player), loginAvailable: this.provider.available };
+  }
+
+  /** 로그인 사용자의 18세 확인 기록(PRD D33). 기기에서 확인한 사용자가 로그인 직후 호출한다. */
+  @Post('age-confirmation')
+  @HttpCode(204)
+  async confirmAge(@CurrentPlayer() player: Player): Promise<void> {
+    if (player.kind !== 'USER') throw new AppException(401, 'UNAUTHORIZED');
+    await this.auth.confirmAge(player, new Date());
   }
 }

@@ -23,7 +23,7 @@ export function EndingView() {
     return (
       <p role="alert" className="text-red-300">
         {(session.error ?? ending.error)?.message}{' '}
-        <Link href="/" className="underline">
+        <Link href="/cases" className="underline">
           {t.common.back}
         </Link>
       </p>
@@ -188,7 +188,7 @@ export function EndingView() {
         >
           {t.ending.playAgain}
         </button>
-        <Link href="/" className="rounded px-4 py-2 text-stone-300 hover:bg-stone-800">
+        <Link href="/cases" className="rounded px-4 py-2 text-stone-300 hover:bg-stone-800">
           {t.common.back}
         </Link>
       </div>

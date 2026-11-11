@@ -6,18 +6,27 @@ import { AppModule } from '../src/app.module.js';
 import { configureApp } from '../src/app.setup.js';
 import { readCaseDirs, type LoadedCase } from '../src/content/content-files.js';
 import { syncCase } from '../src/content/content-sync.js';
+import { AUTH_PROVIDER, FakeAuthProvider, type AuthProvider } from '../src/auth/auth-provider.js';
 import { GRADER, type Grader } from '../src/grade/grader.types.js';
 import { JUDGE, type Judge } from '../src/judge/judge.types.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
 
+export const TEST_PUBLIC_BASE_URL = 'http://localhost:3000';
+
 /** 테스트용 앱. judge·grader 를 넘기면 실제 AI 대신 그 판정기·채점기를 쓴다. */
-export async function createTestApp(options: { judge?: Judge; grader?: Grader } = {}): Promise<{
+export async function createTestApp(
+  options: { judge?: Judge; grader?: Grader; authProvider?: AuthProvider } = {},
+): Promise<{
   app: NestExpressApplication;
   prisma: PrismaService;
 }> {
   let builder = Test.createTestingModule({ imports: [AppModule] });
   if (options.judge) builder = builder.overrideProvider(JUDGE).useValue(options.judge);
   if (options.grader) builder = builder.overrideProvider(GRADER).useValue(options.grader);
+  // 로그인은 기본으로 가짜 제공자(실제 구글에 접속하지 않음)
+  builder = builder
+    .overrideProvider(AUTH_PROVIDER)
+    .useValue(options.authProvider ?? new FakeAuthProvider(TEST_PUBLIC_BASE_URL));
   const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication<NestExpressApplication>({ bodyParser: false });
   configureApp(app);

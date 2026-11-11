@@ -38,7 +38,7 @@ export class PlayerService {
     return { player, token };
   }
 
-  toMe(player: Player): MeResponse {
+  toMe(player: Player): Omit<MeResponse, 'loginAvailable'> {
     return {
       kind: player.kind,
       detectiveName: player.detectiveName,

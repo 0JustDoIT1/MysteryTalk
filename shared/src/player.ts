@@ -11,5 +11,7 @@ export const meResponseSchema = z.object({
   kind: playerKindSchema,
   detectiveName: z.string(),
   ageConfirmed: z.boolean(),
+  /** 로그인을 쓸 수 있는지(구글 설정이 없으면 false) */
+  loginAvailable: z.boolean(),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;

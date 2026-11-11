@@ -7,14 +7,19 @@ const json = (status: number, body: unknown) =>
 
 describe('apiGet', () => {
   it('성공 응답을 스키마로 검증해 돌려준다', async () => {
-    const f = vi
-      .fn()
-      .mockResolvedValue(json(200, { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false }));
+    const f = vi.fn().mockResolvedValue(
+      json(200, {
+        kind: 'GUEST',
+        detectiveName: '탐정',
+        ageConfirmed: false,
+        loginAvailable: true,
+      }),
+    );
     const r = await apiGet('/me', meResponseSchema, f);
     expect(r).toEqual({
       ok: true,
       status: 200,
-      data: { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false },
+      data: { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false, loginAvailable: true },
     });
     expect(f).toHaveBeenCalledWith('/api/me', {
       method: 'GET',
@@ -62,9 +67,14 @@ describe('apiGet', () => {
 
 describe('apiRequest (상태 변경 요청)', () => {
   it('본문은 JSON으로, 멱등성 키는 헤더로 보낸다', async () => {
-    const f = vi
-      .fn()
-      .mockResolvedValue(json(200, { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false }));
+    const f = vi.fn().mockResolvedValue(
+      json(200, {
+        kind: 'GUEST',
+        detectiveName: '탐정',
+        ageConfirmed: false,
+        loginAvailable: true,
+      }),
+    );
     await apiRequest(
       '/sessions/s/questions',
       meResponseSchema,

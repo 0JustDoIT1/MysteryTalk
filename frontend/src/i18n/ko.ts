@@ -4,6 +4,45 @@
  */
 export const ko = {
   app: { title: 'MysteryTalk', tagline: '질문으로 진실을 찾는 추리 게임' },
+  age: {
+    title: '만 18세 이상인가요?',
+    body: '이 게임에는 살인 등 범죄를 다루는 이야기와 긴장감 있는 묘사가 나와요. 만 18세 이상만 이용할 수 있어요.',
+    yes: '네, 18세 이상이에요',
+    no: '아니요',
+    terms: '이용약관',
+    privacy: '개인정보처리방침',
+    blockedTitle: '이용할 수 없어요',
+    blockedBody: 'MysteryTalk은 만 18세 이상만 이용할 수 있어요.',
+  },
+  account: {
+    guest: '게스트로 플레이 중이에요. 로그인하면 기록을 다른 기기에서도 이어서 할 수 있어요.',
+    signedIn: '로그인했어요. 기록이 계정에 저장돼요.',
+    login: '구글로 로그인',
+    logout: '로그아웃',
+    loginOk: '로그인했어요. 이 브라우저의 기록을 계정으로 옮겼어요.',
+    loginFailed: '로그인하지 못했어요. 다시 시도해 주세요.',
+    loginUnavailable: '지금은 로그인을 쓸 수 없어요.',
+    loggedOut: '로그아웃했어요.',
+  },
+  menu: {
+    label: '메인 메뉴',
+    home: '메인으로',
+    newStory: '새 스토리',
+    continue: '이어서',
+    inProgress: (n: number) => `진행 중 ${n}`,
+    notices: '공지',
+    settings: '설정',
+    soon: '준비 중',
+  },
+  continue: {
+    empty: '진행 중인 사건이 없어요.',
+    resume: '이어서 수사',
+  },
+  legal: {
+    terms: '이용약관',
+    privacy: '개인정보처리방침',
+    pending: '출시 전 법률 검토를 거쳐 작성할 예정이에요.',
+  },
   common: {
     loading: '불러오는 중…',
     retry: '다시 시도',

@@ -33,6 +33,7 @@ describe('1단계 기반 (e2e)', () => {
         kind: 'GUEST',
         detectiveName: '탐정',
         ageConfirmed: false,
+        loginAvailable: true,
       });
       const setCookie = findSetCookie(res, 'mt_guest')!;
       expect(setCookie).toMatch(/HttpOnly/i);

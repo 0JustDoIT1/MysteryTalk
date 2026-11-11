@@ -41,7 +41,9 @@ export function CaseList() {
               key={g}
               type="button"
               aria-pressed={genre === g}
-              onClick={() => router.replace(g === 'ALL' ? '/' : `/?genre=${g}`, { scroll: false })}
+              onClick={() =>
+                router.replace(g === 'ALL' ? '/cases' : `/cases?genre=${g}`, { scroll: false })
+              }
               className={`rounded px-3 py-1 text-sm ${genre === g ? 'bg-amber-300 text-stone-900' : 'bg-stone-800 text-stone-300 hover:bg-stone-700'}`}
             >
               {t.genre[g]}

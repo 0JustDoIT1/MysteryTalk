@@ -1,5 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 
+/** 18세 확인을 이미 한 기기로 시작한다(확인 팝업 자체는 별도 테스트). */
+const AGE_CONFIRMED = JSON.stringify({
+  state: { age: 'yes', ageAt: '2026-11-11T00:00:00.000Z' },
+  version: 0,
+});
+
+test.beforeEach(async ({ page }, info) => {
+  if (info.title.startsWith('18세 확인')) return;
+  await page.addInitScript((v) => window.localStorage.setItem('mt-device', v), AGE_CONFIRMED);
+});
+
 /**
  * 시작부터 엔딩까지(PRD §14 E2·E3·E4·E7 해당 부분, 텍스트·PC).
  * Mock AI: 질문 판정은 항상 '관계없음'(차감), 채점은 정답 요소 키워드 기준.
@@ -15,7 +26,7 @@ async function ask(page: Page, question: string, expectedUsed: number) {
 }
 
 async function openCase(page: Page, title: string) {
-  await page.goto('/');
+  await page.goto('/cases');
   await expect(page.getByRole('heading', { name: '사건 선택' })).toBeVisible();
   await page.getByRole('link', { name: new RegExp(title) }).click();
   await page.getByRole('button', { name: '수사 시작' }).click();
@@ -182,4 +193,54 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await page.reload();
   await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
   await expect(page.getByText('가까이: 두꺼비집 — E·Enter로 조사')).toBeVisible();
+});
+
+test('18세 확인: 처음 방문하면 묻고, 예를 고르면 다시 묻지 않는다', async ({ page }) => {
+  await page.goto('/');
+  const gate = page.getByRole('dialog', { name: '만 18세 이상인가요?' });
+  await expect(gate).toBeVisible();
+  await expect(gate.getByRole('link', { name: '이용약관' })).toHaveAttribute('target', '_blank');
+  await gate.getByRole('button', { name: '네, 18세 이상이에요' }).click();
+  await expect(gate).toBeHidden();
+  await page.reload();
+  await expect(page.getByRole('navigation', { name: '메인 메뉴' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toBeHidden();
+});
+
+test('18세 확인: 아니요를 고르면 이용할 수 없고, 다시 와도 차단된다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '아니요' }).click();
+  await expect(page.getByRole('heading', { name: '이용할 수 없어요' })).toBeVisible();
+  await page.goto('/cases');
+  await expect(page.getByRole('heading', { name: '이용할 수 없어요' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '사건 선택' })).toHaveCount(0);
+});
+
+test('로그인: 게스트로 시작한 사건을 로그인 후 이어서에서 열고, 로그아웃하면 빈 게스트가 된다', async ({
+  page,
+}) => {
+  await openCase(page, '302호의 정전');
+  await ask(page, '로그인 전에 한 질문인가요?', 1);
+
+  await page.goto('/');
+  await expect(page.getByText(/게스트로 플레이 중이에요/)).toBeVisible();
+  await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveAttribute(
+    'href',
+    '/api/auth/google',
+  );
+  // 실행마다 다른 가짜 사용자로 로그인(가짜 제공자는 fakeSub 로 사용자를 고른다)
+  await page.goto(`/api/auth/google?fakeSub=e2e-${Date.now()}`);
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole('status').getByText(/로그인했어요/)).toBeVisible();
+  await expect(page.getByText('로그인했어요. 기록이 계정에 저장돼요.')).toBeVisible();
+
+  await page.getByRole('link', { name: /이어서/ }).click();
+  await page.getByRole('link', { name: /302호의 정전/ }).click();
+  await expect(page.getByText(/질문 1 \/ 기준 20/)).toBeVisible();
+
+  await page.goto('/');
+  await page.getByRole('button', { name: '로그아웃' }).click();
+  await expect(page.getByText(/게스트로 플레이 중이에요/)).toBeVisible();
+  await page.goto('/continue');
+  await expect(page.getByText('진행 중인 사건이 없어요.')).toBeVisible();
 });
