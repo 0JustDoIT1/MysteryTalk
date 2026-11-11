@@ -46,7 +46,17 @@ jobs:
       - run: npm run test:e2e
       - run: npm run build -w frontend
       # 브라우저 E2E(Playwright, AI는 Mock). 실패 시 추적 파일을 올린다.
-      - run: npx playwright install --with-deps chromium
+      # 브라우저 다운로드는 일시 오류에 대비해 최대 3번 시도한다.
+      - run: |
+          for i in 1 2 3; do
+            npx playwright install chromium && exit 0
+            echo "playwright install failed (attempt $i), retrying..."
+            sleep 10
+          done
+          exit 1
+      # 시스템 패키지(apt) 설치는 외부 저장소 오류로 실패할 수 있다. 실행 환경에 대부분 이미 있으므로 실패해도 계속한다.
+      - run: npx playwright install-deps chromium
+        continue-on-error: true
       - run: npm run test:browser
       - uses: actions/upload-artifact@v4
         if: failure()
