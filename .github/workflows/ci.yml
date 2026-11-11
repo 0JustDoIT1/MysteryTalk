@@ -6,7 +6,8 @@ on:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    # ubuntu-latest 는 Ubuntu 26 으로 전환 중이라 Playwright 시스템 의존성 설치가 깨질 수 있어 고정한다.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:17-alpine
@@ -36,6 +37,8 @@ jobs:
       - run: npm install -g npm@12.2.2
       - run: npm ci
       - run: npm run build:shared
+      # 타입 기반 린트가 Prisma 생성 타입을 볼 수 있게 먼저 생성한다.
+      - run: npm run prisma:generate -w backend
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
