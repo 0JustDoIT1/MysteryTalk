@@ -1,6 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { DEFAULT_DETECTIVE_NAME, type MeResponse } from '@mysterytalk/shared';
+import {
+  DEFAULT_DETECTIVE_NAME,
+  DETECTIVE_NAME_MAX,
+  DETECTIVE_NAME_MIN,
+  type MeResponse,
+} from '@mysterytalk/shared';
 import type { Player } from '../generated/prisma/client.js';
+import { AppException } from '../common/app-exception.js';
+import { containsProfanity } from '../judge/prefilter.js';
+import { normalizeText } from '../judge/normalize.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { GUEST_TTL_MS, generateGuestToken, hashGuestToken } from './guest-token.js';
 
@@ -36,6 +44,15 @@ export class PlayerService {
       },
     });
     return { player, token };
+  }
+
+  /**
+   * 탐정 이름 변경(PRD D40): 정규화 후 1~12자, 욕설 금지. 화면 고정 문구에만 쓰고 AI에는 전달하지 않는다.
+   */
+  async rename(player: Player, raw: string): Promise<Player> {
+    const name = normalizeText(raw, DETECTIVE_NAME_MIN, DETECTIVE_NAME_MAX);
+    if (name === null || containsProfanity(name)) throw new AppException(422, 'NAME_NOT_ALLOWED');
+    return this.prisma.player.update({ where: { id: player.id }, data: { detectiveName: name } });
   }
 
   toMe(player: Player): Omit<MeResponse, 'loginAvailable'> {

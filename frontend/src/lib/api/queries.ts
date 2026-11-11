@@ -212,3 +212,13 @@ export function useConfirmAge() {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.me }),
   });
 }
+
+/** 탐정 이름 변경(PRD D40) */
+export function useRename() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (detectiveName: string) =>
+      apiOrThrow('/me', meResponseSchema, { method: 'PATCH', body: { detectiveName } }),
+    onSuccess: (me) => qc.setQueryData(keys.me, me),
+  });
+}

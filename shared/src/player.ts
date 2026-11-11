@@ -15,3 +15,11 @@ export const meResponseSchema = z.object({
   loginAvailable: z.boolean(),
 });
 export type MeResponse = z.infer<typeof meResponseSchema>;
+
+/** 탐정 이름 길이(PRD D40) */
+export const DETECTIVE_NAME_MIN = 1;
+export const DETECTIVE_NAME_MAX = 12;
+
+/** PATCH /me: 탐정 이름 변경. 이름은 화면 고정 문구에만 쓰고 AI에 전달하지 않는다(D40). */
+export const updateMeRequestSchema = z.object({ detectiveName: z.string().max(100) });
+export type UpdateMeRequest = z.infer<typeof updateMeRequestSchema>;

@@ -12,6 +12,8 @@ import { useAskQuestion } from '@/lib/api/queries';
 import { keyFor, type PendingRequest } from '@/lib/play/idempotency';
 import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
+import { useSfx } from '@/lib/audio/use-sfx';
+import { MicButton } from './MicButton';
 import { VerdictBadge } from './VerdictBadge';
 
 type Shown = { question: string; response: AskQuestionResponse };
@@ -28,6 +30,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
   const [shown, setShown] = useState<Shown | null>(null);
   const ask = useAskQuestion(session.sessionId);
   const pushToast = useToastStore((s) => s.push);
+  const play = useSfx();
   const capReached = session.questionsUsed >= session.questionCap;
   const disabled = ask.isPending || capReached || session.status !== 'ACTIVE';
 
@@ -42,6 +45,8 @@ export function QuestionPanel({ session }: { session: SessionState }) {
         onSuccess: (response) => {
           setPending(null);
           setShown({ question, response });
+          play(response.label);
+          if (response.unlockedMaps.length) play('unlock');
           setText('');
           if (response.unlockedMaps.length) pushToast(t.explore.unlocked(response.unlockedMaps));
           if (response.counted) {
@@ -121,6 +126,10 @@ export function QuestionPanel({ session }: { session: SessionState }) {
               placeholder={t.play.questionPlaceholder}
               autoComplete="off"
               className="flex-1 rounded border border-stone-600 bg-stone-950 px-3 py-2 text-stone-100 disabled:opacity-60"
+            />
+            <MicButton
+              disabled={disabled}
+              onText={(spoken) => setText(spoken.slice(0, QUESTION_MAX_LENGTH))}
             />
             <button
               type="submit"

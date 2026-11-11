@@ -8,7 +8,10 @@ const AGE_CONFIRMED = JSON.stringify({
 
 test.beforeEach(async ({ page }, info) => {
   if (info.title.startsWith('18세 확인')) return;
-  await page.addInitScript((v) => window.localStorage.setItem('mt-device', v), AGE_CONFIRMED);
+  // 페이지를 열 때마다 실행되므로, 이미 저장된 기기 설정(볼륨 등)은 덮어쓰지 않는다.
+  await page.addInitScript((v) => {
+    if (!window.localStorage.getItem('mt-device')) window.localStorage.setItem('mt-device', v);
+  }, AGE_CONFIRMED);
 });
 
 /**
@@ -243,4 +246,89 @@ test('로그인: 게스트로 시작한 사건을 로그인 후 이어서에서 
   await expect(page.getByText(/게스트로 플레이 중이에요/)).toBeVisible();
   await page.goto('/continue');
   await expect(page.getByText('진행 중인 사건이 없어요.')).toBeVisible();
+});
+
+test('설정: 탐정 이름을 바꾸면 추리 화면에 보이고, 볼륨은 새로고침 뒤에도 유지된다', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: '설정' }).click();
+  const name = page.getByLabel('탐정 이름 입력');
+  await name.fill('명탐정 홈즈');
+  await page.getByRole('button', { name: '저장' }).click();
+  await expect(page.getByText('저장했어요.')).toBeVisible();
+
+  const sfx = page.getByRole('slider', { name: '효과음' });
+  await sfx.fill('30');
+  await page.reload();
+  await expect(page.getByRole('slider', { name: '효과음' })).toHaveValue('30');
+  await expect(page.getByLabel('탐정 이름 입력')).toHaveValue('명탐정 홈즈');
+
+  await openCase(page, '302호의 정전');
+  await expect(page.getByText('탐정 명탐정 홈즈의 수사')).toBeVisible();
+});
+
+test('마이크: 인식한 문장은 입력창에만 넣고 자동으로 보내지 않는다', async ({ page }) => {
+  // 음성 인식을 흉내 낸다(실제 마이크·브라우저 제조사 서버를 쓰지 않음)
+  await page.addInitScript(() => {
+    class FakeRecognition {
+      lang = '';
+      interimResults = false;
+      maxAlternatives = 1;
+      onresult: ((e: unknown) => void) | null = null;
+      onerror: ((e: unknown) => void) | null = null;
+      onend: (() => void) | null = null;
+      start() {
+        setTimeout(() => {
+          this.onresult?.({ results: [[{ transcript: '정전이 있었나요' }]] });
+          this.onend?.();
+        }, 50);
+      }
+      stop() {
+        this.onend?.();
+      }
+      abort() {}
+    }
+    // 최신 크롬은 접두사 없는 SpeechRecognition 도 있으므로 둘 다 바꾼다.
+    const w = window as unknown as Record<string, unknown>;
+    w.SpeechRecognition = FakeRecognition;
+    w.webkitSpeechRecognition = FakeRecognition;
+  });
+  await openCase(page, '302호의 정전');
+  await page.getByRole('button', { name: '마이크로 질문하기' }).click();
+  const notice = page.getByRole('dialog', { name: '음성 입력 안내' });
+  await expect(notice.getByText(/MysteryTalk 서버로 보내지 않아요/)).toBeVisible();
+  await notice.getByRole('button', { name: '알겠어요' }).click();
+  await expect(page.getByLabel('예/아니오로 답할 수 있는 질문')).toHaveValue('정전이 있었나요');
+  await expect(page.getByText(/질문 0 \/ 기준 20/)).toBeVisible();
+});
+
+test('마이크: 음성 인식을 지원하지 않는 브라우저에서는 버튼을 숨긴다', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as Record<string, unknown>;
+    delete w.webkitSpeechRecognition;
+    delete w.SpeechRecognition;
+  });
+  await openCase(page, '302호의 정전');
+  await expect(page.getByLabel('예/아니오로 답할 수 있는 질문')).toBeVisible();
+  await expect(page.getByRole('button', { name: '마이크로 질문하기' })).toHaveCount(0);
+});
+
+test('모바일: 가상 방향키로 걸어가 조사하고, 맵은 화면 폭 안에 들어온다', async ({ page }) => {
+  await openCase(page, '302호의 정전');
+  const pad = page.getByRole('group', { name: '이동 버튼' });
+  await expect(pad).toBeVisible();
+  const canvas = page.getByTestId('explore-canvas').locator('canvas');
+  await expect(canvas).toBeVisible();
+  const box = await canvas.boundingBox();
+  expect(box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
+
+  // 시작 (6,6) → 위로 5칸 → 오른쪽 5칸: 전등 스위치 옆
+  for (let i = 0; i < 5; i += 1) await pad.getByRole('button', { name: '위로' }).tap();
+  for (let i = 0; i < 5; i += 1) await pad.getByRole('button', { name: '오른쪽으로' }).tap();
+  await expect(page.getByText('가까이: 전등 스위치 — E·Enter로 조사')).toBeVisible();
+  await page.getByRole('button', { name: '조사', exact: true }).tap();
+  await expect(
+    page.getByRole('dialog', { name: '전등 스위치' }).getByText(/단서를 찾았어요/),
+  ).toBeVisible();
 });

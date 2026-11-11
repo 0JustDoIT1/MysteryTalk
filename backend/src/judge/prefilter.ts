@@ -33,3 +33,9 @@ const INJECTION = [
 export function prefilterAbuse(text: string): boolean {
   return PROFANITY.some((re) => re.test(text)) || INJECTION.some((re) => re.test(text));
 }
+
+/** 욕설만 검사(탐정 이름 금칙어, PRD D40). 공백을 지우고도 본다(예: '씨 발'). */
+export function containsProfanity(text: string): boolean {
+  const compact = text.replace(/\s+/g, '');
+  return PROFANITY.some((re) => re.test(text) || re.test(compact));
+}

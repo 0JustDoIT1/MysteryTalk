@@ -1,5 +1,5 @@
-import { Controller, Get, HttpCode, Inject, Post, UseGuards } from '@nestjs/common';
-import type { MeResponse } from '@mysterytalk/shared';
+import { Body, Controller, Get, HttpCode, Inject, Patch, Post, UseGuards } from '@nestjs/common';
+import { updateMeRequestSchema, type MeResponse, type UpdateMeRequest } from '@mysterytalk/shared';
 import { AUTH_PROVIDER, type AuthProvider } from '../auth/auth-provider.js';
 import { AuthService } from '../auth/auth.service.js';
 import { AppException } from '../common/app-exception.js';
@@ -21,6 +21,16 @@ export class PlayerController {
   @Get()
   me(@CurrentPlayer() player: Player): MeResponse {
     return { ...this.players.toMe(player), loginAvailable: this.provider.available };
+  }
+
+  /** 탐정 이름 변경(PRD D40). 게스트도 바꿀 수 있다. */
+  @Patch()
+  async update(
+    @CurrentPlayer() player: Player,
+    @Body({ schema: updateMeRequestSchema }) body: UpdateMeRequest,
+  ): Promise<MeResponse> {
+    const updated = await this.players.rename(player, body.detectiveName);
+    return { ...this.players.toMe(updated), loginAvailable: this.provider.available };
   }
 
   /** 로그인 사용자의 18세 확인 기록(PRD D33). 기기에서 확인한 사용자가 로그인 직후 호출한다. */

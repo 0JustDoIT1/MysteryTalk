@@ -20,7 +20,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
     locale: 'ko-KR',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, grepInvert: /모바일/ },
+    // 모바일 터치 조작(PRD D42): 이름이 '모바일'로 시작하는 테스트만 휴대폰 크기·터치로 실행
+    { name: 'mobile', use: { ...devices['Pixel 7'] }, grep: /모바일/ },
+  ],
   webServer: [
     {
       command: 'npm run e2e:server -w backend',

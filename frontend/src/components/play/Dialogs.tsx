@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { isRetryable } from '@/lib/api/client';
 import { useAbandon, useSubmitAnswer } from '@/lib/api/queries';
+import { useSfx } from '@/lib/audio/use-sfx';
 import { keyFor, type PendingRequest } from '@/lib/play/idempotency';
 import { t } from '@/i18n/ko';
 
@@ -58,6 +59,7 @@ export function SubmitDialog({
   const [answer, setAnswer] = useState('');
   const [pending, setPending] = useState<PendingRequest | null>(null);
   const submit = useSubmitAnswer(session.sessionId);
+  const play = useSfx();
   const length = answer.trim().length;
   const valid = length >= ANSWER_MIN_LENGTH && length <= ANSWER_MAX_LENGTH;
   const result = submit.data;
@@ -72,6 +74,9 @@ export function SubmitDialog({
       {
         onSuccess: (r) => {
           setPending(null);
+          if (r.result === 'SOLVED') play('solved');
+          else if (r.result === 'WRONG') play('wrong');
+          else play('RETRY');
           if (r.status !== 'ACTIVE') router.push(`/play/${session.sessionId}/ending`);
         },
         onError: (error) => {

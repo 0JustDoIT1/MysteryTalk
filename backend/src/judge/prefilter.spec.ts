@@ -1,4 +1,4 @@
-import { prefilterAbuse } from './prefilter.js';
+import { containsProfanity, prefilterAbuse } from './prefilter.js';
 
 describe('prefilterAbuse (PRD D57)', () => {
   it.each([
@@ -23,5 +23,14 @@ describe('prefilterAbuse (PRD D57)', () => {
     '이 일에 나쁜 의도를 가진 사람이 있나요?',
   ])('정상 질문은 통과: %s', (q) => {
     expect(prefilterAbuse(q)).toBe(false);
+  });
+});
+
+describe('containsProfanity (탐정 이름 금칙어, PRD D40)', () => {
+  it('욕설은 띄어 써도 걸러 내고, 평범한 이름은 통과시킨다', () => {
+    expect(containsProfanity('씨발탐정')).toBe(true);
+    expect(containsProfanity('씨 발')).toBe(true);
+    expect(containsProfanity('홈즈')).toBe(false);
+    expect(containsProfanity('명탐정 코난')).toBe(false);
   });
 });

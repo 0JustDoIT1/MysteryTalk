@@ -3,7 +3,13 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import { useCaseDetail, useExploreState, useQuestionLog, useSessionState } from '@/lib/api/queries';
+import {
+  useCaseDetail,
+  useExploreState,
+  useMe,
+  useQuestionLog,
+  useSessionState,
+} from '@/lib/api/queries';
 import { tutorialStep } from '@/lib/play/tutorial';
 import { t } from '@/i18n/ko';
 import { AbandonDialog, SubmitDialog } from './Dialogs';
@@ -19,6 +25,7 @@ export function PlayScreen() {
   const detail = useCaseDetail(session.data?.caseSlug ?? '');
   const log = useQuestionLog(sessionId);
   const explore = useExploreState(sessionId);
+  const me = useMe();
   const [dialog, setDialog] = useState<'submit' | 'abandon' | null>(null);
   const [guideClosed, setGuideClosed] = useState(false);
 
@@ -50,6 +57,9 @@ export function PlayScreen() {
             ← {c.title}
           </Link>
           <h1 className="text-2xl font-bold text-amber-200">{c.title}</h1>
+          {me.data && (
+            <p className="text-xs text-stone-400">{t.play.detective(me.data.detectiveName)}</p>
+          )}
         </div>
         {/* 진행 수치만 보여 주고 점수·등급은 엔딩에서 공개한다(D76). */}
         <ul aria-label="진행 상황" className="flex flex-wrap gap-3 text-sm text-stone-300">

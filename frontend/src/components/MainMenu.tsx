@@ -26,9 +26,9 @@ export function MainMenu() {
       <span aria-disabled="true" className={`${item} text-stone-500`}>
         {t.menu.notices} <span className="text-sm">{t.menu.soon}</span>
       </span>
-      <span aria-disabled="true" className={`${item} text-stone-500`}>
-        {t.menu.settings} <span className="text-sm">{t.menu.soon}</span>
-      </span>
+      <Link href="/settings" className={`${item} hover:border-amber-300/60`}>
+        {t.menu.settings}
+      </Link>
     </nav>
   );
 }

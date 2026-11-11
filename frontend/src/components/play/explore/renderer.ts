@@ -134,6 +134,9 @@ export async function createRenderer(parent: HTMLElement): Promise<ExploreRender
     }
   }
 
+  // 이전 렌더러의 캔버스가 남아 있으면 치운다(개발 모드에서 화면이 두 번 붙을 때 이전 화면의 정리가
+  // 다음 프레임으로 미뤄져 캔버스가 겹칠 수 있다).
+  parent.querySelectorAll('canvas').forEach((c) => c.remove());
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,

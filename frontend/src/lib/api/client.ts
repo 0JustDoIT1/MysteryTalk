@@ -21,7 +21,7 @@ export class ApiError extends Error {
 }
 
 export type RequestOptions = {
-  method?: 'GET' | 'POST' | 'PUT';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
   body?: unknown;
   /** 상태를 바꾸는 요청의 멱등성 키(SPEC §5). 재시도할 때 같은 값을 보낸다. */
   idempotencyKey?: string;
