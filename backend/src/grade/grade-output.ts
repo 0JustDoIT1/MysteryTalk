@@ -12,13 +12,13 @@ export type GradeOutput = { form: AnswerForm; verdicts: Record<string, AiVerdict
 
 /**
  * 요소 id마다 정확히 한 번씩 판정하도록 사건별 JSON 스키마를 만든다(SPEC §7-3).
- * 생성 순서: 답안 형식(form) → 요소별 evidence(답안 속 해당 구절) → verdict. evidence는 저장·응답하지 않는다.
+ * 생성 순서: 답안 형식(form) → 요소별 evidence(답안 속 해당 구절, 최대 80자: 출력을 짧게 해 지연을 줄임) → verdict. evidence는 저장·응답하지 않는다.
  */
 export function gradeOutputJsonSchema(elementIds: string[], final = false): object {
   const item = {
     type: 'object',
     properties: {
-      evidence: { type: 'string', maxLength: 150 },
+      evidence: { type: 'string', maxLength: 80 },
       verdict: { type: 'string', enum: [...(final ? FINAL_VERDICTS : VERDICTS)] },
     },
     required: ['evidence', 'verdict'],

@@ -31,4 +31,4 @@ export interface Grader {
 }
 
 export const GRADER = Symbol('GRADER');
-export const GRADE_PROMPT_VERSION = 'grade-v3';
+export const GRADE_PROMPT_VERSION = 'grade-v4';

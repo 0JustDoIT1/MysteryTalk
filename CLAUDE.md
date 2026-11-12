@@ -49,4 +49,5 @@
 - 검사: `npm run format:check` · `npm run lint` · `npm run typecheck` · `npm test` · `npm run test:e2e`(DATABASE_URL_TEST 필요, DB 이름은 `_test`로 끝나야 함) · `npm run build -w frontend`
 - 브라우저 E2E: `npm run test:browser`(DATABASE_URL_BROWSER 필요, `_test`로 끝나는 DB. 최초 1회 `npx playwright install chromium`. 3100/4100 포트, AI는 Mock) (2026-11-11 3단계에서 확인)
 - 운영(2026-11-12 7단계에서 확인): 정리 `npm run cleanup:guests -w backend -- --dry-run`(미리 보기, 빼면 실제 삭제) · 통계 `npm run stats -w backend` (DATABASE_URL 필요)
+- 사건 데이터 검사(DB 불필요, 2026-11-12 확인): `npm run content:check -w backend` (비공개 사건 포함: `CASE_DATA_DIR=D:/Project/MysteryTalk-cases`, 절대 경로로 지정)
 - 사건 적재: `npm run content:load -w backend` / AI 평가(로컬 Ollama): 판정 `npm run eval -w backend -- --case sample --repeat 3`, 채점 `npm run eval:grade -w backend -- --case sample --repeat 3`
