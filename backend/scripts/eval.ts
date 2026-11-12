@@ -10,7 +10,9 @@ import {
   type EvalRun,
   type QuestionReport,
 } from '../src/eval/metrics.js';
+import { checkJudge, criteriaLines } from '../src/eval/criteria.js';
 import { interleavedOrder } from '../src/eval/schedule.js';
+import { applyNegationCheck } from '../src/judge/negation.js';
 import { normalizeQuestion } from '../src/judge/normalize.js';
 import { OllamaJudge } from '../src/judge/ollama.judge.js';
 import { prefilterAbuse } from '../src/judge/prefilter.js';
@@ -29,6 +31,7 @@ const { values } = parseArgs({
     'base-url': { type: 'string' },
     'timeout-ms': { type: 'string', default: '30000' },
     seed: { type: 'string', default: '1' },
+    'no-negation': { type: 'boolean', default: false },
   },
 });
 
@@ -75,24 +78,27 @@ async function runOnce(raw: string): Promise<EvalRun> {
       tokensOut: null,
     };
   }
-  const outcome = await judge.judge({
-    intro: loaded!.content.intro,
-    facts: loaded!.content.facts,
-    question,
-  });
-  for (const c of outcome.calls)
-    if (c.invalidOutput !== undefined) invalidSamples.push(`${raw} => ${c.invalidOutput}`);
-  const latencyMs = outcome.calls.reduce((n, c) => n + c.latencyMs, 0);
-  const sum = (k: 'tokensIn' | 'tokensOut') =>
-    outcome.calls.some((c) => c[k] !== null)
-      ? outcome.calls.reduce((n, c) => n + (c[k] ?? 0), 0)
+  const input = { intro: loaded!.content.intro, facts: loaded!.content.facts, question };
+  const outcome = await judge.judge(input);
+  // 서비스와 같은 순서: 부정형 질문 재확인(옵션 --no-negation 으로 끌 수 있음)
+  const negation =
+    outcome.ok && !values['no-negation']
+      ? await applyNegationCheck(judge, input, outcome.result)
       : null;
+  if (negation?.changed) negationChanged.push(raw);
+  const calls = [...outcome.calls, ...(negation?.calls ?? [])];
+  for (const c of calls)
+    if (c.invalidOutput !== undefined) invalidSamples.push(`${raw} => ${c.invalidOutput}`);
+  const latencyMs = calls.reduce((n, c) => n + c.latencyMs, 0);
+  const sum = (k: 'tokensIn' | 'tokensOut') =>
+    calls.some((c) => c[k] !== null) ? calls.reduce((n, c) => n + (c[k] ?? 0), 0) : null;
+  const result = negation?.result ?? (outcome.ok ? outcome.result : null);
   return {
-    label: outcome.ok ? outcome.result.label : null,
-    retryReason: outcome.ok ? outcome.result.retryReason : null,
+    label: result ? result.label : null,
+    retryReason: result ? result.retryReason : null,
     latencyMs,
-    calls: outcome.calls.length,
-    invalidCalls: outcome.calls.filter((c) => !c.ok).length,
+    calls: calls.length,
+    invalidCalls: calls.filter((c) => !c.ok).length,
     tokensIn: sum('tokensIn'),
     tokensOut: sum('tokensOut'),
   };
@@ -100,6 +106,7 @@ async function runOnce(raw: string): Promise<EvalRun> {
 
 const reports: QuestionReport[] = [];
 const invalidSamples: string[] = [];
+const negationChanged: string[] = [];
 // 모델 적재 시간이 첫 측정에 섞이지 않도록 한 번 미리 호출한다.
 await runOnce('예열 질문입니다');
 // 같은 질문을 연달아 묻지 않고 회차마다 섞어 한 바퀴씩 돈다(실행마다 달라지는 판정까지 잡기 위해).
@@ -140,6 +147,11 @@ const lines = [
   '| 카테고리 | 정답/전체 |',
   '|---|---|',
   ...Object.entries(summary.byCategory).map(([k, v]) => `| ${k} | ${v.correct}/${v.total} |`),
+  '',
+  ...criteriaLines(checkJudge(summary)),
+  '',
+  `## 부정형 재확인으로 바뀐 판정(${new Set(negationChanged).size}개 질문)`,
+  ...[...new Set(negationChanged)].map((q) => `- ${q}`),
   '',
   '## 형식 위반 AI 출력(최대 10개)',
   ...[...new Set(invalidSamples)].slice(0, 10).map((s) => `- ${s}`),

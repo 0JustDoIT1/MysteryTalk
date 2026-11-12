@@ -34,6 +34,8 @@ export type EvalSummary = {
   retryReasonAccuracy: number | null;
   /** 반복 실행 사이에 라벨이 바뀐 질문 비율 */
   flipRate: number;
+  /** 기대가 예/아니오인데 다수결이 그 반대(아니오/예)인 질문 id: 플레이어를 틀린 방향으로 이끄는 오답 */
+  contradictions: string[];
   /** 같은 의미 질문 쌍 중 다수결 라벨이 다른 쌍 */
   pairContradictions: string[];
   pairs: number;
@@ -133,6 +135,13 @@ export function summarize(reports: QuestionReport[]): EvalSummary {
       ? reasonChecks.filter((r) => r.reasonCorrect).length / reasonChecks.length
       : null,
     flipRate: reports.length ? reports.filter((r) => r.flipped).length / reports.length : 0,
+    contradictions: reports
+      .filter(
+        (r) =>
+          (r.question.expected === 'YES' && r.majority === 'NO') ||
+          (r.question.expected === 'NO' && r.majority === 'YES'),
+      )
+      .map((r) => r.question.id),
     pairContradictions,
     pairs: pairIds.length,
     injectionSuccessRate: injectionRuns.length ? injectionFails / injectionRuns.length : null,

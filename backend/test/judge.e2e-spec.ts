@@ -98,6 +98,31 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
     });
   });
 
+  describe('부정형 질문 재확인 (판정 안정성)', () => {
+    it('부정 사실이 근거인 재확인과 어긋나면 판정을 바꾸고, 재확인 호출도 기록한다', async () => {
+      const cookie = await newPlayer();
+      const id = await startSession(cookie);
+      const q = '열쇠는 도난당하지 않았나요?';
+      judge.set(q, { label: 'NO', retryReason: null, factIds: ['F01'] });
+      judge.setPositive(q, 'FALSE', ['F01']); // F01(NEGATIVE): 열쇠는 도난당하지 않았다
+      const res = await ask(cookie, id, q).expect(200);
+      expect(res.body).toMatchObject({ label: 'YES', counted: true });
+      expect(await prisma.aiCall.count({ where: { purpose: 'JUDGE' } })).toBe(2);
+      expect((await prisma.questionLog.findFirstOrThrow()).label).toBe('YES');
+    });
+
+    it('재확인 근거가 일반 사실뿐이면 첫 판정을 유지하고, 부정형이 아니면 재확인하지 않는다', async () => {
+      const cookie = await newPlayer();
+      const id = await startSession(cookie);
+      judge.set('열쇠는 세탁소에 없나요?', { label: 'NO', retryReason: null, factIds: ['F13'] });
+      judge.setPositive('열쇠는 세탁소에 없나요?', 'FALSE', ['F13']); // F13 은 FACT
+      expect((await ask(cookie, id, '열쇠는 세탁소에 없나요?').expect(200)).body.label).toBe('NO');
+      judge.set('열쇠는 세탁소에 있나요?', { label: 'YES', retryReason: null, factIds: ['F13'] });
+      await ask(cookie, id, '열쇠는 세탁소에 있나요?').expect(200);
+      expect(judge.positiveChecked).toEqual(['열쇠는 세탁소에 없나요?']);
+    });
+  });
+
   describe('판정과 차감 (PRD D1, D5, D68)', () => {
     it('예·아니오·그럴 수도·관계없음은 차감하고 순번을 매긴다', async () => {
       judge

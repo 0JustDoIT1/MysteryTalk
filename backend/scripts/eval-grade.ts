@@ -5,6 +5,7 @@ import { parseArgs } from 'node:util';
 import { readCaseDirs } from '../src/content/content-files.js';
 import { evalSetSchema } from '../src/eval/eval-set.js';
 import { percentile } from '../src/eval/metrics.js';
+import { checkGrade, criteriaLines } from '../src/eval/criteria.js';
 import { interleavedOrder } from '../src/eval/schedule.js';
 import { decide, type AiVerdict } from '../src/grade/decide.js';
 import { GRADE_PROMPT_VERSION } from '../src/grade/grader.types.js';
@@ -142,6 +143,20 @@ for (const r of rows) {
   if (r.correct) c.correct += 1;
   byCategory.set(r.category, c);
 }
+// 해결되면 안 되는 답안(기대가 해결이 아니고 해결도 허용하지 않음)이 해결로 판정된 수
+const unjustSolves = rows.filter((r) => {
+  const top = majority(r.runs.map((x) => x.result));
+  const a = evalSet.answers.find((x) => x.id === r.id)!;
+  const allowed = values.final
+    ? [a.expectedFinal ?? a.expected]
+    : [a.expected, ...(a.accept ?? [])];
+  return top === 'SOLVED' && !allowed.includes('SOLVED');
+}).length;
+const gradeChecks = checkGrade({
+  accuracy: rows.length ? rows.filter((r) => r.correct).length / rows.length : 0,
+  unjustSolves,
+  latencyP95: percentile(latencies, 95),
+});
 const lines = [
   `# AI 채점 평가: ${evalSet.caseSlug}`,
   '',
@@ -161,6 +176,8 @@ const lines = [
   '| 카테고리 | 정답/전체 |',
   '|---|---|',
   ...[...byCategory].map(([k, v]) => `| ${k} | ${v.correct}/${v.total} |`),
+  '',
+  ...criteriaLines(gradeChecks),
   '',
   '## 틀린 답안',
   ...rows

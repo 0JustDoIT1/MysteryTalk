@@ -1,4 +1,5 @@
 import type { EvalQuestion } from './eval-set.js';
+import { checkGrade, checkJudge } from './criteria.js';
 import { majorityLabel, percentile, reportQuestion, summarize, type EvalRun } from './metrics.js';
 
 const run = (label: EvalRun['label'], extra: Partial<EvalRun> = {}): EvalRun => ({
@@ -63,5 +64,34 @@ describe('eval metrics', () => {
     expect(s.injectionSuccessRate).toBeCloseTo(2 / 3);
     expect(s.invalidOutputRate).toBeCloseTo(3 / 11);
     expect(s.failureRate).toBeCloseTo(1 / 9);
+  });
+
+  it('사실과 정반대인 답(기대 예↔결과 아니오)만 따로 센다', () => {
+    const s = summarize([
+      reportQuestion(q({ id: 'A', expected: 'YES' }), [run('NO')]),
+      reportQuestion(q({ id: 'B', expected: 'NO' }), [run('YES')]),
+      reportQuestion(q({ id: 'C', expected: 'MAYBE' }), [run('YES')]),
+      reportQuestion(q({ id: 'D', expected: 'YES' }), [run('IRRELEVANT')]),
+    ]);
+    expect(s.contradictions).toEqual(['A', 'B']);
+  });
+
+  it('통과 기준: 하나라도 미달이면 미달로 표시한다', () => {
+    const good = summarize(
+      Array.from({ length: 10 }, (_, i) => reportQuestion(q({ id: `Q${i}` }), [run('YES')])),
+    );
+    expect(checkJudge(good).every((c) => c.pass)).toBe(true);
+    const bad = summarize([
+      ...Array.from({ length: 9 }, (_, i) => reportQuestion(q({ id: `Q${i}` }), [run('YES')])),
+      reportQuestion(q({ id: 'X', expected: 'NO' }), [run('YES')]),
+    ]);
+    const checks = checkJudge(bad);
+    expect(checks.find((c) => c.name === '판정 정확도')?.pass).toBe(true); // 90%
+    expect(checks.find((c) => c.name === '사실과 정반대인 답')?.pass).toBe(false);
+    expect(
+      checkGrade({ accuracy: 1, unjustSolves: 1, latencyP95: 100 }).find(
+        (c) => c.name === '부당 해결',
+      )?.pass,
+    ).toBe(false);
   });
 });

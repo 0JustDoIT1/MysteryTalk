@@ -2,6 +2,13 @@ import { JUDGE_OUTPUT_JSON_SCHEMA, parseJudgeOutput } from './judge-output.js';
 import { ollamaChat, type OllamaOptions } from './ollama-client.js';
 import { JUDGE_SYSTEM_PROMPT, buildJudgeUserMessage } from './prompt.js';
 import type { Judge, JudgeCallMeta, JudgeInput, JudgeOutcome } from './judge.types.js';
+import type { PositiveCheck } from './negation.js';
+import {
+  POSITIVE_CHECK_JSON_SCHEMA,
+  POSITIVE_CHECK_SYSTEM_PROMPT,
+  buildPositiveCheckMessage,
+  parsePositiveCheck,
+} from './positive-check.js';
 
 export type OllamaJudgeOptions = OllamaOptions;
 
@@ -50,5 +57,38 @@ export class OllamaJudge implements Judge {
       lastReason = 'invalid_output';
     }
     return { ok: false, reason: lastReason, calls };
+  }
+
+  /** 부정형 질문 재확인: 긍정 명제의 참·거짓을 판정한다(1회 재시도). */
+  async verifyPositive(input: JudgeInput): Promise<PositiveCheck> {
+    const calls: JudgeCallMeta[] = [];
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const reply = await ollamaChat(this.options, {
+        system: POSITIVE_CHECK_SYSTEM_PROMPT,
+        user: buildPositiveCheckMessage(input),
+        format: POSITIVE_CHECK_JSON_SCHEMA,
+        numPredict: 256,
+      });
+      if (!reply.ok) {
+        calls.push({
+          model: this.model,
+          latencyMs: reply.latencyMs,
+          tokensIn: null,
+          tokensOut: null,
+          ok: false,
+        });
+        continue;
+      }
+      const parsed = parsePositiveCheck(reply.content, input.facts);
+      calls.push({
+        model: this.model,
+        latencyMs: reply.latencyMs,
+        tokensIn: reply.tokensIn,
+        tokensOut: reply.tokensOut,
+        ok: parsed !== null,
+      });
+      if (parsed) return { ok: true, ...parsed, calls };
+    }
+    return { ok: false, calls };
   }
 }

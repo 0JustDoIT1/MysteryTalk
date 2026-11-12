@@ -1,4 +1,5 @@
 import type { Judge, JudgeInput, JudgeOutcome, JudgeResult } from './judge.types.js';
+import type { PositiveCheck } from './negation.js';
 
 /**
  * AI 없이 동작하는 판정기. 개발 중 Ollama를 켜지 않았을 때와 CI에서 쓴다.
@@ -24,6 +25,9 @@ export class ScriptedJudge implements Judge {
   readonly model = 'scripted';
   readonly received: JudgeInput[] = [];
   private readonly script = new Map<string, JudgeResult | 'fail'>();
+  /** 부정형 재확인 응답(질문별). 정하지 않은 질문은 판단 불가(UNKNOWN) */
+  private readonly positive = new Map<string, { truth: 'TRUE' | 'FALSE'; factIds: string[] }>();
+  readonly positiveChecked: string[] = [];
   private delayMs = 0;
 
   set(question: string, outcome: JudgeResult | 'fail'): this {
@@ -38,6 +42,8 @@ export class ScriptedJudge implements Judge {
 
   reset(): void {
     this.script.clear();
+    this.positive.clear();
+    this.positiveChecked.length = 0;
     this.received.length = 0;
     this.delayMs = 0;
   }
@@ -55,5 +61,19 @@ export class ScriptedJudge implements Judge {
       result: outcome ?? { label: 'IRRELEVANT', retryReason: null, factIds: [] },
       calls: [{ ...meta, ok: true }],
     };
+  }
+
+  setPositive(question: string, truth: 'TRUE' | 'FALSE', factIds: string[]): this {
+    this.positive.set(question, { truth, factIds });
+    return this;
+  }
+
+  verifyPositive(input: JudgeInput): Promise<PositiveCheck> {
+    this.positiveChecked.push(input.question);
+    const p = this.positive.get(input.question);
+    const calls = [{ model: this.model, latencyMs: 0, tokensIn: null, tokensOut: null, ok: true }];
+    return Promise.resolve(
+      p ? { ok: true, ...p, calls } : { ok: true, truth: 'UNKNOWN', factIds: [], calls },
+    );
   }
 }

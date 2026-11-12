@@ -17,6 +17,7 @@ import { LimitsService } from '../ops/limits.service.js';
 import { recordAiCalls } from './ai-calls.js';
 import { loadVersion, questionCap } from './case-data.js';
 import { unlockZones } from './zones.js';
+import { applyNegationCheck } from '../judge/negation.js';
 import { claimLease, leaseMsFor, releaseLease } from './session-lease.js';
 import { SessionsService } from './sessions.service.js';
 
@@ -113,11 +114,8 @@ export class QuestionsService {
     if (prefilterAbuse(question)) {
       result = { label: 'RETRY', retryReason: 'ABUSE', factIds: [] };
     } else {
-      const outcome = await this.judge.judge({
-        intro: session.case.intro,
-        facts: data.facts,
-        question,
-      });
+      const judgeInput = { intro: session.case.intro, facts: data.facts, question };
+      const outcome = await this.judge.judge(judgeInput);
       const costs = await this.limits.spend('JUDGE', outcome.calls);
       await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls, costs);
       if (!outcome.ok) {
@@ -126,7 +124,13 @@ export class QuestionsService {
         await releaseLease(this.prisma, session.id, idempotencyKey);
         throw new AppException(503, 'AI_UNAVAILABLE');
       }
-      result = outcome.result;
+      // 부정형 질문은 긍정형으로 교차 확인한다(판정 안정성 작업). 재확인 호출도 비용·기록에 넣는다.
+      const negation = await applyNegationCheck(this.judge, judgeInput, outcome.result);
+      if (negation.calls.length) {
+        const extra = await this.limits.spend('JUDGE', negation.calls);
+        await recordAiCalls(this.prisma, 'JUDGE', session.id, negation.calls, extra);
+      }
+      result = negation.result;
       await this.limits.countQuestion(player, ip, session.case.isTutorial);
       model = this.judge.model;
     }
