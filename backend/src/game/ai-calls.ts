@@ -1,16 +1,17 @@
 import type { JudgeCallMeta } from '../judge/judge.types.js';
 import type { PrismaService } from '../prisma/prisma.service.js';
 
-/** AI 호출 기록(SPEC §10). 질문·답안 원문은 남기지 않는다. 로컬 Ollama는 비용 0원, 단가표는 7단계에서 추가. */
+/** AI 호출 기록(SPEC §10). 질문·답안 원문은 남기지 않는다. 비용은 단가표로 계산한 추정치(로컬 Ollama는 0원). */
 export async function recordAiCalls(
   prisma: PrismaService,
   purpose: 'JUDGE' | 'GRADE',
   sessionId: string,
   calls: JudgeCallMeta[],
+  costs: number[] = [],
 ): Promise<void> {
   if (!calls.length) return;
   await prisma.aiCall.createMany({
-    data: calls.map((c) => ({
+    data: calls.map((c, i) => ({
       purpose,
       sessionId,
       model: c.model,
@@ -18,6 +19,7 @@ export async function recordAiCalls(
       tokensOut: c.tokensOut,
       latencyMs: c.latencyMs,
       ok: c.ok,
+      estCostKrw: costs[i] ?? 0,
     })),
   });
 }

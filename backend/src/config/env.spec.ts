@@ -16,6 +16,12 @@ describe('validateEnv', () => {
       NODE_ENV: 'development',
       AUTH_PROVIDER: 'google',
       PUBLIC_BASE_URL: 'http://localhost:3000',
+      DAILY_LIMIT_GUEST: 60,
+      DAILY_LIMIT_USER: 200,
+      DAILY_LIMIT_TUTORIAL: 60,
+      MONTHLY_AI_BUDGET_KRW: 5000,
+      BUDGET_RESERVE_RATIO: 0.1,
+      IP_HASH_SECRET: 'dev-only-ip-hash-secret-change-me',
     });
   });
 

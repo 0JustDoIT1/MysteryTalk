@@ -7,6 +7,7 @@ import {
   createSessionResponseSchema,
   endingSchema,
   meResponseSchema,
+  noticeSchema,
   exploreStateSchema,
   inspectResponseSchema,
   moveResponseSchema,
@@ -220,5 +221,14 @@ export function useRename() {
     mutationFn: (detectiveName: string) =>
       apiOrThrow('/me', meResponseSchema, { method: 'PATCH', body: { detectiveName } }),
     onSuccess: (me) => qc.setQueryData(keys.me, me),
+  });
+}
+
+/** 공지(PRD D41). 배포할 때만 바뀌므로 오래 캐시해도 된다. */
+export function useNotices() {
+  return useQuery({
+    queryKey: ['notices'],
+    queryFn: () => apiOrThrow('/notices', z.array(noticeSchema)),
+    staleTime: 10 * 60 * 1000,
   });
 }

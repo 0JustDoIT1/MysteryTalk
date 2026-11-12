@@ -14,6 +14,7 @@ import { decide, failedStatus } from '../grade/decide.js';
 import { GRADER, GRADE_PROMPT_VERSION, type Grader } from '../grade/grader.types.js';
 import { normalizeAnswer } from '../judge/normalize.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { LimitsService } from '../ops/limits.service.js';
 import { recordAiCalls } from './ai-calls.js';
 import { loadVersion } from './case-data.js';
 import { finishSession } from './finish.js';
@@ -36,6 +37,7 @@ export class SubmissionsService {
     private readonly sessions: SessionsService,
     private readonly config: ConfigService<Env, true>,
     @Inject(GRADER) private readonly grader: Grader,
+    private readonly limits: LimitsService,
   ) {}
 
   async submit(
@@ -60,7 +62,8 @@ export class SubmissionsService {
       return submitAnswerResponseSchema.parse(previous.response);
     }
     if (session.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
-    // 2. 월 예산·예비 예산은 7단계에서 이 위치에 추가한다. 일일 질문 한도는 제출에 적용하지 않는다(D83).
+    // 2. 월 예산: 질문 예산이 바닥나도 예비 예산으로 채점한다(D72). 일일 질문 한도는 제출에 적용하지 않는다(D83).
+    await this.limits.assertCanGrade();
 
     // 3. 선점 → AI 요소별 판정(트랜잭션 밖)
     await claimLease(
@@ -89,7 +92,8 @@ export class SubmissionsService {
       answer,
       final,
     });
-    await recordAiCalls(this.prisma, 'GRADE', session.id, outcome.calls);
+    const costs = await this.limits.spend('GRADE', outcome.calls);
+    await recordAiCalls(this.prisma, 'GRADE', session.id, outcome.calls, costs);
     if (!outcome.ok) {
       // 7. 실패: 미차감·기록 없음 → 같은 키로 재시도(D73)
       this.logger.warn(`grade failed (${outcome.reason}) session=${session.id}`);

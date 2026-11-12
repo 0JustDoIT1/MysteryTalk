@@ -98,6 +98,12 @@ enum ZoneUnlockedBy {
   HINT
 }
 
+/// 일일 사용량의 주체: 게스트는 IP 해시, 로그인은 플레이어 id
+enum UsageSubject {
+  IP
+  PLAYER
+}
+
 enum AiPurpose {
   JUDGE
   GRADE
@@ -333,4 +339,27 @@ model AuthSession {
   @@index([playerId])
   @@index([expiresAt])
   @@map("auth_session")
+}
+
+/// 일일 질문 사용량(SPEC §10, PRD D58·D83). AI에 보낸 질문만 센다. IP는 날마다 바뀌는 비밀값을 섞은 해시만 저장한다.
+model UsageDaily {
+  day               DateTime     @db.Date
+  subjectType       UsageSubject @map("subject_type")
+  subjectHash       String       @map("subject_hash")
+  questions         Int          @default(0)
+  tutorialQuestions Int          @default(0) @map("tutorial_questions")
+
+  @@id([day, subjectType, subjectHash])
+  @@map("usage_daily")
+}
+
+/// 월 AI 예산(SPEC §10, PRD D46·D72). 질문은 (한도 − 예비)까지, 정답 채점은 한도까지 쓸 수 있다.
+model BudgetMonth {
+  month         String  @id
+  limitKrw      Int     @map("limit_krw")
+  reserveKrw    Int     @map("reserve_krw")
+  spentJudgeKrw Decimal @default(0) @map("spent_judge_krw") @db.Decimal(12, 4)
+  spentGradeKrw Decimal @default(0) @map("spent_grade_krw") @db.Decimal(12, 4)
+
+  @@map("budget_month")
 }

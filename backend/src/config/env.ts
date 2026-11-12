@@ -35,6 +35,18 @@ export const envSchema = z
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     /** 브라우저가 접속하는 주소(프론트). 구글 로그인 리디렉션 주소 = PUBLIC_BASE_URL + /api/auth/google/callback */
     PUBLIC_BASE_URL: z.url().default('http://localhost:3000'),
+    /**
+     * 일일 질문 한도(PRD D58·D83). 수치는 [잠정]이라 비용 측정 후 조정한다. 0이면 제한 없음.
+     * 게스트는 IP 단위, 로그인은 계정 단위. 튜토리얼은 IP·계정 한도에서 빼고 따로 센다.
+     */
+    DAILY_LIMIT_GUEST: z.coerce.number().int().min(0).default(60),
+    DAILY_LIMIT_USER: z.coerce.number().int().min(0).default(200),
+    DAILY_LIMIT_TUTORIAL: z.coerce.number().int().min(0).default(60),
+    /** 월 AI 예산(원, PRD D46·D72, [잠정]). 이 중 예비 비율만큼은 정답 채점 전용. 0이면 제한 없음. */
+    MONTHLY_AI_BUDGET_KRW: z.coerce.number().int().min(0).default(5000),
+    BUDGET_RESERVE_RATIO: z.coerce.number().min(0).max(0.9).default(0.1),
+    /** IP 해시용 비밀값(SPEC §10). 운영에서는 반드시 바꾼다. IP 원문은 저장하지 않는다. */
+    IP_HASH_SECRET: z.string().min(16).default('dev-only-ip-hash-secret-change-me'),
   })
   .refine((e) => !(e.AUTH_PROVIDER === 'fake' && e.NODE_ENV === 'production'), {
     message: 'AUTH_PROVIDER=fake is not allowed in production',

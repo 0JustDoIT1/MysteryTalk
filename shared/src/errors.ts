@@ -19,6 +19,8 @@ export const ERROR_CODES = [
   'NAME_NOT_ALLOWED',
   'INVALID_MOVE',
   'SESSION_NOT_FINISHED',
+  'DAILY_LIMIT_REACHED',
+  'MONTHLY_BUDGET_REACHED',
   'RATE_LIMITED',
   'AI_UNAVAILABLE',
   'INTERNAL_ERROR',
@@ -49,6 +51,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   ZONE_LOCKED: '아직 들어갈 수 없는 곳이에요.',
   INVALID_MOVE: '위치가 맞지 않아 다시 맞췄어요.',
   SESSION_NOT_FINISHED: '사건이 끝난 뒤에 볼 수 있어요.',
+  DAILY_LIMIT_REACHED: '오늘 할 수 있는 질문을 모두 썼어요. 정답 제출은 계속할 수 있어요.',
+  MONTHLY_BUDGET_REACHED:
+    '이번 달 운영 예산을 모두 써서 새 질문을 받을 수 없어요. 정답 제출은 계속할 수 있어요.',
   RATE_LIMITED: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.',
   AI_UNAVAILABLE: '판정이 잠시 지연되고 있어요. 질문 수는 차감되지 않았어요. 다시 시도해 주세요.',
   INTERNAL_ERROR: '알 수 없는 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',

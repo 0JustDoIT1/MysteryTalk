@@ -57,6 +57,9 @@ export const ko = {
     noticeOk: '알겠어요',
     error: '음성을 알아듣지 못했어요. 다시 시도하거나 글자로 입력해 주세요.',
   },
+  notices: {
+    empty: '아직 공지가 없어요.',
+  },
   continue: {
     empty: '진행 중인 사건이 없어요.',
     resume: '이어서 수사',
@@ -110,6 +113,7 @@ export const ko = {
     duplicate: '이미 한 질문이에요. 질문 수는 차감되지 않았어요.',
     notCounted: '질문 수는 차감되지 않았어요.',
     retryAvailable: '같은 질문을 그대로 다시 보낼 수 있어요.',
+    limitLogin: '로그인하면 하루에 더 많이 질문할 수 있어요.',
     negationTip: "부정형 질문('~아닌가요?')은 그 문장이 맞는지로 답해요.",
     hintsViewed: (n: number) => `열람한 힌트 ${n}개`,
     submissionsLeft: (n: number) => `남은 제출 기회 ${n}회`,

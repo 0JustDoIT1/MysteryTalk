@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Headers,
+  Ip,
   HttpCode,
   Param,
   Post,
@@ -96,11 +97,12 @@ export class GameController {
   @HttpCode(200)
   ask(
     @CurrentPlayer() player: Player,
+    @Ip() ip: string,
     @Param('id') id: string,
     @Headers('idempotency-key') key: string | undefined,
     @Body({ schema: askQuestionRequestSchema }) body: AskQuestionRequest,
   ): Promise<AskQuestionResponse> {
-    return this.questions.ask(player, id, key, body.question);
+    return this.questions.ask(player, id, key, body.question, ip);
   }
 
   /** 힌트 열람(해금된 것만, 순서대로). 같은 힌트를 다시 요청하면 같은 내용(감점 1회). */

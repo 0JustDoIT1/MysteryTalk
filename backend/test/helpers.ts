@@ -37,7 +37,7 @@ export async function createTestApp(
 /** 테스트마다 DB를 비운다. 테이블이 늘면 이 목록에 추가한다. */
 export async function resetDb(prisma: PrismaService): Promise<void> {
   await prisma.$executeRawUnsafe(
-    'TRUNCATE TABLE ai_call, submission, hint_view, case_record, question_log, play_session, case_version, mystery_case, player RESTART IDENTITY CASCADE',
+    'TRUNCATE TABLE usage_daily, budget_month, ai_call, submission, hint_view, case_record, question_log, play_session, case_version, mystery_case, player RESTART IDENTITY CASCADE',
   );
 }
 

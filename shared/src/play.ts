@@ -137,3 +137,12 @@ export const caseRecordSchema = z.object({
   solved: z.boolean(),
 });
 export type CaseRecordSummary = z.infer<typeof caseRecordSchema>;
+
+/** 공지(PRD D41): 저장소 파일(content/notices/*.md)에서 읽는다. */
+export const noticeSchema = z.object({
+  id: z.string().regex(/^[a-z0-9-]+$/),
+  title: z.string().min(1).max(60),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  body: z.string().min(1).max(5000),
+});
+export type Notice = z.infer<typeof noticeSchema>;

@@ -18,6 +18,8 @@ import { QuestionsService } from './game/questions.service.js';
 import { SessionsService } from './game/sessions.service.js';
 import { SubmissionsService } from './game/submissions.service.js';
 import { HealthController } from './health/health.controller.js';
+import { LimitsService } from './ops/limits.service.js';
+import { NoticesController } from './ops/notices.controller.js';
 import { GradeModule } from './grade/grade.module.js';
 import { JudgeModule } from './judge/judge.module.js';
 import { PlayerController } from './player/player.controller.js';
@@ -34,7 +36,13 @@ import { PrismaModule } from './prisma/prisma.module.js';
     JudgeModule,
     GradeModule,
   ],
-  controllers: [HealthController, PlayerController, GameController, AuthController],
+  controllers: [
+    HealthController,
+    PlayerController,
+    GameController,
+    AuthController,
+    NoticesController,
+  ],
   providers: [
     PlayerService,
     PlayerGuard,
@@ -59,6 +67,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     QuestionsService,
     SubmissionsService,
     ExploreService,
+    LimitsService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],
 })

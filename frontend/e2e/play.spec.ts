@@ -332,3 +332,11 @@ test('모바일: 가상 방향키로 걸어가 조사하고, 맵은 화면 폭 �
     page.getByRole('dialog', { name: '전등 스위치' }).getByText(/단서를 찾았어요/),
   ).toBeVisible();
 });
+
+test('공지: 메인 메뉴에서 공지 목록을 열고 최신 공지 본문을 본다', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: '공지' }).click();
+  await expect(page).toHaveURL(/\/notices$/);
+  await expect(page.getByText('MysteryTalk 개발 중 안내')).toBeVisible();
+  await expect(page.getByText(/튜토리얼과 샘플 사건으로/)).toBeVisible();
+});

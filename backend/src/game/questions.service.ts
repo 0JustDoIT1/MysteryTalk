@@ -13,6 +13,7 @@ import { duplicateKey, normalizeQuestion } from '../judge/normalize.js';
 import { prefilterAbuse } from '../judge/prefilter.js';
 import { JUDGE, PROMPT_VERSION, type Judge, type JudgeResult } from '../judge/judge.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { LimitsService } from '../ops/limits.service.js';
 import { recordAiCalls } from './ai-calls.js';
 import { loadVersion, questionCap } from './case-data.js';
 import { unlockZones } from './zones.js';
@@ -35,6 +36,7 @@ export class QuestionsService {
     private readonly sessions: SessionsService,
     private readonly config: ConfigService<Env, true>,
     @Inject(JUDGE) private readonly judge: Judge,
+    private readonly limits: LimitsService,
   ) {}
 
   async ask(
@@ -42,6 +44,7 @@ export class QuestionsService {
     sessionId: string,
     idempotencyKey: string | undefined,
     rawQuestion: string,
+    ip = '',
   ): Promise<AskQuestionResponse> {
     // 1. 소유·상태
     const session = await this.sessions.loadOwned(player, sessionId);
@@ -89,6 +92,9 @@ export class QuestionsService {
 
     // 5. 서버 상한 3B(D49). 6. 일일·월 한도는 7단계에서 이 위치에 추가한다(SPEC §10).
     if (session.questionsUsed >= cap) throw new AppException(409, 'QUESTION_CAP_REACHED');
+    // 6. 일일 한도·월 예산(D58·D72·D83): AI에 보낼 질문만 확인한다(사전 필터에 걸리는 질문은 AI를 쓰지 않음).
+    const usesAi = !prefilterAbuse(question);
+    if (usesAi) await this.limits.assertCanAsk(player, ip, session.case.isTutorial);
 
     // 8. 처리 중 선점(원자적). 다른 요청이 처리 중이면 409.
     await claimLease(
@@ -112,7 +118,8 @@ export class QuestionsService {
         facts: data.facts,
         question,
       });
-      await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls);
+      const costs = await this.limits.spend('JUDGE', outcome.calls);
+      await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls, costs);
       if (!outcome.ok) {
         // 10. 실패: 선점 해제, 미차감, 기록 없음 → 같은 키로 재시도 가능(D6)
         this.logger.warn(`judge failed (${outcome.reason}) session=${session.id}`);
@@ -120,6 +127,7 @@ export class QuestionsService {
         throw new AppException(503, 'AI_UNAVAILABLE');
       }
       result = outcome.result;
+      await this.limits.countQuestion(player, ip, session.case.isTutorial);
       model = this.judge.model;
     }
 

@@ -30,7 +30,9 @@
     "content:load": "tsx scripts/load-content.ts",
     "eval": "tsx scripts/eval.ts",
     "eval:grade": "tsx scripts/eval-grade.ts",
-    "e2e:server": "tsx scripts/browser-e2e-server.ts"
+    "e2e:server": "tsx scripts/browser-e2e-server.ts",
+    "cleanup:guests": "tsx scripts/cleanup-guests.ts",
+    "stats": "tsx scripts/stats.ts"
   },
   "dependencies": {
     "@mysterytalk/shared": "^0.0.1",

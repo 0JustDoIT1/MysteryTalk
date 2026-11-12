@@ -7,8 +7,8 @@ import {
   type SessionState,
 } from '@mysterytalk/shared';
 import { useState } from 'react';
-import { isRetryable } from '@/lib/api/client';
-import { useAskQuestion } from '@/lib/api/queries';
+import { ApiError, isRetryable } from '@/lib/api/client';
+import { useAskQuestion, useMe } from '@/lib/api/queries';
 import { keyFor, type PendingRequest } from '@/lib/play/idempotency';
 import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
@@ -31,6 +31,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
   const ask = useAskQuestion(session.sessionId);
   const pushToast = useToastStore((s) => s.push);
   const play = useSfx();
+  const me = useMe();
   const capReached = session.questionsUsed >= session.questionCap;
   const disabled = ask.isPending || capReached || session.status !== 'ACTIVE';
 
@@ -95,6 +96,14 @@ export function QuestionPanel({ session }: { session: SessionState }) {
         {ask.error && !ask.isPending && (
           <p role="alert" className="mt-2 text-sm text-red-300">
             {ask.error.message} {retryable && t.play.retryAvailable}
+            {ask.error instanceof ApiError &&
+              ask.error.code === 'DAILY_LIMIT_REACHED' &&
+              me.data?.kind === 'GUEST' &&
+              me.data.loginAvailable && (
+                <a href="/api/auth/google" className="ml-1 text-amber-200 underline">
+                  {t.play.limitLogin}
+                </a>
+              )}
           </p>
         )}
       </div>
