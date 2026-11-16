@@ -11,15 +11,23 @@ if (!url) throw new Error('DATABASE_URL_BROWSER is required for browser e2e');
 process.env['DATABASE_URL_TEST'] = url;
 await prepareTestDb();
 
-const env = {
+// 개발용 backend/.env 값(개발 서버 주소, 한도, 비공개 사건 폴더 등)이 테스트에 섞이지 않게 고정한다.
+const env: NodeJS.ProcessEnv = {
   ...process.env,
   DATABASE_URL: url,
   LLM_PROVIDER: 'mock',
   // 로그인은 가짜 제공자(실제 구글 접속 없음), 브라우저 주소는 E2E 프론트(3100)
   AUTH_PROVIDER: 'fake',
-  PUBLIC_BASE_URL: process.env['PUBLIC_BASE_URL'] ?? 'http://localhost:3100',
+  PUBLIC_BASE_URL: 'http://localhost:3100',
   PORT: process.env['PORT'] ?? '4100',
+  // 한도·예산 없음(테스트가 여러 번 질문해도 막히지 않게)
+  DAILY_LIMIT_GUEST: '0',
+  DAILY_LIMIT_USER: '0',
+  DAILY_LIMIT_TUTORIAL: '0',
+  MONTHLY_AI_BUDGET_KRW: '0',
 };
+// 공개 사건(튜토리얼·샘플)만 적재한다
+delete env['CASE_DATA_DIR'];
 const run = (cmd: string) =>
   new Promise<void>((resolve, reject) => {
     const child = spawn(cmd, {
