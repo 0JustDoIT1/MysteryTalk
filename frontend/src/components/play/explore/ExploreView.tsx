@@ -117,6 +117,9 @@ export function ExploreView({ session }: { session: SessionState }) {
             lastSaved.current = c.at;
             setResult(r);
             if (r.unlockedMaps.length) pushToast(t.explore.unlocked(r.unlockedMaps));
+            const added = r.caseFileAdded;
+            if (added.people || added.timeline)
+              pushToast(t.explore.caseFileAdded(added.people, added.timeline));
           },
           onError: (error) => {
             setLocked(false);
@@ -332,6 +335,17 @@ export function ExploreView({ session }: { session: SessionState }) {
                 <p className="text-emerald-50">{result.clue.content}</p>
               </div>
             )}
+            {result.chainedClues.map((c) => (
+              <div
+                key={c.key}
+                className="rounded border border-emerald-500/30 bg-emerald-950/30 p-3 text-sm"
+              >
+                <p className="font-semibold text-emerald-200">
+                  {t.explore.chainedClue}: {c.title}
+                </p>
+                <p className="text-emerald-50">{c.content}</p>
+              </div>
+            ))}
             {result.clue && !result.newClue && (
               <p className="text-sm text-stone-400">{t.explore.alreadyInspected}</p>
             )}

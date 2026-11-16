@@ -196,6 +196,27 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await page.reload();
   await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
   await expect(page.getByText('가까이: 두꺼비집 — E·Enter로 조사')).toBeVisible();
+
+  // 관리실 출입구(12,4)로 → 관리실(1,1) → 관리인 옆(4,3)에서 말 걸기
+  // 진술과 함께 CCTV 기록이 기록되고(단서 연쇄 D91), 수사 자료 타임라인이 늘어난다(D90)
+  await page.getByRole('tab', { name: '수사 자료' }).click();
+  await expect(page.getByRole('tabpanel').getByText(/계단으로 나감/)).toHaveCount(0);
+  await map.click();
+  await walk(page, 'ArrowRight', 10);
+  await walk(page, 'ArrowDown', 3);
+  await expect(page.getByText('현재 위치: 빌라 관리실')).toBeVisible();
+  await walk(page, 'ArrowDown', 2);
+  await walk(page, 'ArrowRight', 3);
+  await expect(page.getByText('가까이: 관리인 오만식 — E·Enter로 말 걸기')).toBeVisible();
+  await page.keyboard.press('e');
+  const talk = page.getByRole('dialog', { name: '관리인 오만식' });
+  await expect(talk.getByText(/함께 수첩에 기록했어요: 입구 CCTV 기록/)).toBeVisible();
+  await expect(
+    page.getByRole('status').getByText('수사 자료에 타임라인 2건이 추가됐어요'),
+  ).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.getByRole('tab', { name: '수사 자료' }).click();
+  await expect(page.getByRole('tabpanel').getByText(/계단으로 나감/)).toBeVisible();
 });
 
 test('18세 확인: 처음 방문하면 묻고, 예를 고르면 다시 묻지 않는다', async ({ page }) => {

@@ -124,7 +124,7 @@ export function PlayScreen() {
               </button>
             </div>
           )}
-          <Notebook session={s} caseFile={c.caseFile} />
+          <Notebook session={s} caseFile={s.caseFile} />
         </div>
       </div>
 

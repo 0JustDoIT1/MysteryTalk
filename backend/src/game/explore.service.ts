@@ -1,7 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import {
+  caseFileSchema,
+  clueChain,
   isAdjacent,
   isWalkable,
+  visibleCaseFile,
+  type Clue,
   type ExploreContent,
   type ExploreState,
   type InspectResponse,
@@ -133,6 +137,11 @@ export class ExploreService {
     if (!isAdjacent(position, thing)) throw new AppException(409, 'INVALID_MOVE');
 
     const clue = ctx.e.clues.find((c) => c.key === thing.clue) ?? null;
+    const none = {
+      newClue: false,
+      chainedKeys: [] as string[],
+      unlockedMaps: [] as string[],
+    };
     const result = await this.prisma.$transaction(async (tx) => {
       await tx.playSession.update({
         where: { id: ctx.s.id },
@@ -144,27 +153,55 @@ export class ExploreService {
           lastActiveAt: new Date(),
         },
       });
-      if (!clue) return { newClue: false, unlockedMaps: [] as string[] };
+      if (!clue) return none;
       const inserted = await tx.sessionClue.createMany({
         data: [{ sessionId: ctx.s.id, clueKey: clue.key }],
         skipDuplicates: true,
       });
-      const newClue = inserted.count > 0;
-      const unlockedMaps = newClue
-        ? await unlockZones(tx, ctx.s.id, ctx.e, { kind: 'CLUE', clue: clue.key })
-        : [];
-      return { newClue, unlockedMaps };
+      // 처음 얻은 단서일 때만 연쇄·해금을 처리한다(같은 요청을 다시 보내도 한 번만, SPEC §9.2)
+      if (inserted.count === 0) return none;
+      const chainedKeys = clueChain(ctx.e, clue.key)
+        .slice(1)
+        .filter((k) => !ctx.found.has(k));
+      if (chainedKeys.length) {
+        await tx.sessionClue.createMany({
+          data: chainedKeys.map((clueKey) => ({ sessionId: ctx.s.id, clueKey })),
+          skipDuplicates: true,
+        });
+      }
+      const unlockedMaps: string[] = [];
+      for (const key of [clue.key, ...chainedKeys]) {
+        unlockedMaps.push(...(await unlockZones(tx, ctx.s.id, ctx.e, { kind: 'CLUE', clue: key })));
+      }
+      return { newClue: true, chainedKeys, unlockedMaps };
+    });
+
+    const { chainedKeys, ...rest } = result;
+    const caseFile = caseFileSchema.parse(ctx.s.case.caseFile);
+    const before = visibleCaseFile(caseFile, ctx.found);
+    const after = visibleCaseFile(
+      caseFile,
+      new Set([...ctx.found, ...(clue && result.newClue ? [clue.key] : []), ...chainedKeys]),
+    );
+    // 미끼 여부는 엔딩에서만 공개한다.
+    const publicClue = (c: Clue) => ({
+      key: c.key,
+      kind: c.kind,
+      title: c.title,
+      content: c.content,
     });
     return {
       kind: obj ? 'OBJECT' : 'NPC',
       name: thing.name,
       description: obj ? obj.description : null,
       lines: npc ? npc.lines : null,
-      // 미끼 여부는 엔딩에서만 공개한다.
-      clue: clue
-        ? { key: clue.key, kind: clue.kind, title: clue.title, content: clue.content }
-        : null,
-      ...result,
+      clue: clue ? publicClue(clue) : null,
+      chainedClues: chainedKeys.map((k) => publicClue(ctx.e.clues.find((c) => c.key === k)!)),
+      caseFileAdded: {
+        people: after.people.length - before.people.length,
+        timeline: after.timeline.length - before.timeline.length,
+      },
+      ...rest,
     };
   }
 

@@ -135,6 +135,9 @@ export const ko = {
     lockedExit: (name: string) => `${name}(으)로 가는 길은 아직 닫혀 있어요.`,
     unlocked: (names: string[]) => `새 장소가 열렸어요: ${names.join(', ')}`,
     clueFound: '단서를 찾았어요',
+    chainedClue: '함께 수첩에 기록했어요',
+    caseFileAdded: (people: number, timeline: number) =>
+      `수사 자료에 ${[people ? `관련자 ${people}명` : '', timeline ? `타임라인 ${timeline}건` : ''].filter(Boolean).join('·')}이 추가됐어요`,
     alreadyInspected: '이미 조사한 곳이에요. 단서는 수첩에 있어요.',
     noClue: '특별한 단서는 없어 보여요.',
     saving: '이동 중…',

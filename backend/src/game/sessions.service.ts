@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
   MAX_SUBMISSIONS,
+  caseFileSchema,
+  visibleCaseFile,
   type Ending,
   type HintState,
   type ViewHintResponse,
@@ -42,6 +44,7 @@ export class SessionsService {
             baseQuestions: true,
             currentVersion: true,
             explanation: true,
+            caseFile: true,
           },
         },
       },
@@ -54,6 +57,7 @@ export class SessionsService {
     const s = await this.loadOwned(player, sessionId);
     const data = await loadVersion(this.prisma, s.case.id, s.case.currentVersion);
     const viewed = await this.viewedHints(s.id);
+    const found = await this.foundClues(s.id);
     return {
       sessionId: s.id,
       caseSlug: s.case.slug,
@@ -67,7 +71,17 @@ export class SessionsService {
       submissionsLeft: MAX_SUBMISSIONS - s.wrongSubmissions,
       hints: this.hintStates(data, s.case.baseQuestions, s.questionsUsed, viewed),
       memo: s.memo,
+      caseFile: visibleCaseFile(caseFileSchema.parse(s.case.caseFile), found),
     };
+  }
+
+  /** 세션이 얻은 단서 key(연쇄로 얻은 단서 포함) */
+  async foundClues(sessionId: string): Promise<Set<string>> {
+    const rows = await this.prisma.sessionClue.findMany({
+      where: { sessionId },
+      select: { clueKey: true },
+    });
+    return new Set(rows.map((r) => r.clueKey));
   }
 
   /** 질문 기록(PRD D48). '다시 질문'은 순번(turnNo) 없이 포함된다. */
@@ -166,14 +180,7 @@ export class SessionsService {
       orderBy: { createdAt: 'desc' },
       select: { matched: true },
     });
-    const found = new Set(
-      (
-        await this.prisma.sessionClue.findMany({
-          where: { sessionId: s.id },
-          select: { clueKey: true },
-        })
-      ).map((c) => c.clueKey),
-    );
+    const found = await this.foundClues(s.id);
     const matched = matchedSchema.safeParse(last?.matched ?? []);
     const matchedIds = new Set(
       (matched.success ? matched.data : []).filter((m) => m.agreement === 'MATCH').map((m) => m.id),

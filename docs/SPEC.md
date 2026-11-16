@@ -129,14 +129,14 @@
 | POST | `/me/age-confirmation` | 로그인 사용자의 18세 확인 기록 [D33] |
 | GET | `/auth/google` · `/auth/google/callback` · POST `/auth/logout` | 구글 로그인, 콜백에서 기록 이전 실행 [D31, D82] |
 | GET | `/cases` | 사건 목록: 제목, 한 줄 요약, 난이도, 수위, 태그, 장르, 상태(미해결/해결), 최고 등급·달성 회차·총 회차, 진행 중 여부 |
-| GET | `/cases/{slug}` | 사건 공개 정보: 도입 이야기, 수사 자료, B, 맵 목록(공개 메타데이터만) |
+| GET | `/cases/{slug}` | 사건 공개 정보: 도입 이야기, 수사 자료(처음 공개 항목만, D90), B, 맵 목록(공개 메타데이터만) |
 | POST | `/cases/{slug}/sessions` | 새 세션 시작(진행 중이 있으면 409 `ACTIVE_SESSION_EXISTS`) |
-| GET | `/sessions/{id}` | 진행 상태 전체(복원용): 진행 수치, 힌트 해금·열람, 열린 구역, 현재 맵·위치, 획득 단서, 메모, 남은 제출 기회 [D53, D76] |
+| GET | `/sessions/{id}` | 진행 상태 전체(복원용): 진행 수치, 힌트 해금·열람, 열린 구역, 현재 맵·위치, 획득 단서, 메모, 남은 제출 기회, 지금까지 공개된 수사 자료(caseFile) [D53, D76, D90] |
 | GET | `/sessions/{id}/questions` | 질문 기록(순번·질문·판정, 판정별 필터) [D48] |
 | POST | `/sessions/{id}/questions` | `{question}` → 판정(§6) |
 | POST | `/sessions/{id}/hints/{no}` | 힌트 열람(해금된 것만, 순서대로) [D15] |
 | POST | `/sessions/{id}/move` | `{mapKey, x, y}` 맵 이동·위치 저장(구역 해금 검사) |
-| POST | `/sessions/{id}/inspect` | `{objectKey 또는 npcKey}` 조사·대화 → 설명·단서·진술, 단서 해금 처리 |
+| POST | `/sessions/{id}/inspect` | `{objectKey 또는 npcKey}` 조사·대화 → 설명·단서·진술, 연쇄 단서(chainedClues), 수사 자료 추가 수(caseFileAdded), 단서 해금 처리 [D90, D91] |
 | PUT | `/sessions/{id}/memo` | 메모 저장 [D62] |
 | POST | `/sessions/{id}/submissions` | `{answer}` → 채점(§7) |
 | POST | `/sessions/{id}/abandon` | 포기 → F, 해설 공개 [D80] |
@@ -233,6 +233,8 @@ grade = SOLVED  → score >= 90 ? S : >= 80 ? A : >= 70 ? B : C
 - 조사: 플레이어와 대상이 인접(맨해튼 거리 1)해야 함. 처음 조사하면 설명 + 단서(있으면) 획득, 다시 조사하면 설명과 "이미 조사함" [확정].
 - NPC: 대화하면 대사 1~3줄을 보여 주고 처음 대화 시 진술 단서 획득 [D28, D75].
 - 단서 해금: 단서 획득 직후 그 단서로 열리는 구역을 개방.
+- 단서 연쇄(D91): 처음 얻은 단서에 `reveals`가 있으면 그 단서들도 같은 트랜잭션에서 기록하고(여러 단계), 연쇄로 얻은 단서로 열리는 구역도 연다. 다시 조사하면 연쇄·해금을 반복하지 않는다.
+- 수사 자료 점진 공개(D90): 관련자·타임라인 항목의 `revealedBy`(단서 key)를 세션이 얻은 단서와 비교해 공개 범위를 계산한다. 별도 저장 없이 `session_clue`로 계산하므로 이어하기도 그대로 복원된다. 사건 소개(`/cases/{slug}`)는 처음 공개 항목만, 응답에는 `revealedBy`를 넣지 않는다.
 
 ### 9.3 Phaser·React 경계 [확정]
 - Phaser는 이동·애니메이션·충돌·상호작용 키 입력만 처리하고 **API를 직접 호출하지 않는다**. 조사·이동 요청은 이벤트로 React에 넘기고, React가 API를 호출해 결과(모달 등)를 표시한다.
@@ -267,10 +269,10 @@ content/public/tutorial/
   eval.json        # 평가 질문(30개 이상)·평가 답안
 ```
 
-`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?}}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy}], explanation`.
+`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?}}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?}], explanation`. `caseFile.people[]`·`caseFile.timeline[]`에는 선택 항목 `revealedBy`(공개 조건 단서 key, D90).
 - 맵 격자: '#' 벽, '.' 바닥. 조사 대상·NPC는 바닥 칸에 서고 그 칸은 지나갈 수 없다. 출입구 칸에 들어서면 대상 맵의 도착 좌표로 이동한다.
 
-- **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 연결된 오브젝트/NPC가 정확히 1개, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
+- **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 수사 자료의 `revealedBy`가 있는 단서를 가리키고 처음 보이는 관련자가 1명 이상, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
 - 버전: 내용이 바뀌면 `version`을 올리고 `case_version`에 저장, 진행 중 세션은 새 버전 적용 + 세션에 판정 당시 버전 기록 [D59].
 - 작성 규칙(개연성 점검표, 표현 수위, 글쓰기)은 `docs/cases/README.md`로 따로 정리한다(사건 제작 단계에서).
 - **인물 표기 규칙**(3단계, 적재 전 자동 검사):

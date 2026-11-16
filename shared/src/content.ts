@@ -28,7 +28,16 @@ export const factSchema = z.object({
 });
 export type Fact = z.infer<typeof factSchema>;
 
-/** 수사 자료 탭(PRD D77): 플레이어에게 공개되는 정보만 */
+/**
+ * 이 단서를 얻으면 공개되는 항목(PRD D90). 없으면 처음부터 공개.
+ * 사건 데이터에만 있고, 플레이어에게 보내는 수사 자료(`visibleCaseFile`)에서는 지운다.
+ */
+const revealedBySchema = z
+  .string()
+  .regex(/^[a-z0-9-]+$/)
+  .optional();
+
+/** 수사 자료 탭(PRD D77): 플레이어에게 공개되는 정보만. 관련자·타임라인은 단서를 얻을 때마다 늘어난다(D90). */
 export const caseFileSchema = z.object({
   overview: z.array(z.object({ label: z.string().min(1), value: z.string().min(1) })).min(1),
   people: z
@@ -38,12 +47,28 @@ export const caseFileSchema = z.object({
         name: z.string().min(1),
         role: z.string().min(1),
         publicInfo: z.string().min(1).max(120),
+        revealedBy: revealedBySchema,
       }),
     )
     .min(1),
-  timeline: z.array(z.object({ at: z.string().min(1), text: z.string().min(1) })),
+  timeline: z.array(
+    z.object({ at: z.string().min(1), text: z.string().min(1), revealedBy: revealedBySchema }),
+  ),
 });
 export type CaseFile = z.infer<typeof caseFileSchema>;
+
+/**
+ * 플레이어에게 보낼 수사 자료(PRD D90): 처음부터 공개된 항목 + 얻은 단서로 공개된 항목.
+ * 아직 공개되지 않은 항목과 공개 조건(revealedBy)은 내보내지 않는다.
+ */
+export function visibleCaseFile(cf: CaseFile, foundClues: ReadonlySet<string>): CaseFile {
+  const shown = (r: string | undefined) => r === undefined || foundClues.has(r);
+  return {
+    overview: cf.overview,
+    people: cf.people.filter((p) => shown(p.revealedBy)).map(({ revealedBy: _r, ...p }) => p),
+    timeline: cf.timeline.filter((t) => shown(t.revealedBy)).map(({ revealedBy: _r, ...t }) => t),
+  };
+}
 
 /** 정답 요소(PRD §8, D20). 키워드 그룹: 그룹 안은 OR, 그룹 사이는 AND */
 export const answerElementSchema = z.object({
@@ -100,6 +125,21 @@ export const caseContentSchema = z
     }
     if (!c.elements.some((e) => e.required)) {
       ctx.addIssue({ code: 'custom', message: 'at least one required answer element' });
+    }
+    const clueKeys = new Set(c.clues.map((k) => k.key));
+    for (const item of [...c.caseFile.people, ...c.caseFile.timeline]) {
+      if (item.revealedBy !== undefined && !clueKeys.has(item.revealedBy)) {
+        ctx.addIssue({
+          code: 'custom',
+          message: `case file item revealed by unknown clue ${item.revealedBy}`,
+        });
+      }
+    }
+    if (c.caseFile.people.every((p) => p.revealedBy !== undefined)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'at least one person must be visible from the start',
+      });
     }
     for (const message of personNamingIssues(c)) ctx.addIssue({ code: 'custom', message });
     for (const message of exploreIssues(c, { factIds: c.facts.map((f) => f.id) }))

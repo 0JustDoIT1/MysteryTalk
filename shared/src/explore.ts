@@ -56,8 +56,28 @@ export const clueSchema = z.object({
   content: z.string().min(1).max(200),
   /** 미끼 단서(엔딩에서만 공개, D61) */
   decoy: z.boolean(),
+  /** 단서 연쇄(PRD D91): 이 단서를 얻으면 함께 수첩에 기록되는 단서 key */
+  reveals: z.array(z.string()).optional(),
 });
 export type Clue = z.infer<typeof clueSchema>;
+
+/**
+ * 단서 하나를 얻었을 때 함께 얻는 단서 전부(PRD D91): 자신 + 연쇄로 이어지는 단서(여러 단계).
+ * 순서는 연쇄 순(너비 우선). 순환은 적재 전 검사가 막지만 여기서도 한 번만 넣는다.
+ */
+export function clueChain(e: Pick<ExploreContent, 'clues'>, key: string): string[] {
+  const out: string[] = [];
+  const queue = [key];
+  while (queue.length) {
+    const k = queue.shift()!;
+    if (out.includes(k)) continue;
+    const clue = e.clues.find((c) => c.key === k);
+    if (!clue) continue;
+    out.push(k);
+    queue.push(...(clue.reveals ?? []));
+  }
+  return out;
+}
 
 export const caseObjectSchema = pointSchema.extend({
   key: z.string().regex(/^[a-z0-9-]+$/),
@@ -158,9 +178,14 @@ export function exploreIssues(e: ExploreContent, ctx: { factIds: string[] }): st
     const sources = [
       ...e.objects.filter((o) => o.clue === c.key),
       ...e.npcs.filter((n) => n.clue === c.key),
+      ...e.clues.filter((p) => p.reveals?.includes(c.key)),
     ];
     if (sources.length !== 1)
-      issues.push(`clue ${c.key}: must be linked to exactly one object or npc`);
+      issues.push(`clue ${c.key}: must be linked to exactly one object, npc or revealing clue`);
+    for (const r of c.reveals ?? []) {
+      if (r === c.key) issues.push(`clue ${c.key}: cannot reveal itself`);
+      else if (!clueKeys.includes(r)) issues.push(`clue ${c.key}: reveals unknown clue ${r}`);
+    }
   }
   for (const o of [...e.objects, ...e.npcs]) {
     if ('clue' in o && o.clue && !clueKeys.includes(o.clue))
@@ -212,10 +237,12 @@ export function exploreIssues(e: ExploreContent, ctx: { factIds: string[] }): st
         [0, 1],
         [0, -1],
       ].some(([dx, dy]) => seen?.has(`${o.x + dx!},${o.y + dy!}`));
-      if (reachable && o.clue && !found.has(o.clue)) {
-        found.add(o.clue);
+      if (!reachable || !o.clue || found.has(o.clue)) continue;
+      for (const got of clueChain(e, o.clue)) {
+        if (found.has(got)) continue;
+        found.add(got);
         for (const m of e.maps) {
-          if (m.unlock.type === 'CLUE' && m.unlock.clue === o.clue && !opened.has(m.key)) {
+          if (m.unlock.type === 'CLUE' && m.unlock.clue === got && !opened.has(m.key)) {
             opened.add(m.key);
             changed = true;
             // 이미 도달한 출입구로 다시 들어갈 수 있게 모든 진입점을 다시 넣는다.
@@ -230,6 +257,8 @@ export function exploreIssues(e: ExploreContent, ctx: { factIds: string[] }): st
   }
   for (const m of e.maps)
     if (!reachedTiles.get(m.key)?.size) issues.push(`map ${m.key}: unreachable`);
+  // 연쇄가 순환하면(서로만 서로를 연다) 어느 단서도 얻을 수 없다
+  for (const c of e.clues) if (!found.has(c.key)) issues.push(`clue ${c.key}: cannot be obtained`);
   for (const o of [...e.objects, ...e.npcs]) {
     const seen = reachedTiles.get(o.map);
     if (
@@ -328,6 +357,10 @@ export const inspectResponseSchema = z.object({
   clue: foundClueSchema.nullable(),
   /** 처음 얻은 단서인지(다시 조사하면 false, '이미 조사함') */
   newClue: z.boolean(),
+  /** 단서 연쇄로 이번에 함께 얻은 단서(PRD D91) */
+  chainedClues: z.array(foundClueSchema),
+  /** 이번에 수사 자료에 새로 공개된 항목 수(PRD D90, 알림용). 내용은 세션 상태로 다시 받는다 */
+  caseFileAdded: z.object({ people: z.number().int(), timeline: z.number().int() }),
   /** 이번에 새로 열린 맵 이름 */
   unlockedMaps: z.array(z.string()),
 });

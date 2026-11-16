@@ -1,7 +1,14 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { exploreIssues, personNamingIssues, type ExploreContent } from '@mysterytalk/shared';
+import {
+  caseContentSchema,
+  clueChain,
+  exploreIssues,
+  personNamingIssues,
+  visibleCaseFile,
+  type ExploreContent,
+} from '@mysterytalk/shared';
 import { evalSetSchema } from '../eval/eval-set.js';
 import { readCaseDirs } from './content-files.js';
 
@@ -160,7 +167,7 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
       e.maps[1]!.unlock = { type: 'FACT', fact: 'F99', keywords: [['x']], hint: 1 };
       expect(exploreIssues(e, { factIds: ['F01'] })).toEqual(
         expect.arrayContaining([
-          'clue note: must be linked to exactly one object or npc',
+          'clue note: must be linked to exactly one object, npc or revealing clue',
           'map b: unlock fact F99 not found',
         ]),
       );
@@ -173,6 +180,107 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
         expect.arrayContaining([
           'map b: unreachable',
           'desk: no walkable tile next to it is reachable',
+        ]),
+      );
+    });
+
+    it('단서 연쇄(D91): 연쇄로 얻는 단서로도 맵이 열리고, 여러 단계로 이어진다', () => {
+      const e = base();
+      e.objects[0]!.clue = 'note';
+      e.clues[0]!.reveals = ['memo'];
+      e.clues.push(
+        {
+          key: 'memo',
+          kind: 'RECORD',
+          title: '메모',
+          content: '메모',
+          decoy: false,
+          reveals: ['photo'],
+        },
+        { key: 'photo', kind: 'ITEM', title: '사진', content: '사진', decoy: false },
+      );
+      e.maps[1]!.unlock = { type: 'CLUE', clue: 'photo' };
+      expect(exploreIssues(e, { factIds: [] })).toEqual([]);
+      expect(clueChain(e, 'note')).toEqual(['note', 'memo', 'photo']);
+      expect(clueChain(e, 'memo')).toEqual(['memo', 'photo']);
+    });
+
+    it('단서 연쇄: 없는 단서·자기 자신을 가리키거나, 서로만 여는 순환이면 알려 준다', () => {
+      const e = base();
+      e.clues[0]!.reveals = ['ghost', 'note'];
+      e.clues.push(
+        { key: 'x', kind: 'ITEM', title: 'x', content: 'x', decoy: false, reveals: ['y'] },
+        { key: 'y', kind: 'ITEM', title: 'y', content: 'y', decoy: false, reveals: ['x'] },
+      );
+      expect(exploreIssues(e, { factIds: [] })).toEqual(
+        expect.arrayContaining([
+          'clue note: reveals unknown clue ghost',
+          'clue note: cannot reveal itself',
+        ]),
+      );
+      e.clues[0]!.reveals = undefined;
+      expect(exploreIssues(e, { factIds: [] })).toEqual(
+        expect.arrayContaining(['clue x: cannot be obtained', 'clue y: cannot be obtained']),
+      );
+    });
+
+    it('단서 연쇄: 대상과 연쇄 양쪽에서 얻는 단서는 출처가 둘이라 거부한다', () => {
+      const e = base();
+      e.clues.push({
+        key: 'memo',
+        kind: 'RECORD',
+        title: '메모',
+        content: '메모',
+        decoy: false,
+        reveals: ['note'],
+      });
+      expect(exploreIssues(e, { factIds: [] })).toEqual(
+        expect.arrayContaining([
+          'clue note: must be linked to exactly one object, npc or revealing clue',
+        ]),
+      );
+    });
+  });
+
+  describe('수사 자료 점진 공개(D90)', () => {
+    const tutorial = () =>
+      JSON.parse(readFileSync(join(publicRoot, 'tutorial', 'case.json'), 'utf8')) as {
+        caseFile: { people: { revealedBy?: string }[]; timeline: { revealedBy?: string }[] };
+        clues: { key: string }[];
+      };
+
+    it('처음 공개 항목 + 얻은 단서로 공개된 항목만 보이고, 공개 조건은 내보내지 않는다', () => {
+      const cf = {
+        overview: [{ label: '장소', value: '빵집' }],
+        people: [
+          { id: 'P1', name: '갑', role: '사장', publicInfo: '처음부터' },
+          { id: 'P2', name: '을', role: '직원', publicInfo: '나중에', revealedBy: 'note' },
+        ],
+        timeline: [
+          { at: '09:00', text: '처음부터' },
+          { at: '10:00', text: '나중에', revealedBy: 'memo' },
+        ],
+      };
+      const start = visibleCaseFile(cf, new Set());
+      expect(start.people.map((p) => p.id)).toEqual(['P1']);
+      expect(start.timeline.map((t) => t.at)).toEqual(['09:00']);
+      const later = visibleCaseFile(cf, new Set(['note', 'memo']));
+      expect(later.people.map((p) => p.id)).toEqual(['P1', 'P2']);
+      expect(later.timeline).toHaveLength(2);
+      expect(JSON.stringify(later)).not.toContain('revealedBy');
+    });
+
+    it('없는 단서를 공개 조건으로 쓰거나 처음 보이는 관련자가 없으면 실패한다', () => {
+      const c = tutorial();
+      c.caseFile.timeline[0]!.revealedBy = 'no-such-clue';
+      for (const p of c.caseFile.people) p.revealedBy = c.clues[0]!.key;
+      const r = caseContentSchema.safeParse(c);
+      expect(r.success).toBe(false);
+      const messages = r.error!.issues.map((i) => i.message);
+      expect(messages).toEqual(
+        expect.arrayContaining([
+          'case file item revealed by unknown clue no-such-clue',
+          'at least one person must be visible from the start',
         ]),
       );
     });

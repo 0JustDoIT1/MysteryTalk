@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   caseFileSchema,
+  visibleCaseFile,
   genreSchema,
   type CaseDetail,
   type CaseSummary,
@@ -72,7 +73,8 @@ export class CasesService {
     if (!c) throw new AppException(404, 'NOT_FOUND');
     return {
       ...c,
-      caseFile: caseFileSchema.parse(c.caseFile),
+      // 세션 시작 전에는 처음부터 공개된 항목만(PRD D90)
+      caseFile: visibleCaseFile(caseFileSchema.parse(c.caseFile), new Set()),
       genres: genresSchema.parse(c.genres),
     };
   }

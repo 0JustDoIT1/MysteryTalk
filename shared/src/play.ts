@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { caseFileSchema } from './content.js';
 
 export const sessionStatusSchema = z.enum(['ACTIVE', 'SOLVED', 'PARTIAL', 'FAILED', 'ABANDONED']);
 export type SessionStatus = z.infer<typeof sessionStatusSchema>;
@@ -74,6 +75,8 @@ export const sessionStateSchema = z.object({
   submissionsLeft: z.number().int(),
   hints: z.array(hintStateSchema),
   memo: z.string(),
+  /** 지금까지 공개된 수사 자료(PRD D90): 처음 공개분 + 얻은 단서로 공개된 항목 */
+  caseFile: caseFileSchema,
 });
 export type SessionState = z.infer<typeof sessionStateSchema>;
 
