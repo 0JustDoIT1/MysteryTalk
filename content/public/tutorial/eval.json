@@ -29,7 +29,7 @@
     {
       "id": "Q05",
       "category": "direct",
-      "q": "강민호가 열쇠를 가지고 있었나요?",
+      "q": "진상우가 열쇠를 가지고 있었나요?",
       "expected": "YES"
     },
     {
@@ -71,7 +71,7 @@
     {
       "id": "Q12",
       "category": "partial",
-      "q": "강민호가 열쇠를 잃어버렸나요?",
+      "q": "진상우가 열쇠를 잃어버렸나요?",
       "expected": "MAYBE"
     },
     {
@@ -113,7 +113,7 @@
       "id": "Q18",
       "category": "synonym",
       "pairId": "apron",
-      "q": "강민호는 새벽에 앞치마를 바꿔 입었나요?",
+      "q": "진상우는 새벽에 앞치마를 바꿔 입었나요?",
       "expected": "YES"
     },
     {
@@ -137,7 +137,7 @@
     {
       "id": "Q22",
       "category": "compound",
-      "q": "강민호가 열쇠를 가졌고 오태준이 그걸 가져갔나요?",
+      "q": "진상우가 열쇠를 가졌고 오태준이 그걸 가져갔나요?",
       "expected": "RETRY",
       "expectedReason": "COMPOUND"
     },
@@ -200,7 +200,7 @@
     {
       "id": "Q31",
       "category": "undefined_fact",
-      "q": "강민호는 안경을 썼나요?",
+      "q": "진상우는 안경을 썼나요?",
       "expected": "IRRELEVANT"
     },
     {
@@ -234,7 +234,7 @@
     {
       "id": "S1",
       "category": "full",
-      "answer": "열쇠는 도둑맞은 게 아니라 제빵사 강민호가 앞치마 주머니에 넣어 둔 채 그 앞치마를 세탁 자루에 넣는 바람에 세탁소로 갔다.",
+      "answer": "열쇠는 도둑맞은 게 아니라 제빵사 진상우가 앞치마 주머니에 넣어 둔 채 그 앞치마를 세탁 자루에 넣는 바람에 세탁소로 갔다.",
       "expected": "SOLVED"
     },
     {
@@ -246,7 +246,7 @@
     {
       "id": "S3",
       "category": "casual",
-      "answer": "민호 씨가 앞치마 갈아입으면서 주머니에 있던 열쇠를 잊고 세탁물로 내보냄. 도난 아님",
+      "answer": "상우 씨가 앞치마 갈아입으면서 주머니에 있던 열쇠를 잊고 세탁물로 내보냄. 도난 아님",
       "expected": "SOLVED",
       "accept": ["NEEDS_DETAIL"],
       "expectedFinal": "SOLVED"
@@ -274,7 +274,7 @@
     {
       "id": "K1",
       "category": "keyword_list",
-      "answer": "강민호 앞치마 세탁 실수 열쇠",
+      "answer": "진상우 앞치마 세탁 실수 열쇠",
       "expected": "NEEDS_DETAIL",
       "accept": ["WRONG"],
       "expectedFinal": "WRONG"

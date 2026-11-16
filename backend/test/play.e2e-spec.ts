@@ -342,7 +342,7 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
       const cookie = await newPlayer();
       const id = await start(cookie, TUTORIAL);
       const answer =
-        '제빵사 강민호가 앞치마 주머니에 열쇠를 넣고 세탁 자루에 넣었다. 도난이 아니다.';
+        '제빵사 진상우가 앞치마 주머니에 열쇠를 넣고 세탁 자루에 넣었다. 도난이 아니다.';
       grader.set(answer, { A1: 'MATCH', A2: 'MATCH' });
       await submit(cookie, id, answer).expect(200);
       const ending = (await http().get(`/sessions/${id}/ending`).set('Cookie', cookie).expect(200))

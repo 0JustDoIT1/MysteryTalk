@@ -156,7 +156,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
         label: 'MAYBE',
         turnNo: 3,
       });
-      expect((await ask(cookie, id, '강민호는 안경을 썼나요?')).body).toMatchObject({
+      expect((await ask(cookie, id, '진상우는 안경을 썼나요?')).body).toMatchObject({
         label: 'IRRELEVANT',
         turnNo: 4,
       });
@@ -177,7 +177,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
         turnNo: null,
         questionsUsed: 0,
       });
-      await ask(cookie, id, '강민호는 안경을 썼나요?').expect(200);
+      await ask(cookie, id, '진상우는 안경을 썼나요?').expect(200);
 
       const log = await http().get(`/sessions/${id}/questions`).set('Cookie', cookie).expect(200);
       expect(
@@ -270,8 +270,8 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);
       const key = randomUUID();
-      const first = await ask(cookie, id, '강민호는 안경을 썼나요?', key).expect(200);
-      const replay = await ask(cookie, id, '강민호는 안경을 썼나요?', key).expect(200);
+      const first = await ask(cookie, id, '진상우는 안경을 썼나요?', key).expect(200);
+      const replay = await ask(cookie, id, '진상우는 안경을 썼나요?', key).expect(200);
       expect(replay.body).toEqual(first.body);
       expect(judge.received).toHaveLength(1);
       expect(await prisma.questionLog.count()).toBe(1);

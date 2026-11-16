@@ -102,7 +102,7 @@ test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수와 �
 
   await submitAnswer(
     page,
-    '제빵사 강민호가 앞치마 주머니에 열쇠를 넣은 채 세탁 자루에 넣었다. 도난이 아니다.',
+    '제빵사 진상우가 앞치마 주머니에 열쇠를 넣은 채 세탁 자루에 넣었다. 도난이 아니다.',
   );
   await expect(page).toHaveURL(/\/ending$/);
   await expect(page.getByText('점수 100')).toBeVisible();
