@@ -1,4 +1,6 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import request from 'supertest';
 import { ScriptedGrader } from '../src/grade/mock.grader.js';
@@ -330,6 +332,73 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
         'P4',
         'P5',
       ]);
+    });
+  });
+
+  describe('힌트·단서 이미지 (D92·D93)', () => {
+    const image = (cookie: string, path: string) =>
+      http()
+        .get(path)
+        .set('Cookie', cookie)
+        .buffer(true)
+        .parse((res, cb) => {
+          const chunks: Buffer[] = [];
+          res.on('data', (c: Buffer) => chunks.push(c));
+          res.on('end', () => cb(null, Buffer.concat(chunks)));
+        });
+    const png = () => readFileSync(join(sampleCase().dir, 'images', 'light-switch.png'));
+
+    it('단서 이미지는 그 단서를 얻은 본인 세션에만 내려주고, 본인 브라우저에만 캐시하게 한다', async () => {
+      const { cookie, id } = await setup();
+      const path = `/sessions/${id}/clues/light-switch/image`;
+      await image(cookie, path).expect(404);
+      await prisma.playSession.update({
+        where: { id },
+        data: { startedAt: new Date(Date.now() - 1000) },
+      });
+      const res = await inspect(cookie, id, 'switch', 'living', 11, 1).expect(200);
+      expect(res.body.clue).toMatchObject({ key: 'light-switch', image: true });
+      expect(res.body.clue.alt).toContain('전등 스위치');
+
+      const ok = await image(cookie, path).expect(200);
+      expect(ok.headers['content-type']).toBe('image/png');
+      expect(ok.headers['cache-control']).toBe('private, max-age=3600');
+      expect(ok.headers['x-content-type-options']).toBe('nosniff');
+      expect(Buffer.compare(ok.body as Buffer, png())).toBe(0);
+
+      const { cookie: other } = await setup();
+      await image(other, path).expect(404);
+      // 이미지가 없는 단서·없는 단서
+      await image(cookie, `/sessions/${id}/clues/breaker/image`).expect(404);
+      await image(cookie, `/sessions/${id}/clues/NOPE/image`).expect(422);
+    });
+
+    it('이미지 힌트는 열람한 뒤에만 이미지·대체 텍스트를 주고, 글 힌트에는 이미지가 없다', async () => {
+      const loaded = sampleCase();
+      loaded.content.hints[0] = { no: 1, image: 'light-switch.png', alt: '전등 스위치 사진' };
+      loaded.content.version += 1;
+      await syncCase(prisma, { ...loaded, hash: `${loaded.hash}-img` });
+
+      const { cookie, id } = await setup();
+      const before = (await http().get(`/sessions/${id}`).set('Cookie', cookie).expect(200)).body;
+      expect(before.hints[0]).toMatchObject({ viewed: false, image: true, text: null, alt: null });
+      await image(cookie, `/sessions/${id}/hints/1/image`).expect(404);
+
+      await prisma.playSession.update({ where: { id }, data: { questionsUsed: 20 } });
+      const viewed = await http().post(`/sessions/${id}/hints/1`).set('Cookie', cookie).expect(200);
+      expect(viewed.body).toMatchObject({
+        viewed: true,
+        image: true,
+        text: null,
+        alt: '전등 스위치 사진',
+      });
+      const ok = await image(cookie, `/sessions/${id}/hints/1/image`).expect(200);
+      expect(ok.headers['content-type']).toBe('image/png');
+
+      await http().post(`/sessions/${id}/hints/2`).set('Cookie', cookie).expect(200);
+      await image(cookie, `/sessions/${id}/hints/2/image`).expect(404);
+      const { cookie: other } = await setup();
+      await image(other, `/sessions/${id}/hints/1/image`).expect(404);
     });
   });
 

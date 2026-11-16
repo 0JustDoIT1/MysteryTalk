@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { altSchema, imageNameSchema } from './images.js';
 
 /**
  * 현장 조사 데이터(SPEC §9.2, §11, PRD §6). 사건 데이터 파일(`case.json`)의 maps·objects·npcs·clues.
@@ -58,6 +59,9 @@ export const clueSchema = z.object({
   decoy: z.boolean(),
   /** 단서 연쇄(PRD D91): 이 단서를 얻으면 함께 수첩에 기록되는 단서 key */
   reveals: z.array(z.string()).optional(),
+  /** 단서 이미지(선택, PRD D93). 있으면 대체 텍스트도 있어야 한다 */
+  image: imageNameSchema.optional(),
+  alt: altSchema.optional(),
 });
 export type Clue = z.infer<typeof clueSchema>;
 
@@ -182,6 +186,8 @@ export function exploreIssues(e: ExploreContent, ctx: { factIds: string[] }): st
     ];
     if (sources.length !== 1)
       issues.push(`clue ${c.key}: must be linked to exactly one object, npc or revealing clue`);
+    if (c.image && !c.alt) issues.push(`clue ${c.key}: image needs alt text`);
+    if (!c.image && c.alt) issues.push(`clue ${c.key}: alt text without image`);
     for (const r of c.reveals ?? []) {
       if (r === c.key) issues.push(`clue ${c.key}: cannot reveal itself`);
       else if (!clueKeys.includes(r)) issues.push(`clue ${c.key}: reveals unknown clue ${r}`);
@@ -288,6 +294,10 @@ export const foundClueSchema = z.object({
   kind: clueKindSchema,
   title: z.string(),
   content: z.string(),
+  /** 이미지가 있으면 GET /sessions/{id}/clues/{key}/image 로 받는다(D93) */
+  image: z.boolean(),
+  /** 이미지 대체 텍스트(화면 낭독용) */
+  alt: z.string().nullable(),
 });
 export type FoundClue = z.infer<typeof foundClueSchema>;
 

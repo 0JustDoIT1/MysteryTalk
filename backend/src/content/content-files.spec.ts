@@ -5,12 +5,14 @@ import {
   caseContentSchema,
   clueChain,
   exploreIssues,
+  hintSchema,
+  IMAGE_MAX_BYTES,
   personNamingIssues,
   visibleCaseFile,
   type ExploreContent,
 } from '@mysterytalk/shared';
 import { evalSetSchema } from '../eval/eval-set.js';
-import { readCaseDirs } from './content-files.js';
+import { contentHash, readCaseDirs } from './content-files.js';
 
 const publicRoot = resolve(import.meta.dirname, '../../../content/public');
 
@@ -64,7 +66,7 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
         ],
       },
       facts: [{ id: 'F01', text: '조카 문태성이 밀쳤다. 조카 문태성은 달아났다.' }],
-      hints: [{ no: 1, text: '관리인 오만식에게 물어보세요.' }],
+      hints: [{ no: 1 as const, text: '관리인 오만식에게 물어보세요.' }],
       elements: [
         {
           id: 'A1',
@@ -284,5 +286,89 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
         ]),
       );
     });
+  });
+});
+
+describe('사건 이미지(D92·D93)', () => {
+  const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  /** 튜토리얼을 복사해 힌트 1을 이미지 힌트로 바꾼 임시 사건 폴더 */
+  function imageCase(image: Buffer | null, name = 'hint-1.png') {
+    const c = JSON.parse(readFileSync(join(publicRoot, 'tutorial', 'case.json'), 'utf8'));
+    c.hints[0] = { no: 1, image: name, alt: '열쇠 걸이 사진' };
+    const root = mkdtempSync(join(tmpdir(), 'mt-img-'));
+    mkdirSync(join(root, 'tut', 'images'), { recursive: true });
+    writeFileSync(join(root, 'tut', 'case.json'), JSON.stringify(c));
+    if (image) writeFileSync(join(root, 'tut', 'images', name), image);
+    return root;
+  }
+
+  it('이미지 힌트를 읽어 형식과 내용을 함께 싣고, 이미지가 바뀌면 해시도 바뀐다', () => {
+    const [a] = readCaseDirs([imageCase(PNG)]);
+    expect(a!.assets).toEqual([
+      expect.objectContaining({ name: 'hint-1.png', mime: 'image/png', bytes: PNG }),
+    ]);
+    const [b] = readCaseDirs([imageCase(Buffer.concat([PNG, Buffer.from([1])]))]);
+    expect(b!.hash).not.toBe(a!.hash);
+  });
+
+  it('이미지가 없는 사건의 해시는 예전 방식과 같다(기존 버전 재적재 시 오류 방지)', () => {
+    const [t] = readCaseDirs([publicRoot]).filter((c) => c.content.isTutorial);
+    expect(t!.assets).toEqual([]);
+    expect(t!.hash).toBe(contentHash(t!.content));
+  });
+
+  it('파일이 없거나, 확장자와 내용이 다르거나, 너무 크면 거부한다', () => {
+    expect(() => readCaseDirs([imageCase(null)])).toThrow(/images\/hint-1\.png: file not found/);
+    expect(() => readCaseDirs([imageCase(Buffer.from('GIF89a....'))])).toThrow(
+      /does not match its extension/,
+    );
+    const big = Buffer.concat([PNG, Buffer.alloc(IMAGE_MAX_BYTES)]);
+    expect(() => readCaseDirs([imageCase(big)])).toThrow(/larger than/);
+  });
+
+  it('글 힌트와 이미지 힌트 필드를 섞으면 거부하고, SVG는 받지 않는다', () => {
+    expect(hintSchema.safeParse({ no: 1, text: '글', image: 'a.png', alt: '대체' }).success).toBe(
+      false,
+    );
+    expect(hintSchema.safeParse({ no: 1, image: 'a.svg', alt: '대체' }).success).toBe(false);
+    expect(hintSchema.safeParse({ no: 2, image: 'a.webp', alt: '대체' }).success).toBe(true);
+  });
+
+  it('단서 이미지는 대체 텍스트가 있어야 하고, 이미지 힌트는 대체 텍스트로 인물 표기를 검사한다', () => {
+    const e: ExploreContent = {
+      maps: [
+        {
+          key: 'a',
+          name: '방',
+          grid: ['#####', '#...#', '#####'],
+          exits: [],
+          unlock: { type: 'OPEN' },
+        },
+      ],
+      spawn: { x: 1, y: 1 },
+      objects: [
+        { key: 'desk', map: 'a', x: 3, y: 1, name: '책상', description: '책상', clue: 'note' },
+      ],
+      npcs: [],
+      clues: [
+        {
+          key: 'note',
+          kind: 'ITEM',
+          title: '쪽지',
+          content: '쪽지',
+          decoy: false,
+          image: 'note.png',
+        },
+      ],
+    };
+    expect(exploreIssues(e, { factIds: [] })).toContain('clue note: image needs alt text');
+    expect(
+      personNamingIssues({
+        caseFile: { people: [{ name: '오만식', role: '관리인' }] },
+        facts: [],
+        hints: [{ no: 1, image: 'h.png', alt: '오만식의 순찰 일지' }],
+        elements: [],
+      }),
+    ).toEqual(['hint 1: write "관리인 오만식" instead of "오만식"']);
   });
 });

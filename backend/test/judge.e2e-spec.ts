@@ -357,7 +357,12 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
           { id: 'F99', kind: 'FACT' as const, text: '새로 추가된 사실이다.' },
         ],
       };
-      await syncCase(prisma, { dir: original.dir, content: updated, hash: contentHash(updated) });
+      await syncCase(prisma, {
+        dir: original.dir,
+        content: updated,
+        hash: contentHash(updated),
+        assets: [],
+      });
       await ask(cookie, id, '수정 후 질문인가요?').expect(200);
 
       expect(judge.received[1]!.facts.map((f) => f.id)).toContain('F99');
@@ -370,7 +375,12 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const original = tutorialCase();
       const changed = { ...original.content, title: '바뀐 제목' };
       await expect(
-        syncCase(prisma, { dir: original.dir, content: changed, hash: contentHash(changed) }),
+        syncCase(prisma, {
+          dir: original.dir,
+          content: changed,
+          hash: contentHash(changed),
+          assets: [],
+        }),
       ).rejects.toThrow(/bump "version"/);
     });
   });

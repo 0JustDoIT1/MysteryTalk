@@ -159,6 +159,12 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await page.keyboard.press('e');
   const dialog = page.getByRole('dialog', { name: '전등 스위치' });
   await expect(dialog.getByText(/단서를 찾았어요: 켜져 있는 전등 스위치/)).toBeVisible();
+  // 단서 이미지(D93): 서버가 얻은 세션에만 내려주고, 대체 텍스트는 화면 낭독용
+  const photo = dialog.getByRole('img', { name: /전등 스위치 사진/ });
+  await expect(photo).toBeVisible();
+  await expect
+    .poll(() => photo.evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBeGreaterThan(0);
   await dialog.getByRole('button', { name: '닫기' }).click();
 
   // 다시 조사하면 '이미 조사함'
@@ -169,6 +175,11 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
 
   await page.getByRole('tab', { name: '단서' }).click();
   await expect(page.getByRole('tabpanel').getByText('켜져 있는 전등 스위치')).toBeVisible();
+  await page.getByRole('button', { name: '켜져 있는 전등 스위치 이미지 크게 보기' }).click();
+  const zoom = page.getByRole('dialog', { name: '켜져 있는 전등 스위치' });
+  await expect(zoom.getByRole('img', { name: /전등 스위치 사진/ })).toBeVisible();
+  await zoom.getByRole('button', { name: '닫기' }).click();
+  await expect(zoom).toBeHidden();
 
   // 질문창에 입력할 때는 캐릭터가 움직이지 않는다
   const input = page.getByLabel('예/아니오로 답할 수 있는 질문');

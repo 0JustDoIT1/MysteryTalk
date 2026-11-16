@@ -8,6 +8,7 @@ import {
   type Clue,
   type ExploreContent,
   type ExploreState,
+  type FoundClue,
   type InspectResponse,
   type MoveResponse,
   type Position,
@@ -15,7 +16,7 @@ import {
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { loadVersion } from './case-data.js';
+import { loadAsset, loadVersion } from './case-data.js';
 import { SessionsService } from './sessions.service.js';
 import { openMapKeys, unlockZones } from './zones.js';
 
@@ -25,6 +26,18 @@ import { openMapKeys, unlockZones } from './zones.js';
  */
 const TILES_PER_SECOND = 12; // 화면은 0.11초마다 한 칸(초당 약 9칸)이라 여유를 둔다
 const SLACK_TILES = 6;
+
+/** 플레이어에게 보내는 단서. 미끼 여부는 엔딩에서만 공개하고, 이미지는 따로 받는다(D93). */
+function publicClue(c: Clue): FoundClue {
+  return {
+    key: c.key,
+    kind: c.kind,
+    title: c.title,
+    content: c.content,
+    image: c.image !== undefined,
+    alt: c.alt ?? null,
+  };
+}
 
 /** 현장 조사(SPEC §9.2, PRD §6): 진행 상태·이동·조사. 조사·이동은 같은 요청을 다시 보내도 결과가 같다. */
 @Injectable()
@@ -106,9 +119,7 @@ export class ExploreService {
             : [],
         };
       }),
-      clues: e.clues
-        .filter((c) => found.has(c.key))
-        .map((c) => ({ key: c.key, kind: c.kind, title: c.title, content: c.content })),
+      clues: e.clues.filter((c) => found.has(c.key)).map(publicClue),
     };
   }
 
@@ -183,13 +194,6 @@ export class ExploreService {
       caseFile,
       new Set([...ctx.found, ...(clue && result.newClue ? [clue.key] : []), ...chainedKeys]),
     );
-    // 미끼 여부는 엔딩에서만 공개한다.
-    const publicClue = (c: Clue) => ({
-      key: c.key,
-      kind: c.kind,
-      title: c.title,
-      content: c.content,
-    });
     return {
       kind: obj ? 'OBJECT' : 'NPC',
       name: thing.name,
@@ -203,6 +207,18 @@ export class ExploreService {
       },
       ...rest,
     };
+  }
+
+  /** 얻은 단서의 이미지(D93). 얻기 전이거나 이미지가 없으면 404 */
+  async clueImage(
+    player: Player,
+    sessionId: string,
+    key: string,
+  ): Promise<{ mime: string; bytes: Uint8Array }> {
+    const { s, e, found } = await this.context(player, sessionId);
+    const clue = e.clues.find((c) => c.key === key);
+    if (!clue?.image || !found.has(key)) throw new AppException(404, 'NOT_FOUND');
+    return loadAsset(this.prisma, s.case.id, s.case.currentVersion, clue.image);
   }
 
   /**

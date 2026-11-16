@@ -156,11 +156,16 @@ export const ko = {
     waiting: (no: number) => `힌트 ${no} · 앞 힌트를 먼저 열어 주세요`,
     penaltyNote: '힌트를 열면 점수가 깎여요.',
     unlockedToast: (no: number) => `힌트 ${no}이(가) 열렸어요.`,
+    label: (no: number) => `힌트 ${no}`,
+  },
+  image: {
+    zoom: (label: string) => `${label} 이미지 크게 보기`,
   },
   notebook: {
     heading: '수첩',
     tabs: { file: '수사 자료', clues: '단서', questions: '질문 기록', memo: '메모' },
     noClues: '아직 찾은 단서가 없어요. 현장을 조사해 보세요.',
+    hintTag: '힌트',
     clueKind: { ITEM: '물건', RECORD: '기록', TESTIMONY: '진술' },
     filterAll: '전체',
     noQuestions: '아직 질문 기록이 없어요.',

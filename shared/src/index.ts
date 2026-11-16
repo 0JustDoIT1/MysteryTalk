@@ -5,3 +5,4 @@ export * from './content.js';
 export * from './question.js';
 export * from './play.js';
 export * from './explore.js';
+export * from './images.js';

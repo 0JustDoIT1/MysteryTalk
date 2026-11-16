@@ -9,8 +9,11 @@ import {
   Post,
   Put,
   Query,
+  Res,
+  StreamableFile,
   UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   askQuestionRequestSchema,
   inspectRequestSchema,
@@ -48,6 +51,7 @@ import { SessionsService } from './sessions.service.js';
 import { SubmissionsService } from './submissions.service.js';
 
 const hintNoSchema = z.coerce.number().int().min(1).max(3);
+const clueKeySchema = z.string().regex(/^[a-z0-9-]+$/);
 
 @Controller()
 @UseGuards(PlayerGuard)
@@ -116,6 +120,17 @@ export class GameController {
     return this.sessions.viewHint(player, id, no);
   }
 
+  /** 열람한 이미지 힌트의 이미지(D92·D93). 열람 전·남의 세션은 404 */
+  @Get('sessions/:id/hints/:no/image')
+  async hintImage(
+    @CurrentPlayer() player: Player,
+    @Param('id') id: string,
+    @Param('no', { schema: hintNoSchema }) no: number,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    return imageFile(res, await this.sessions.hintImage(player, id, no));
+  }
+
   @Put('sessions/:id/memo')
   saveMemo(
     @CurrentPlayer() player: Player,
@@ -179,4 +194,24 @@ export class GameController {
   ): Promise<InspectResponse> {
     return this.explore.inspect(player, id, { map: body.map, x: body.x, y: body.y }, body.target);
   }
+
+  /** 얻은 단서의 이미지(D93). 얻기 전·남의 세션은 404 */
+  @Get('sessions/:id/clues/:key/image')
+  async clueImage(
+    @CurrentPlayer() player: Player,
+    @Param('id') id: string,
+    @Param('key', { schema: clueKeySchema }) key: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    return imageFile(res, await this.explore.clueImage(player, id, key));
+  }
+}
+
+/** 이미지 응답: 본인 브라우저에만 캐시(공유 캐시 금지), 형식 추측 금지 */
+function imageFile(res: Response, img: { mime: string; bytes: Uint8Array }): StreamableFile {
+  res.set({
+    'Cache-Control': 'private, max-age=3600',
+    'X-Content-Type-Options': 'nosniff',
+  });
+  return new StreamableFile(Buffer.from(img.bytes), { type: img.mime });
 }

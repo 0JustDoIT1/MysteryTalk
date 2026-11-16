@@ -35,6 +35,13 @@ export async function syncCase(prisma: PrismaClient, loaded: LoadedCase): Promis
     explore: { maps: c.maps, spawn: c.spawn, objects: c.objects, npcs: c.npcs, clues: c.clues },
     contentHash: loaded.hash,
   };
+  // 사건 이미지(D92·D93)는 버전과 함께 넣는다
+  const assets = loaded.assets.map((a) => ({
+    name: a.name,
+    mime: a.mime,
+    bytes: new Uint8Array(a.bytes),
+    sha256: a.sha256,
+  }));
 
   return prisma.$transaction(async (tx) => {
     const existing = await tx.mysteryCase.findUnique({
@@ -43,7 +50,11 @@ export async function syncCase(prisma: PrismaClient, loaded: LoadedCase): Promis
     });
     if (!existing) {
       await tx.mysteryCase.create({
-        data: { slug: c.slug, ...meta, versions: { create: versionData } },
+        data: {
+          slug: c.slug,
+          ...meta,
+          versions: { create: { ...versionData, assets: { create: assets } } },
+        },
       });
       return { slug: c.slug, action: 'created' };
     }
@@ -59,7 +70,9 @@ export async function syncCase(prisma: PrismaClient, loaded: LoadedCase): Promis
       }
       return { slug: c.slug, action: 'unchanged' };
     }
-    await tx.caseVersion.create({ data: { caseId: existing.id, ...versionData } });
+    await tx.caseVersion.create({
+      data: { caseId: existing.id, ...versionData, assets: { create: assets } },
+    });
     await tx.mysteryCase.update({ where: { id: existing.id }, data: meta });
     return { slug: c.slug, action: 'new-version' };
   });

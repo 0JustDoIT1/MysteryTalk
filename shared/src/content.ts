@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { exploreContentSchema, exploreIssues } from './explore.js';
+import { altSchema, imageNameSchema } from './images.js';
 
 /**
  * 사건 데이터 파일(`case.json`) 형식(SPEC §11).
@@ -78,10 +79,31 @@ export const answerElementSchema = z.object({
   keywordGroups: z.array(z.array(z.string().min(1)).min(1)).min(1),
 });
 
-export const hintSchema = z.object({
-  no: z.union([z.literal(1), z.literal(2), z.literal(3)]),
-  text: z.string().min(1).max(200),
-});
+const hintNoSchema = z.union([z.literal(1), z.literal(2), z.literal(3)]);
+
+/**
+ * 힌트(PRD §7): 글 힌트(튜토리얼·샘플) 또는 이미지 힌트(본편, D92). 이미지 힌트는 설명 문장 없이
+ * 이미지 한 장이고, 대체 텍스트(alt)는 화면 낭독용이다.
+ */
+export const hintSchema = z.union([
+  z.strictObject({ no: hintNoSchema, text: z.string().min(1).max(200) }),
+  z.strictObject({ no: hintNoSchema, image: imageNameSchema, alt: altSchema }),
+]);
+export type Hint = z.infer<typeof hintSchema>;
+
+/** 힌트의 글(글 힌트) 또는 대체 텍스트(이미지 힌트). 인물 표기 검사·화면 낭독에 쓴다 */
+export function hintWords(h: Hint): string {
+  return 'text' in h ? h.text : h.alt;
+}
+
+/** 사건이 쓰는 이미지 파일 이름(힌트·단서). 적재 때 사건 폴더의 images/에서 읽는다 */
+export function caseImageNames(c: { hints: Hint[]; clues: { image?: string }[] }): string[] {
+  const names = [
+    ...c.hints.flatMap((h) => ('image' in h ? [h.image] : [])),
+    ...c.clues.flatMap((k) => (k.image ? [k.image] : [])),
+  ];
+  return [...new Set(names)];
+}
 
 export const caseContentSchema = z
   .object({
@@ -164,7 +186,7 @@ const compact = (v: string) => v.replace(/\s/g, '');
 export function personNamingIssues(c: {
   caseFile: { people: { name: string; role: string }[] };
   facts: { id: string; text: string }[];
-  hints: { no: number; text: string }[];
+  hints: Hint[];
   elements: { id: string; description: string; keywordGroups: string[][] }[];
 }): string[] {
   const issues: string[] = [];
@@ -177,7 +199,7 @@ export function personNamingIssues(c: {
   if (dup.length) issues.push(`duplicate person designation: ${[...new Set(dup)].join(', ')}`);
   const texts = [
     ...c.facts.map((f) => [f.id, f.text] as const),
-    ...c.hints.map((h) => [`hint ${h.no}`, h.text] as const),
+    ...c.hints.map((h) => [`hint ${h.no}`, hintWords(h)] as const),
     ...c.elements.map((e) => [e.id, e.description] as const),
   ];
   for (const { name, designation } of people) {

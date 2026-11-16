@@ -4,6 +4,7 @@ import {
   caseFileSchema,
   visibleCaseFile,
   type Ending,
+  type Hint,
   type HintState,
   type ViewHintResponse,
   type QuestionLabel,
@@ -14,13 +15,21 @@ import { z } from 'zod';
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { loadVersion, questionCap, type CaseVersionData } from './case-data.js';
+import { loadAsset, loadVersion, questionCap, type CaseVersionData } from './case-data.js';
 import { finishSession } from './finish.js';
 import { unlockZones } from './zones.js';
 import { computeScore, hintUnlockAt } from './scoring.js';
 
 const uuid = z.uuid();
 const matchedSchema = z.array(z.object({ id: z.string(), agreement: z.string() }));
+
+/** 열람한 힌트의 내용: 글 힌트는 글, 이미지 힌트는 대체 텍스트(이미지는 따로 받는다, D92) */
+function hintContent(h: Hint | undefined): Pick<HintState, 'text' | 'image' | 'alt'> {
+  if (!h) return { text: null, image: false, alt: null };
+  return 'text' in h
+    ? { text: h.text, image: false, alt: null }
+    : { text: null, image: true, alt: h.alt };
+}
 
 @Injectable()
 export class SessionsService {
@@ -126,9 +135,23 @@ export class SessionsService {
     return {
       ...target,
       viewed: true,
-      text: data.hints.find((h) => h.no === no)?.text ?? null,
+      ...hintContent(data.hints.find((h) => h.no === no)),
       unlockedMaps,
     };
+  }
+
+  /** 열람한 이미지 힌트의 이미지(D92·D93). 열람 전이거나 글 힌트면 404(존재 여부를 알리지 않음) */
+  async hintImage(
+    player: Player,
+    sessionId: string,
+    no: number,
+  ): Promise<{ mime: string; bytes: Uint8Array }> {
+    const s = await this.loadOwned(player, sessionId);
+    const data = await loadVersion(this.prisma, s.case.id, s.case.currentVersion);
+    const hint = data.hints.find((h) => h.no === no);
+    const viewed = await this.viewedHints(s.id);
+    if (!hint || !('image' in hint) || !viewed.has(no)) throw new AppException(404, 'NOT_FOUND');
+    return loadAsset(this.prisma, s.case.id, s.case.currentVersion, hint.image);
   }
 
   /** 메모 저장(PRD D62). AI에 전달하지 않는다. 같은 내용을 다시 보내도 결과가 같다(PUT). */
@@ -239,7 +262,7 @@ export class SessionsService {
         unlockAt: unlockAt[h.no - 1]!,
         unlocked: questionsUsed >= unlockAt[h.no - 1]!,
         viewed: viewed.has(h.no),
-        text: viewed.has(h.no) ? h.text : null,
+        ...(viewed.has(h.no) ? hintContent(h) : { text: null, image: 'image' in h, alt: null }),
       }));
   }
 }

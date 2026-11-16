@@ -4,6 +4,7 @@ import type { SessionState } from '@mysterytalk/shared';
 import { useViewHint } from '@/lib/api/queries';
 import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
+import { CaseImage, hintImageUrl } from './CaseImage';
 
 /** 힌트(PRD D15·D17·D81): 해금된 것만 순서대로 열고, 다음 힌트까지 남은 질문 수를 보여 준다. */
 export function HintPanel({ session }: { session: SessionState }) {
@@ -27,7 +28,15 @@ export function HintPanel({ session }: { session: SessionState }) {
                 className="rounded border border-amber-400/30 bg-stone-900 p-3 text-sm"
               >
                 <span className="mr-2 font-semibold text-amber-200">#{h.no}</span>
-                {h.text}
+                {h.image ? (
+                  <CaseImage
+                    src={hintImageUrl(session.sessionId, h.no)}
+                    alt={h.alt ?? ''}
+                    label={t.hints.label(h.no)}
+                  />
+                ) : (
+                  h.text
+                )}
               </li>
             );
           if (!h.unlocked)

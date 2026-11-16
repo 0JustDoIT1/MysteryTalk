@@ -40,6 +40,21 @@ export async function loadVersion(
   return parsed.data;
 }
 
+/** 사건 이미지(D92·D93) 한 장. 없으면 404 */
+export async function loadAsset(
+  prisma: Pick<PrismaService, 'caseAsset'>,
+  caseId: string,
+  version: number,
+  name: string,
+): Promise<{ mime: string; bytes: Uint8Array }> {
+  const row = await prisma.caseAsset.findUnique({
+    where: { caseId_version_name: { caseId, version, name } },
+    select: { mime: true, bytes: true },
+  });
+  if (!row) throw new AppException(404, 'NOT_FOUND');
+  return row;
+}
+
 /** 세션이 판정에 쓸 사건 버전의 사실 목록 */
 export async function loadFacts(
   prisma: Pick<PrismaService, 'caseVersion'>,

@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useExploreState, useQuestionLog, useSaveMemo } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
 import { CaseFileView } from './CaseFileView';
+import { CaseImage, clueImageUrl, hintImageUrl } from './CaseImage';
 import { VerdictBadge } from './VerdictBadge';
 
 const TABS = ['file', 'clues', 'questions', 'memo'] as const;
@@ -69,7 +70,7 @@ export function Notebook({ session, caseFile }: { session: SessionState; caseFil
         className="rounded-b rounded-tr bg-stone-800/60 p-3"
       >
         {tab === 'file' && <CaseFileView caseFile={caseFile} />}
-        {tab === 'clues' && <ClueList sessionId={session.sessionId} />}
+        {tab === 'clues' && <ClueList session={session} />}
         {tab === 'questions' && (
           <QuestionLog
             sessionId={session.sessionId}
@@ -183,13 +184,38 @@ function Memo({ session }: { session: SessionState }) {
 }
 
 /** 찾은 단서(조사·NPC 진술). 미끼 여부는 엔딩에서만 공개한다. */
-function ClueList({ sessionId }: { sessionId: string }) {
+/** 단서 탭: 찾은 단서(진술 포함) + 열람한 힌트(D92, '놓친 단서'에는 넣지 않음) */
+function ClueList({ session }: { session: SessionState }) {
+  const sessionId = session.sessionId;
   const explore = useExploreState(sessionId);
   if (explore.isPending) return <p className="text-sm text-stone-400">{t.common.loading}</p>;
   const clues = explore.data?.clues ?? [];
-  if (!clues.length) return <p className="text-sm text-stone-400">{t.notebook.noClues}</p>;
+  const hints = session.hints.filter((h) => h.viewed);
+  if (!clues.length && !hints.length)
+    return <p className="text-sm text-stone-400">{t.notebook.noClues}</p>;
   return (
     <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
+      {hints.map((h) => (
+        <li key={`hint-${h.no}`} className="rounded bg-stone-900 p-2">
+          <p className="font-semibold text-amber-100">
+            <span className="mr-2 rounded bg-amber-900/60 px-1.5 py-0.5 text-xs text-amber-100">
+              {t.notebook.hintTag}
+            </span>
+            {t.hints.label(h.no)}
+          </p>
+          <div className="mt-1">
+            {h.image ? (
+              <CaseImage
+                src={hintImageUrl(sessionId, h.no)}
+                alt={h.alt ?? ''}
+                label={t.hints.label(h.no)}
+              />
+            ) : (
+              <p className="text-stone-300">{h.text}</p>
+            )}
+          </div>
+        </li>
+      ))}
       {clues.map((c) => (
         <li key={c.key} className="rounded bg-stone-900 p-2">
           <p className="font-semibold text-amber-100">
@@ -199,6 +225,11 @@ function ClueList({ sessionId }: { sessionId: string }) {
             {c.title}
           </p>
           <p className="mt-1 text-stone-300">{c.content}</p>
+          {c.image && (
+            <div className="mt-2">
+              <CaseImage src={clueImageUrl(sessionId, c.key)} alt={c.alt ?? ''} label={c.title} />
+            </div>
+          )}
         </li>
       ))}
     </ul>

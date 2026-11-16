@@ -24,6 +24,7 @@ import {
 import { useExploreStore } from '@/stores/explore';
 import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
+import { CaseImage, clueImageUrl } from '../CaseImage';
 import { Modal } from '../Dialogs';
 import { createRenderer, type ExploreRenderer } from './renderer';
 
@@ -333,6 +334,15 @@ export function ExploreView({ session }: { session: SessionState }) {
                   {t.explore.clueFound}: {result.clue.title}
                 </p>
                 <p className="text-emerald-50">{result.clue.content}</p>
+                {result.clue.image && (
+                  <div className="mt-2">
+                    <CaseImage
+                      src={clueImageUrl(id, result.clue.key)}
+                      alt={result.clue.alt ?? ''}
+                      label={result.clue.title}
+                    />
+                  </div>
+                )}
               </div>
             )}
             {result.chainedClues.map((c) => (

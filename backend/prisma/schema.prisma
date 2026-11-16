@@ -150,10 +150,27 @@ model CaseVersion {
   contentHash String   @map("content_hash")
   publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz
 
-  case MysteryCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  case   MysteryCase @relation(fields: [caseId], references: [id], onDelete: Restrict)
+  assets CaseAsset[]
 
   @@id([caseId, version])
   @@map("case_version")
+}
+
+/// 사건 이미지(힌트·단서, PRD D92·D93). 사건 버전과 함께 적재하고, 열람·획득한 세션에만 내려준다.
+model CaseAsset {
+  caseId  String @map("case_id") @db.Uuid
+  version Int
+  /// 사건 데이터에 적은 파일 이름(예: hint-1.webp)
+  name    String
+  mime    String
+  bytes   Bytes
+  sha256  String
+
+  caseVersion CaseVersion @relation(fields: [caseId, version], references: [caseId, version], onDelete: Cascade)
+
+  @@id([caseId, version, name])
+  @@map("case_asset")
 }
 
 /// 사건 1회 플레이. 사건당 진행 중(ACTIVE) 세션은 1개(PRD D54) → 마이그레이션의 부분 고유 인덱스로 강제한다.

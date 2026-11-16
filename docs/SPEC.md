@@ -95,6 +95,7 @@
 |---|---|
 | `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_file_json(수사 자료: 개요·관련자·타임라인), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
 | `case_version` | case_id, version, facts_json, elements_json(정답 요소·키워드), hints_json, content_hash, published_at |
+| `case_asset` | (case_id, version, name) PK, mime, bytes, sha256. 힌트·단서 이미지(D92·D93). 사건 버전과 함께 적재(버전 삭제 시 함께 삭제) |
 | (현장 조사) | 4단계 구현: 맵·구역 해금 조건·조사 대상·NPC·단서·시작 위치는 별도 테이블 대신 `case_version.explore_json`에 버전과 함께 저장한다(사실 목록처럼 D59 버전 규칙을 그대로 따르고, 적재 전 검사로 정합성을 보장) |
 
 ### 4.3 플레이
@@ -134,7 +135,9 @@
 | GET | `/sessions/{id}` | 진행 상태 전체(복원용): 진행 수치, 힌트 해금·열람, 열린 구역, 현재 맵·위치, 획득 단서, 메모, 남은 제출 기회, 지금까지 공개된 수사 자료(caseFile) [D53, D76, D90] |
 | GET | `/sessions/{id}/questions` | 질문 기록(순번·질문·판정, 판정별 필터) [D48] |
 | POST | `/sessions/{id}/questions` | `{question}` → 판정(§6) |
-| POST | `/sessions/{id}/hints/{no}` | 힌트 열람(해금된 것만, 순서대로) [D15] |
+| POST | `/sessions/{id}/hints/{no}` | 힌트 열람(해금된 것만, 순서대로). 글 힌트는 text, 이미지 힌트는 image=true·alt [D15, D92] |
+| GET | `/sessions/{id}/hints/{no}/image` | 열람한 이미지 힌트의 이미지. 열람 전·글 힌트·남의 세션은 404. `Cache-Control: private` [D92, D93] |
+| GET | `/sessions/{id}/clues/{key}/image` | 얻은 단서의 이미지. 얻기 전·이미지 없음·남의 세션은 404 [D93] |
 | POST | `/sessions/{id}/move` | `{mapKey, x, y}` 맵 이동·위치 저장(구역 해금 검사) |
 | POST | `/sessions/{id}/inspect` | `{objectKey 또는 npcKey}` 조사·대화 → 설명·단서·진술, 연쇄 단서(chainedClues), 수사 자료 추가 수(caseFileAdded), 단서 해금 처리 [D90, D91] |
 | PUT | `/sessions/{id}/memo` | 메모 저장 [D62] |
@@ -269,10 +272,10 @@ content/public/tutorial/
   eval.json        # 평가 질문(30개 이상)·평가 답안
 ```
 
-`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?}}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?}], explanation`. `caseFile.people[]`·`caseFile.timeline[]`에는 선택 항목 `revealedBy`(공개 조건 단서 key, D90).
+`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?}}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. `caseFile.people[]`·`caseFile.timeline[]`에는 선택 항목 `revealedBy`(공개 조건 단서 key, D90). 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93).
 - 맵 격자: '#' 벽, '.' 바닥. 조사 대상·NPC는 바닥 칸에 서고 그 칸은 지나갈 수 없다. 출입구 칸에 들어서면 대상 맵의 도착 좌표로 이동한다.
 
-- **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 수사 자료의 `revealedBy`가 있는 단서를 가리키고 처음 보이는 관련자가 1명 이상, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
+- **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 수사 자료의 `revealedBy`가 있는 단서를 가리키고 처음 보이는 관련자가 1명 이상, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 이미지 파일이 있고 확장자와 내용(매직 바이트)이 맞고 크기 상한 이하, 단서 이미지에 대체 텍스트, 이미지 힌트는 대체 텍스트로 인물 표기 검사, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
 - 버전: 내용이 바뀌면 `version`을 올리고 `case_version`에 저장, 진행 중 세션은 새 버전 적용 + 세션에 판정 당시 버전 기록 [D59].
 - 작성 규칙(개연성 점검표, 표현 수위, 글쓰기)은 `docs/cases/README.md`로 따로 정리한다(사건 제작 단계에서).
 - **인물 표기 규칙**(3단계, 적재 전 자동 검사):

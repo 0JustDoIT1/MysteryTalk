@@ -51,7 +51,12 @@ export const hintStateSchema = z.object({
   unlockAt: z.number().int(),
   unlocked: z.boolean(),
   viewed: z.boolean(),
+  /** 글 힌트의 내용(열람 후). 이미지 힌트는 null */
   text: z.string().nullable(),
+  /** 이미지 힌트인지(D92). 열람 후 GET /sessions/{id}/hints/{no}/image 로 받는다 */
+  image: z.boolean(),
+  /** 이미지 힌트의 대체 텍스트(열람 후, 화면 낭독용) */
+  alt: z.string().nullable(),
 });
 export type HintState = z.infer<typeof hintStateSchema>;
 
