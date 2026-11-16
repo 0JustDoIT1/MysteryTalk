@@ -42,6 +42,17 @@ describe('parseJudgeOutput (SPEC §6-9)', () => {
     ).toEqual({ label: 'RETRY', retryReason: 'COMPOUND', factIds: [] });
   });
 
+  it('RETRY면 사실 id는 검사하지 않고 버린다(사실 번호를 전부 나열해도 형식 위반이 아님, judge-v4)', () => {
+    const many = Array.from({ length: 34 }, (_, i) => `F${String(i + 1).padStart(2, '0')}`);
+    expect(
+      parseJudgeOutput(out({ label: 'RETRY', retryReason: 'ASKS_ANSWER', factIds: many }), facts),
+    ).toEqual({ label: 'RETRY', retryReason: 'ASKS_ANSWER', factIds: [] });
+  });
+
+  it('AI에게 근거 사실을 5개까지만 쓰게 한다', () => {
+    expect(JUDGE_OUTPUT_JSON_SCHEMA.properties.factIds.maxItems).toBe(5);
+  });
+
   it('RETRY가 아니면 사유는 무시한다', () => {
     expect(
       parseJudgeOutput(out({ label: 'NO', retryReason: 'OPEN', factIds: ['F01'] }), facts)
@@ -59,6 +70,10 @@ describe('parseJudgeOutput (SPEC §6-9)', () => {
       out({ label: 'YES', retryReason: 'NONE', factIds: [], explanation: '정답은...' }),
     ],
     ['필드 누락', out({ label: 'YES' })],
+    [
+      '판정인데 사실 id가 20개 초과',
+      out({ label: 'YES', retryReason: 'NONE', factIds: Array(21).fill('F01') }),
+    ],
     [
       '너무 긴 claim',
       out({ retryReason: 'NONE', claim: 'ㄱ'.repeat(201), factIds: [], label: 'YES' }),

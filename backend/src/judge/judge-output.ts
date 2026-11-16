@@ -12,7 +12,8 @@ export const JUDGE_OUTPUT_JSON_SCHEMA = {
   properties: {
     retryReason: { type: 'string', enum: [...RETRY_REASONS, 'NONE'] },
     claim: { type: 'string', maxLength: 200 },
-    factIds: { type: 'array', items: { type: 'string' } },
+    // judge-v4: 사실 번호를 끝없이 나열하지 않게 개수를 강제한다(출력 한도 초과로 형식 위반이 나던 문제)
+    factIds: { type: 'array', items: { type: 'string' }, maxItems: 5 },
     label: { type: 'string', enum: [...QUESTION_LABELS] },
   },
   required: ['retryReason', 'claim', 'factIds', 'label'],
@@ -24,14 +25,14 @@ const rawOutputSchema = z
     claim: z.string().max(200).optional(),
     label: z.enum(QUESTION_LABELS),
     retryReason: z.enum([...RETRY_REASONS, 'NONE']),
-    factIds: z.array(z.string()).max(20),
+    factIds: z.array(z.string()),
   })
   .strict();
 
 /**
  * AI 출력 문자열을 검증한다(SPEC §6-9). 형식이 틀리거나, 허용 값 밖이거나,
- * RETRY인데 사유가 없거나, 존재하지 않는 사실 id를 들면 null(형식 위반).
- * RETRY가 아닌 판정의 사유는 무시한다.
+ * RETRY인데 사유가 없거나, 존재하지 않는 사실 id를 들거나, 사실 id가 20개를 넘으면 null(형식 위반).
+ * RETRY가 아닌 판정의 사유는 무시하고, RETRY 판정의 사실 id는 검사하지 않고 버린다(judge-v4).
  */
 export function parseJudgeOutput(text: string, facts: Fact[]): JudgeResult | null {
   let json: unknown;
@@ -44,6 +45,9 @@ export function parseJudgeOutput(text: string, facts: Fact[]): JudgeResult | nul
   if (!parsed.success) return null;
   const { label, retryReason, factIds } = parsed.data;
   if (label === 'RETRY' && retryReason === 'NONE') return null;
+  if (label === 'RETRY')
+    return { label, retryReason: retryReason as JudgeResult['retryReason'], factIds: [] };
+  if (factIds.length > 20) return null;
   const ids: string[] = [];
   for (const id of factIds) {
     const canonical = canonicalFactId(id, facts);
@@ -52,7 +56,7 @@ export function parseJudgeOutput(text: string, facts: Fact[]): JudgeResult | nul
   }
   return {
     label,
-    retryReason: label === 'RETRY' ? (retryReason as JudgeResult['retryReason']) : null,
+    retryReason: null,
     factIds: [...new Set(ids)],
   };
 }

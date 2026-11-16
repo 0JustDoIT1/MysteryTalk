@@ -10,7 +10,7 @@ import { AppException } from '../common/app-exception.js';
 import type { Env } from '../config/env.js';
 import type { Player } from '../generated/prisma/client.js';
 import { duplicateKey, normalizeQuestion } from '../judge/normalize.js';
-import { prefilterAbuse } from '../judge/prefilter.js';
+import { prefilterRetry } from '../judge/prefilter.js';
 import { JUDGE, PROMPT_VERSION, type Judge, type JudgeResult } from '../judge/judge.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { LimitsService } from '../ops/limits.service.js';
@@ -94,7 +94,8 @@ export class QuestionsService {
     // 5. 서버 상한 3B(D49). 6. 일일·월 한도는 7단계에서 이 위치에 추가한다(SPEC §10).
     if (session.questionsUsed >= cap) throw new AppException(409, 'QUESTION_CAP_REACHED');
     // 6. 일일 한도·월 예산(D58·D72·D83): AI에 보낼 질문만 확인한다(사전 필터에 걸리는 질문은 AI를 쓰지 않음).
-    const usesAi = !prefilterAbuse(question);
+    const prefiltered = prefilterRetry(question);
+    const usesAi = prefiltered === null;
     if (usesAi) await this.limits.assertCanAsk(player, ip, session.case.isTutorial);
 
     // 8. 처리 중 선점(원자적). 다른 요청이 처리 중이면 409.
@@ -105,14 +106,14 @@ export class QuestionsService {
       leaseMsFor(this.config.get('LLM_TIMEOUT_MS', { infer: true })),
     );
 
-    // 7. 사전 필터(욕설·조작 지시) → AI 없이 '다시 질문'. 9. 아니면 AI 판정(트랜잭션 밖)
+    // 7. 사전 필터(욕설·조작 지시, 확실한 복합·열린 질문) → AI 없이 '다시 질문'. 9. 아니면 AI 판정(트랜잭션 밖)
     // 사건 내용이 수정됐으면 진행 중 세션에도 최신 버전을 적용하고, 판정 당시 버전을 기록한다(D59).
     const caseVersion = session.case.currentVersion;
     const data = await loadVersion(this.prisma, session.case.id, caseVersion);
     let result: JudgeResult;
     let model: string | null = null;
-    if (prefilterAbuse(question)) {
-      result = { label: 'RETRY', retryReason: 'ABUSE', factIds: [] };
+    if (prefiltered !== null) {
+      result = { label: 'RETRY', retryReason: prefiltered, factIds: [] };
     } else {
       const judgeInput = { intro: session.case.intro, facts: data.facts, question };
       const outcome = await this.judge.judge(judgeInput);

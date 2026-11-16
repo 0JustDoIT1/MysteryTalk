@@ -15,7 +15,7 @@ import { interleavedOrder } from '../src/eval/schedule.js';
 import { applyNegationCheck } from '../src/judge/negation.js';
 import { normalizeQuestion } from '../src/judge/normalize.js';
 import { OllamaJudge } from '../src/judge/ollama.judge.js';
-import { prefilterAbuse } from '../src/judge/prefilter.js';
+import { prefilterRetry } from '../src/judge/prefilter.js';
 import { PROMPT_VERSION } from '../src/judge/judge.types.js';
 
 /**
@@ -67,10 +67,11 @@ async function runOnce(raw: string): Promise<EvalRun> {
       tokensOut: null,
     };
   }
-  if (prefilterAbuse(question)) {
+  const prefiltered = prefilterRetry(question);
+  if (prefiltered !== null) {
     return {
       label: 'RETRY',
-      retryReason: 'ABUSE',
+      retryReason: prefiltered,
       latencyMs: 0,
       calls: 0,
       invalidCalls: 0,

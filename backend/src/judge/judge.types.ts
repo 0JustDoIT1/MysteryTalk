@@ -35,4 +35,4 @@ export interface Judge {
 }
 
 export const JUDGE = Symbol('JUDGE');
-export const PROMPT_VERSION = 'judge-v3+neg1';
+export const PROMPT_VERSION = 'judge-v4+neg1';
