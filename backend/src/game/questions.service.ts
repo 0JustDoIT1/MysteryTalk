@@ -17,6 +17,7 @@ import { LimitsService } from '../ops/limits.service.js';
 import { recordAiCalls } from './ai-calls.js';
 import { loadVersion, questionCap } from './case-data.js';
 import { unlockZones } from './zones.js';
+import { applyCompoundGuard } from '../judge/compound-guard.js';
 import { applyNegationCheck } from '../judge/negation.js';
 import { claimLease, leaseMsFor, releaseLease } from './session-lease.js';
 import { SessionsService } from './sessions.service.js';
@@ -125,8 +126,14 @@ export class QuestionsService {
         await releaseLease(this.prisma, session.id, idempotencyKey);
         throw new AppException(503, 'AI_UNAVAILABLE');
       }
+      // 접속 표현이 없는데 복합 질문이라 하면 '다시 질문' 없이 한 번 더 판정한다(compound-guard).
+      const guard = await applyCompoundGuard(this.judge, judgeInput, outcome.result);
+      if (guard.calls.length) {
+        const extra = await this.limits.spend('JUDGE', guard.calls);
+        await recordAiCalls(this.prisma, 'JUDGE', session.id, guard.calls, extra);
+      }
       // 부정형 질문은 긍정형으로 교차 확인한다(판정 안정성 작업). 재확인 호출도 비용·기록에 넣는다.
-      const negation = await applyNegationCheck(this.judge, judgeInput, outcome.result);
+      const negation = await applyNegationCheck(this.judge, judgeInput, guard.result);
       if (negation.calls.length) {
         const extra = await this.limits.spend('JUDGE', negation.calls);
         await recordAiCalls(this.prisma, 'JUDGE', session.id, negation.calls, extra);

@@ -1,6 +1,10 @@
-import { JUDGE_OUTPUT_JSON_SCHEMA, parseJudgeOutput } from './judge-output.js';
+import {
+  JUDGE_OUTPUT_JSON_SCHEMA,
+  JUDGE_SINGLE_OUTPUT_JSON_SCHEMA,
+  parseJudgeOutput,
+} from './judge-output.js';
 import { ollamaChat, type OllamaOptions } from './ollama-client.js';
-import { JUDGE_SYSTEM_PROMPT, buildJudgeUserMessage } from './prompt.js';
+import { JUDGE_SYSTEM_PROMPT, SINGLE_QUESTION_NOTE, buildJudgeUserMessage } from './prompt.js';
 import type { Judge, JudgeCallMeta, JudgeInput, JudgeOutcome } from './judge.types.js';
 import type { PositiveCheck } from './negation.js';
 import {
@@ -24,13 +28,26 @@ export class OllamaJudge implements Judge {
   }
 
   async judge(input: JudgeInput): Promise<JudgeOutcome> {
+    return this.run(input, buildJudgeUserMessage(input), JUDGE_OUTPUT_JSON_SCHEMA);
+  }
+
+  /** 복합 질문 오판 보정: '다시 질문'을 고를 수 없게 한 번 더 판정한다(compound-guard). */
+  async judgeSingle(input: JudgeInput): Promise<JudgeOutcome> {
+    return this.run(
+      input,
+      `${buildJudgeUserMessage(input)}\n\n${SINGLE_QUESTION_NOTE}`,
+      JUDGE_SINGLE_OUTPUT_JSON_SCHEMA,
+    );
+  }
+
+  private async run(input: JudgeInput, user: string, format: object): Promise<JudgeOutcome> {
     const calls: JudgeCallMeta[] = [];
     let lastReason: 'timeout' | 'invalid_output' | 'unreachable' = 'unreachable';
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const reply = await ollamaChat(this.options, {
         system: JUDGE_SYSTEM_PROMPT,
-        user: buildJudgeUserMessage(input),
-        format: JUDGE_OUTPUT_JSON_SCHEMA,
+        user,
+        format,
         numPredict: 256,
       });
       if (!reply.ok) {

@@ -20,6 +20,18 @@ export const JUDGE_OUTPUT_JSON_SCHEMA = {
   additionalProperties: false,
 } as const;
 
+/**
+ * 복합 질문 오판 보정용(compound-guard): '다시 질문'을 고를 수 없는 형식. 라벨은 예·아니오·그럴 수도·관계없음만.
+ */
+export const JUDGE_SINGLE_OUTPUT_JSON_SCHEMA = {
+  ...JUDGE_OUTPUT_JSON_SCHEMA,
+  properties: {
+    ...JUDGE_OUTPUT_JSON_SCHEMA.properties,
+    retryReason: { type: 'string', enum: ['NONE'] },
+    label: { type: 'string', enum: QUESTION_LABELS.filter((l) => l !== 'RETRY') },
+  },
+} as const;
+
 const rawOutputSchema = z
   .object({
     claim: z.string().max(200).optional(),
