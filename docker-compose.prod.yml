@@ -1,0 +1,81 @@
+# 운영형 구성: 프론트 + 백엔드 + PostgreSQL을 한 대에서 띄운다(docs/DEPLOY.md).
+#   docker compose -f docker-compose.prod.yml --env-file deploy.env up -d --build
+# 값은 deploy.env 에 둔다(deploy.env.example 참고, 커밋 금지). DB를 외부 서비스로 쓰면 db 서비스를 빼고
+# DATABASE_URL 만 바꾼다. 로컬 개발용 docker-compose.yml 과 이름·포트가 겹치지 않게 project name을 따로 둔다.
+name: mysterytalk-prod
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mysterytalk}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB:-mysterytalk}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    # 외부에 열지 않는다. 사건 적재·백업은 SSH 터널이나 컨테이너 안에서 한다(docs/DEPLOY.md)
+    ports:
+      - '127.0.0.1:${DB_HOST_PORT:-5435}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-mysterytalk}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: '4000'
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL must be set}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      # 프론트(Next)가 같은 도커 네트워크에서 넘겨주므로 사설 대역을 프록시로 믿는다
+      TRUST_PROXY: ${TRUST_PROXY:-uniquelocal}
+      LLM_PROVIDER: ${LLM_PROVIDER:?LLM_PROVIDER must be set}
+      LLM_TIMEOUT_MS: ${LLM_TIMEOUT_MS:-12000}
+      AUTH_PROVIDER: ${AUTH_PROVIDER:-google}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL must be set}
+      DAILY_LIMIT_GUEST: ${DAILY_LIMIT_GUEST:-60}
+      DAILY_LIMIT_USER: ${DAILY_LIMIT_USER:-200}
+      DAILY_LIMIT_TUTORIAL: ${DAILY_LIMIT_TUTORIAL:-60}
+      MONTHLY_AI_BUDGET_KRW: ${MONTHLY_AI_BUDGET_KRW:-5000}
+      BUDGET_RESERVE_RATIO: ${BUDGET_RESERVE_RATIO:-0.1}
+      IP_HASH_SECRET: ${IP_HASH_SECRET:?IP_HASH_SECRET must be set}
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        BACKEND_URL: http://backend:4000
+        NEXT_PUBLIC_BUG_FORM_URL: ${NEXT_PUBLIC_BUG_FORM_URL:-}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    # 앞단에 HTTPS 리버스 프록시(배포처 기본 기능이나 Caddy 등)를 두고 이 포트로 넘긴다
+    ports:
+      - '${WEB_HOST_PORT:-3000}:3000'
+
+volumes:
+  db-data:

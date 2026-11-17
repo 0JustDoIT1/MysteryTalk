@@ -45,3 +45,6 @@ npm run test:e2e          # 실제 테스트 DB 필요(backend/.env 의 DATABASE
 npm run build -w frontend
 ```
 CI(GitHub Actions)는 push·PR마다 위 순서를 실행한다(`.github/workflows/ci.yml`).
+
+## 배포
+운영형 Docker 이미지(`backend/Dockerfile`, `frontend/Dockerfile`)와 구성(`docker-compose.prod.yml`, 값은 `deploy.env.example`)이 있다. 절차·사건 적재·환경 변수·배포처 후보는 [docs/DEPLOY.md](docs/DEPLOY.md).

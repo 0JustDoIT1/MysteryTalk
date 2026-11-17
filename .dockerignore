@@ -1,0 +1,15 @@
+# 이미지에 넣지 않는 것(비밀값·로컬 산출물·대용량)
+**/node_modules
+**/.next
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+.git
+.github
+.claude
+eval-reports
+**/test-results
+**/playwright-report
+**/coverage
+backend/src/generated

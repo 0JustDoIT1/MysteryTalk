@@ -5,6 +5,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+deploy.env
 
 # build outputs
 .next/
