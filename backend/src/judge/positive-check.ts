@@ -55,7 +55,7 @@ export function buildPositiveCheckMessage(input: JudgeInput): string {
 export function parsePositiveCheck(
   text: string,
   facts: Fact[],
-): { truth: 'TRUE' | 'FALSE' | 'UNKNOWN'; factIds: string[] } | null {
+): { truth: 'TRUE' | 'FALSE' | 'UNKNOWN'; factIds: string[]; claim: string } | null {
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -70,5 +70,5 @@ export function parsePositiveCheck(
     if (canonical === null) return null;
     ids.push(canonical);
   }
-  return { truth: parsed.data.truth, factIds: [...new Set(ids)] };
+  return { truth: parsed.data.truth, factIds: [...new Set(ids)], claim: parsed.data.positiveClaim };
 }

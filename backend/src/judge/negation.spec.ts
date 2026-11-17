@@ -69,6 +69,43 @@ describe('부정형 재확인 (판정 안정성)', () => {
     expect(r).toMatchObject({ changed: true, result: { label: 'NO' } });
   });
 
+  it('긍정 명제(부정어 없음)를 부정 사실만으로 참이라 하면 모순이라 첫 판정을 유지한다(4번 Q30 회귀)', async () => {
+    const j = judgeWith({
+      ok: true,
+      truth: 'TRUE',
+      factIds: ['F01'],
+      claim: '범인은 자기 휴대폰을 썼다',
+      calls: meta,
+    });
+    const r = await applyNegationCheck(j, input('범인은 자기 휴대폰을 쓰지 않았나요?'), yes);
+    expect(r).toMatchObject({ changed: false, result: yes });
+    expect(r.calls).toHaveLength(1);
+  });
+
+  it('재확인 명제가 부정문이면(이중 부정) 부정 사실로 참이 될 수 있어 그대로 바꾼다', async () => {
+    const j = judgeWith({
+      ok: true,
+      truth: 'TRUE',
+      factIds: ['F01'],
+      claim: '혼자 넘어진 사고가 아니다',
+      calls: meta,
+    });
+    const r = await applyNegationCheck(j, input('사고가 아니지 않나요?'), yes);
+    expect(r).toMatchObject({ changed: true, result: { label: 'NO' } });
+  });
+
+  it('긍정 명제라도 근거에 일반 사실이 섞여 있으면 재확인을 따른다', async () => {
+    const j = judgeWith({
+      ok: true,
+      truth: 'TRUE',
+      factIds: ['F01', 'F02'],
+      claim: '열쇠는 세탁소에 있다',
+      calls: meta,
+    });
+    const r = await applyNegationCheck(j, input('열쇠는 세탁소에 없나요?'), yes);
+    expect(r).toMatchObject({ changed: true, result: { label: 'NO' } });
+  });
+
   it('재확인 근거가 일반 사실(FACT)뿐이면 어긋나도 첫 판정을 유지한다', async () => {
     const j = judgeWith({ ok: true, truth: 'TRUE', factIds: ['F02'], calls: meta });
     const r = await applyNegationCheck(j, input('열쇠는 세탁소에 없나요?'), yes);
@@ -118,7 +155,7 @@ describe('재확인 출력 검증', () => {
         '{"positiveClaim":"혼자 넘어졌다","factIds":["F1"],"truth":"FALSE"}',
         facts,
       ),
-    ).toEqual({ truth: 'FALSE', factIds: ['F01'] });
+    ).toEqual({ truth: 'FALSE', factIds: ['F01'], claim: '혼자 넘어졌다' });
     expect(
       parsePositiveCheck('{"positiveClaim":"x","factIds":[],"truth":"MAYBE"}', facts),
     ).toBeNull();
