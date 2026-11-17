@@ -44,3 +44,8 @@ export function readGuestToken(req: Request): string | null {
 export function writeGuestCookie(res: Response, token: string, secure: boolean): void {
   res.cookie(GUEST_COOKIE, token, guestCookieOptions(secure));
 }
+
+export function clearGuestCookie(res: Response, secure: boolean): void {
+  const { maxAge: _maxAge, ...options } = guestCookieOptions(secure);
+  res.clearCookie(GUEST_COOKIE, options);
+}

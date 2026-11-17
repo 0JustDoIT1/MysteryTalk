@@ -303,6 +303,30 @@ test('설정: 탐정 이름을 바꾸면 추리 화면에 보이고, 볼륨은 �
   await expect(page.getByText('탐정 명탐정 홈즈의 수사')).toBeVisible();
 });
 
+test('기록 지우기: 게스트가 기록을 지우면 새 게스트로 시작하고, 연령 확인을 다시 물을 수 있다', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: '설정' }).click();
+  await page.getByLabel('탐정 이름 입력').fill('지울 탐정');
+  await page.getByRole('button', { name: '저장' }).click();
+  await expect(page.getByText('저장했어요.')).toBeVisible();
+
+  // 확인 창(지워지는 항목 안내) → 삭제 → 첫 화면, 새 게스트(PRD D96)
+  await page.getByRole('button', { name: '이 브라우저의 기록 지우기' }).click();
+  const dialog = page.getByRole('dialog', { name: '이 브라우저의 기록을 지울까요?' });
+  await expect(dialog.getByText(/지워지는 것: 플레이 기록/)).toBeVisible();
+  await dialog.getByRole('button', { name: '삭제하기' }).click();
+  await expect(page.getByRole('status').getByText('지웠어요. 새 게스트로 시작해요.')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: '메인 메뉴' })).toBeVisible();
+  await page.getByRole('link', { name: '설정' }).click();
+  await expect(page.getByLabel('탐정 이름 입력')).not.toHaveValue('지울 탐정');
+
+  // 이 기기의 연령 확인 다시 하기(PRD D97)
+  await page.getByRole('button', { name: '이 기기의 연령 확인 다시 하기' }).click();
+  await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toBeVisible();
+});
+
 test('마이크: 인식한 문장은 입력창에만 넣고 자동으로 보내지 않는다', async ({ page }) => {
   // 음성 인식을 흉내 낸다(실제 마이크·브라우저 제조사 서버를 쓰지 않음)
   await page.addInitScript(() => {

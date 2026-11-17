@@ -19,6 +19,8 @@ type DeviceState = {
   setBgm: (v: number) => void;
   setSfx: (v: number) => void;
   setMicNoticeSeen: () => void;
+  /** 이 기기의 연령 확인 다시 하기(PRD D97): 저장된 결과를 지워 다음 화면에서 다시 묻는다 */
+  resetAge: () => void;
 };
 
 const clampVolume = (v: number) => Math.min(100, Math.max(0, Math.round(v)));
@@ -59,6 +61,7 @@ export const useDeviceStore = create<DeviceState>()(
       setBgm: (v) => set({ bgm: clampVolume(v) }),
       setSfx: (v) => set({ sfx: clampVolume(v) }),
       setMicNoticeSeen: () => set({ micNoticeSeen: true }),
+      resetAge: () => set({ age: null, ageAt: null }),
     }),
     {
       name: 'mt-device',

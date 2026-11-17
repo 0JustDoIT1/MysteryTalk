@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import { AccountBar } from '@/components/account/AccountBar';
 import { MainMenu } from '@/components/MainMenu';
+import { DeletedNotice } from '@/components/settings/DeletedNotice';
 import { t } from '@/i18n/ko';
 
 /** 메인(SPEC §12): 배너·계정 상태·메뉴. 배너 그림은 아트 작업 단계에서 넣는다. */
@@ -13,6 +14,7 @@ export default function Home() {
       </header>
       <Suspense fallback={null}>
         <AccountBar />
+        <DeletedNotice />
       </Suspense>
       <MainMenu />
     </main>

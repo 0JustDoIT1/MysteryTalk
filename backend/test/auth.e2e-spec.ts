@@ -225,6 +225,55 @@ describe('5단계 로그인·기록 이전 (e2e, SPEC §3, PRD D29~D33·D82)', (
       .ageConfirmedAt;
     expect(again).toEqual(first);
   });
+
+  describe('계정 삭제·게스트 기록 지우기 (PRD D95~D97)', () => {
+    const del = (jar: Map<string, string>) => http().delete('/me').set('Cookie', header(jar));
+
+    it('게스트: 이 브라우저의 기록을 즉시 지우고 쿠키를 지운다. 다른 게스트 기록은 그대로다', async () => {
+      const jar = await browser();
+      const id = await start(jar);
+      await http()
+        .put(`/sessions/${id}/memo`)
+        .set('Cookie', header(jar))
+        .send({ memo: '지울 메모' });
+      const other = await browser();
+      const otherId = await start(other);
+
+      const res = await del(jar).expect(204);
+      absorb(jar, res);
+      expect(jar.has('mt_guest')).toBe(false);
+      expect(await prisma.playSession.findUnique({ where: { id } })).toBeNull();
+      expect(await prisma.playSession.findUnique({ where: { id: otherId } })).not.toBeNull();
+
+      // 다음 요청은 빈 새 게스트
+      expect((await me(jar)).kind).toBe('GUEST');
+      expect((await cases(jar)).every((c) => c.activeSessionId === null && !c.record)).toBe(true);
+    });
+
+    it('로그인: 계정·기록·옮겨진 게스트 기록·로그인 세션·연령 확인을 모두 지우고 로그아웃한다', async () => {
+      const jar = await browser();
+      const guestSession = await start(jar);
+      expect(await login(jar, `del-${randomUUID()}`)).toBe('ok');
+      await http().post('/me/age-confirmation').set('Cookie', header(jar)).expect(204);
+      const userSession = await start(jar, 'tutorial-missing-key');
+      await abandon(jar, userSession);
+      const user = await prisma.player.findFirst({
+        where: { kind: 'USER', sessions: { some: { id: userSession } } },
+      });
+      expect(user?.ageConfirmedAt).not.toBeNull();
+
+      const res = await del(jar).expect(204);
+      absorb(jar, res);
+      expect(jar.has('mt_session')).toBe(false);
+      expect(await prisma.player.findUnique({ where: { id: user!.id } })).toBeNull();
+      expect(await prisma.player.count({ where: { mergedIntoId: user!.id } })).toBe(0);
+      expect(await prisma.authSession.count({ where: { playerId: user!.id } })).toBe(0);
+      expect(await prisma.caseRecord.count({ where: { playerId: user!.id } })).toBe(0);
+      for (const id of [guestSession, userSession])
+        expect(await prisma.playSession.findUnique({ where: { id } })).toBeNull();
+      expect((await me(jar)).kind).toBe('GUEST');
+    });
+  });
 });
 
 describe('구글 설정이 없을 때 (e2e)', () => {

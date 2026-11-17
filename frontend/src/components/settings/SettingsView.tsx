@@ -6,6 +6,7 @@ import { useMe, useRename } from '@/lib/api/queries';
 import { useSfx } from '@/lib/audio/use-sfx';
 import { useDeviceHydrated, useDeviceStore } from '@/stores/device';
 import { AccountBar } from '../account/AccountBar';
+import { DataSection } from './DataSection';
 import { t } from '@/i18n/ko';
 
 /** 버그 제보 외부 폼(PRD D41). 주소가 없으면 버튼을 숨긴다. */
@@ -83,6 +84,8 @@ export function SettingsView() {
         </h2>
         <AccountBar />
       </section>
+
+      {me.data && <DataSection me={me.data} />}
 
       {BUG_FORM_URL && (
         <section aria-labelledby="bug-heading" className="flex flex-col gap-2">

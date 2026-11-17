@@ -62,4 +62,15 @@ export class PlayerService {
       ageConfirmed: player.ageConfirmedAt !== null,
     };
   }
+
+  /**
+   * 계정 삭제·게스트 기록 지우기(PRD D95·D96): 이 플레이어와, 이 계정으로 옮겨진 게스트 기록을 즉시 영구 삭제한다.
+   * 플레이 세션(질문 원문·답안·메모·힌트·단서·구역), 기록, 로그인 세션은 DB 연쇄 삭제로 함께 지워진다.
+   * AI 호출 비용 기록은 세션 연결만 끊기고 남는다(월 비용 집계용, 개인 내용 없음).
+   */
+  async deleteAll(player: Player): Promise<void> {
+    await this.prisma.player.deleteMany({
+      where: { OR: [{ id: player.id }, { mergedIntoId: player.id }] },
+    });
+  }
 }

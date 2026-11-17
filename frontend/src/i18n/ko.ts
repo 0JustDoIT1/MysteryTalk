@@ -47,6 +47,23 @@ export const ko = {
     account: '계정',
     bug: '버그 제보',
     bugOpen: '버그 제보하기',
+    data: '기록과 계정',
+    deleteUser: '계정 삭제',
+    deleteGuest: '이 브라우저의 기록 지우기',
+    deleteNoteUser: '계정과 모든 플레이 기록을 지워요. 되돌릴 수 없어요.',
+    deleteNoteGuest:
+      '이 브라우저로 플레이한 기록을 지워요. 되돌릴 수 없어요. 지우지 않아도 마지막 플레이 후 30일이 지나면 자동으로 지워져요.',
+    deleteHeadingUser: '계정을 삭제할까요?',
+    deleteHeadingGuest: '이 브라우저의 기록을 지울까요?',
+    deleteItems:
+      '지워지는 것: 플레이 기록(질문·답안·메모 포함), 사건별 최고 등급, 탐정 이름과 설정',
+    deleteItemsUser: '로그인 계정과 연령 확인 기록도 함께 지워져요.',
+    deleteAfter: '지운 뒤에는 새 게스트로 시작해요.',
+    deleteConfirm: '삭제하기',
+    deleting: '지우는 중…',
+    deleted: '지웠어요. 새 게스트로 시작해요.',
+    ageReset: '이 기기의 연령 확인 다시 하기',
+    ageResetNote: '이 기기에 저장된 18세 확인 결과를 지우고 다시 물어봐요.',
   },
   mic: {
     start: '마이크로 질문하기',

@@ -205,6 +205,15 @@ export function useLogout() {
   });
 }
 
+/** 계정 삭제(로그인) 또는 이 브라우저의 기록 지우기(게스트)(PRD D95·D96). 끝나면 서버 상태를 비운다. */
+export function useDeleteMe() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiOrThrow('/me', z.null(), { method: 'DELETE' }),
+    onSuccess: () => qc.clear(),
+  });
+}
+
 /** 로그인 사용자의 18세 확인 기록(PRD D33) */
 export function useConfirmAge() {
   const qc = useQueryClient();
