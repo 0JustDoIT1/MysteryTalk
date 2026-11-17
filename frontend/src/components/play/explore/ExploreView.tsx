@@ -1,6 +1,6 @@
 'use client';
 
-import type { InspectResponse, Position, SessionState } from '@mysterytalk/shared';
+import type { ExploreMap, InspectResponse, Position, SessionState } from '@mysterytalk/shared';
 import {
   useEffect,
   useRef,
@@ -51,6 +51,8 @@ export function ExploreView({ session }: { session: SessionState }) {
   const canvasRef = useRef<HTMLDivElement>(null);
   const boxRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<ExploreRenderer | null>(null);
+  // 렌더러가 준비되기 전에 들어온 마지막 화면 상태
+  const latestRef = useRef<{ map: ExploreMap; pos: Position; facing: Dir } | null>(null);
   const lastStep = useRef(0);
   const lastSaved = useRef<Position | null>(null);
   const active = session.status === 'ACTIVE';
@@ -73,23 +75,25 @@ export function ExploreView({ session }: { session: SessionState }) {
   useEffect(() => {
     let disposed = false;
     if (!canvasRef.current) return;
-    void createRenderer(canvasRef.current).then((r) => {
-      if (disposed) r.destroy();
-      else rendererRef.current = r;
+    void createRenderer(canvasRef.current, {
+      backgroundUrl: (mapKey) => `/api/sessions/${id}/maps/${mapKey}/background`,
+    }).then((r) => {
+      if (disposed) return r.destroy();
+      rendererRef.current = r;
+      // 준비되는 데 걸린 시간 동안 들어온 마지막 상태를 바로 그린다(첫 화면이 비지 않게)
+      const l = latestRef.current;
+      if (l) r.draw(l.map, l.pos, l.facing);
     });
     return () => {
       disposed = true;
       rendererRef.current?.destroy();
       rendererRef.current = null;
     };
-  }, []);
+  }, [id]);
   useEffect(() => {
-    if (map && live) rendererRef.current?.draw(map, live, facing);
-    // 렌더러가 늦게 준비되는 경우를 위해 한 번 더 그린다.
-    const timer = setTimeout(() => {
-      if (map && live) rendererRef.current?.draw(map, live, facing);
-    }, 300);
-    return () => clearTimeout(timer);
+    if (!map || !live) return;
+    latestRef.current = { map, pos: live, facing };
+    rendererRef.current?.draw(map, live, facing);
   }, [map, live, facing]);
 
   // Phaser·키 입력이 넣은 명령을 처리한다(조사·맵 이동).

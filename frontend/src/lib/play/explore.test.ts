@@ -6,6 +6,7 @@ const map: ExploreMap = {
   key: 'room',
   name: '방',
   unlocked: true,
+  background: false,
   grid: ['#####', '#...#', '#...#', '##.##'],
   exits: [{ x: 2, y: 3, to: 'hall', toX: 1, toY: 1, toName: '복도', locked: true }],
   objects: [{ key: 'desk', name: '책상', x: 1, y: 1, inspected: false }],

@@ -7,6 +7,7 @@ import {
   exploreIssues,
   hintSchema,
   IMAGE_MAX_BYTES,
+  imageSize,
   personNamingIssues,
   visibleCaseFile,
   type ExploreContent,
@@ -370,5 +371,46 @@ describe('사건 이미지(D92·D93)', () => {
         elements: [],
       }),
     ).toEqual(['hint 1: write "관리인 오만식" instead of "오만식"']);
+  });
+});
+
+describe('맵 배경(D94)', () => {
+  it('PNG·JPEG·WebP 머리말에서 크기를 읽는다', () => {
+    const png = readFileSync(join(publicRoot, 'sample', 'images', 'living-bg.png'));
+    expect(imageSize(png)).toEqual({ width: 448, height: 288 });
+    // JPEG: SOI + APP0(길이 4) + SOF0(높이 0x0120=288, 너비 0x01C0=448)
+    const jpeg = Uint8Array.from([
+      0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x20,
+      0x01, 0xc0, 0x03,
+    ]);
+    expect(imageSize(jpeg)).toEqual({ width: 448, height: 288 });
+    // WebP VP8X: 캔버스 너비-1, 높이-1(24비트 리틀 엔디언)
+    const webp = new Uint8Array(30);
+    webp.set([...Buffer.from('RIFF'), 0, 0, 0, 0, ...Buffer.from('WEBPVP8X')]);
+    webp.set([0xbf, 0x01, 0x00, 0x1f, 0x01, 0x00], 24); // 447+1, 287+1
+    expect(imageSize(webp)).toEqual({ width: 448, height: 288 });
+    expect(imageSize(Uint8Array.from([1, 2, 3]))).toBeNull();
+  });
+
+  it('배경이 격자 크기(칸 × 32px)의 1~3배가 아니면 거부한다', () => {
+    const c = JSON.parse(readFileSync(join(publicRoot, 'sample', 'case.json'), 'utf8'));
+    const root = mkdtempSync(join(tmpdir(), 'mt-bg-'));
+    mkdirSync(join(root, 's', 'images'), { recursive: true });
+    for (const f of ['living-bg.png', 'light-switch.png'])
+      writeFileSync(
+        join(root, 's', 'images', f),
+        readFileSync(join(publicRoot, 'sample', 'images', f)),
+      );
+    // 거실 배경(448×288)을 크기가 다른 현관·복도에 붙인다
+    c.maps.find((m: { key: string }) => m.key === 'hall').background = 'living-bg.png';
+    writeFileSync(join(root, 's', 'case.json'), JSON.stringify(c));
+    expect(() => readCaseDirs([root])).toThrow(
+      /map hall: background living-bg\.png is 448x288, expected 448x160 \(or 2x, 3x\)/,
+    );
+  });
+
+  it('배경 그림도 사건 이미지로 함께 적재한다', () => {
+    const [s] = readCaseDirs([publicRoot]).filter((c) => c.content.slug === 'sample-blackout-302');
+    expect(s!.assets.map((a) => a.name).sort()).toEqual(['light-switch.png', 'living-bg.png']);
   });
 });

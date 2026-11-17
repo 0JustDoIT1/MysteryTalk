@@ -97,8 +97,13 @@ export function hintWords(h: Hint): string {
 }
 
 /** 사건이 쓰는 이미지 파일 이름(힌트·단서). 적재 때 사건 폴더의 images/에서 읽는다 */
-export function caseImageNames(c: { hints: Hint[]; clues: { image?: string }[] }): string[] {
+export function caseImageNames(c: {
+  hints: Hint[];
+  clues: { image?: string }[];
+  maps?: { background?: string }[];
+}): string[] {
   const names = [
+    ...(c.maps ?? []).flatMap((m) => (m.background ? [m.background] : [])),
     ...c.hints.flatMap((h) => ('image' in h ? [h.image] : [])),
     ...c.clues.flatMap((k) => (k.image ? [k.image] : [])),
   ];

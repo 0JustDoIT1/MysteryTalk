@@ -83,6 +83,7 @@ export class ExploreService {
           key: m.key,
           name: m.name,
           unlocked,
+          background: unlocked && m.background !== undefined,
           grid: unlocked ? m.grid : null,
           exits: unlocked
             ? m.exits.map((x) => ({
@@ -207,6 +208,18 @@ export class ExploreService {
       },
       ...rest,
     };
+  }
+
+  /** 열린 맵의 배경 그림(D94). 닫힌 맵이거나 배경이 없으면 404 */
+  async mapBackground(
+    player: Player,
+    sessionId: string,
+    key: string,
+  ): Promise<{ mime: string; bytes: Uint8Array }> {
+    const { s, e, open } = await this.context(player, sessionId);
+    const map = e.maps.find((m) => m.key === key);
+    if (!map?.background || !open.has(key)) throw new AppException(404, 'NOT_FOUND');
+    return loadAsset(this.prisma, s.case.id, s.case.currentVersion, map.background);
   }
 
   /** 얻은 단서의 이미지(D93). 얻기 전이거나 이미지가 없으면 404 */

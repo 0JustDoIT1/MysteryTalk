@@ -402,6 +402,40 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
     });
   });
 
+  describe('맵 배경 (D94)', () => {
+    it('열린 맵의 배경만 내려주고, 닫힌 맵은 열린 뒤에야 준다', async () => {
+      const loaded = sampleCase();
+      // 관리실(처음엔 닫힘)에도 같은 배경을 붙인 버전
+      loaded.content.maps.find((m) => m.key === 'office')!.background = 'living-bg.png';
+      loaded.content.version += 1;
+      await syncCase(prisma, { ...loaded, hash: `${loaded.hash}-bg` });
+
+      const { cookie, id } = await setup();
+      const s = await explore(cookie, id);
+      expect(
+        s.maps.map((m: { key: string; background: boolean }) => [m.key, m.background]),
+      ).toEqual([
+        ['living', true],
+        ['hall', false],
+        ['office', false],
+        ['bedroom', false],
+      ]);
+      const living = await http()
+        .get(`/sessions/${id}/maps/living/background`)
+        .set('Cookie', cookie)
+        .expect(200);
+      expect(living.headers['content-type']).toBe('image/png');
+      expect(living.headers['cache-control']).toBe('private, max-age=3600');
+      await http().get(`/sessions/${id}/maps/office/background`).set('Cookie', cookie).expect(404);
+      await http().get(`/sessions/${id}/maps/hall/background`).set('Cookie', cookie).expect(404);
+
+      await openOffice(cookie, id);
+      await http().get(`/sessions/${id}/maps/office/background`).set('Cookie', cookie).expect(200);
+      const { cookie: other } = await setup();
+      await http().get(`/sessions/${id}/maps/living/background`).set('Cookie', other).expect(404);
+    });
+  });
+
   it('남의 세션은 404', async () => {
     const { id } = await setup();
     const { cookie: other } = await setup();

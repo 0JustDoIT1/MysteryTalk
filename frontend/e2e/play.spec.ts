@@ -147,9 +147,12 @@ async function walk(page: Page, key: string, n: number) {
 test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → 맵 이동 → 단서로 새 장소 열림 → 위치 복원', async ({
   page,
 }) => {
+  // 거실은 배경 그림이 있다(D94): 열린 맵이라 서버가 내려준다
+  const background = page.waitForResponse((r) => r.url().includes('/maps/living/background'));
   await openCase(page, '302호의 정전');
   const map = page.getByRole('application', { name: '현장 조사' });
   await expect(page.getByText('현재 위치: 302호 거실')).toBeVisible();
+  expect((await background).status()).toBe(200);
   await map.click();
 
   // 시작 (6,6) → 위로 5칸 (6,1) → 오른쪽 5칸 (11,1): 전등 스위치 옆

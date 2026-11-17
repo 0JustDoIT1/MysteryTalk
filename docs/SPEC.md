@@ -138,6 +138,7 @@
 | POST | `/sessions/{id}/hints/{no}` | 힌트 열람(해금된 것만, 순서대로). 글 힌트는 text, 이미지 힌트는 image=true·alt [D15, D92] |
 | GET | `/sessions/{id}/hints/{no}/image` | 열람한 이미지 힌트의 이미지. 열람 전·글 힌트·남의 세션은 404. `Cache-Control: private` [D92, D93] |
 | GET | `/sessions/{id}/clues/{key}/image` | 얻은 단서의 이미지. 얻기 전·이미지 없음·남의 세션은 404 [D93] |
+| GET | `/sessions/{id}/maps/{key}/background` | 열린 맵의 배경 그림. 닫힌 맵·배경 없음·남의 세션은 404 [D94] |
 | POST | `/sessions/{id}/move` | `{mapKey, x, y}` 맵 이동·위치 저장(구역 해금 검사) |
 | POST | `/sessions/{id}/inspect` | `{objectKey 또는 npcKey}` 조사·대화 → 설명·단서·진술, 연쇄 단서(chainedClues), 수사 자료 추가 수(caseFileAdded), 단서 해금 처리 [D90, D91] |
 | PUT | `/sessions/{id}/memo` | 메모 저장 [D62] |
@@ -272,7 +273,7 @@ content/public/tutorial/
   eval.json        # 평가 질문(30개 이상)·평가 답안
 ```
 
-`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?}}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. `caseFile.people[]`·`caseFile.timeline[]`에는 선택 항목 `revealedBy`(공개 조건 단서 key, D90). 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93).
+`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?},background?}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. `caseFile.people[]`·`caseFile.timeline[]`에는 선택 항목 `revealedBy`(공개 조건 단서 key, D90). 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93). 맵 배경(`background`)은 격자 크기(칸 × 32px)의 1~3배여야 하고 적재 전 검사가 이미지 머리말에서 크기를 읽어 확인한다(D94).
 - 맵 격자: '#' 벽, '.' 바닥. 조사 대상·NPC는 바닥 칸에 서고 그 칸은 지나갈 수 없다. 출입구 칸에 들어서면 대상 맵의 도착 좌표로 이동한다.
 
 - **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 수사 자료의 `revealedBy`가 있는 단서를 가리키고 처음 보이는 관련자가 1명 이상, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 이미지 파일이 있고 확장자와 내용(매직 바이트)이 맞고 크기 상한 이하, 단서 이미지에 대체 텍스트, 이미지 힌트는 대체 텍스트로 인물 표기 검사, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
@@ -294,7 +295,7 @@ content/public/tutorial/
 | 이어서 | 진행 중인 사건 목록 [D54] |
 | 추리 화면 | 도입 이야기(첫 진입), 질문 입력(마이크 버튼은 지원 브라우저만), 판정 표시, 진행 수치, 힌트 버튼(다음 힌트까지 N개), 수첩 열기, 현장 조사, 정답 제출, 사건 메뉴(포기) |
 | 수첩 | 수사 자료 / 단서(진술 포함) / 질문 기록(필터) / 메모 [D77, D48, D62] |
-| 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키(6단계). **PC에서는 추리 화면 안에 맵과 질문창을 나란히 배치**(4단계 결정), 좁은 화면에서는 위아래로 쌓음. 그림은 임시 도형, 에셋은 별도 결정 |
+| 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키(6단계). **PC에서는 추리 화면 안에 맵과 질문창을 나란히 배치**(4단계 결정), 좁은 화면에서는 위아래로 쌓음. 그림: 맵에 배경 그림이 있으면 배경을 깔고 벽·바닥 도형을 숨기며, 조사 대상은 그림 위의 투명한 조사 영역(조사 전에는 작은 점 표시), 출입구는 반투명 표시. 배경이 없으면 임시 도형. 캐릭터는 쯔꾸르식 스프라이트 시트(가로 3프레임 × 세로 4방향 아래·왼쪽·오른쪽·위, 32px), 기본은 자체 제작 탐정(`frontend/scripts/make-detective-sprite.mjs`), NPC는 같은 시트에 색조를 입힌다. 렌더러가 늦게 준비돼도 마지막 상태를 바로 그린다 [D94] |
 | 정답 제출 | 입력(10~300자), 확인 창, 결과(오답 개수·재작성 요청) |
 | 엔딩 | 결과·등급, 점수 내역, 요소별 충족, 해설, 미끼·놓친 단서, 다시 하기 [D61] |
 | 설정 | 탐정 이름, BGM·효과음 볼륨, 구글 로그인/로그아웃, 버그 제보(외부 폼), 언어 선택은 숨김 [D39~D41, D64]. 구현(6단계): `/settings`. 볼륨은 기기(Zustand persist)에만 저장해 로그인해도 기기마다 다르다. 버그 제보는 `NEXT_PUBLIC_BUG_FORM_URL`이 있을 때만 보인다 |

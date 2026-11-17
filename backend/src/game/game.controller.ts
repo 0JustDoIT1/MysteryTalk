@@ -195,6 +195,17 @@ export class GameController {
     return this.explore.inspect(player, id, { map: body.map, x: body.x, y: body.y }, body.target);
   }
 
+  /** 열린 맵의 배경 그림(D94). 닫힌 맵·남의 세션은 404 */
+  @Get('sessions/:id/maps/:key/background')
+  async mapBackground(
+    @CurrentPlayer() player: Player,
+    @Param('id') id: string,
+    @Param('key', { schema: clueKeySchema }) key: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    return imageFile(res, await this.explore.mapBackground(player, id, key));
+  }
+
   /** 얻은 단서의 이미지(D93). 얻기 전·남의 세션은 404 */
   @Get('sessions/:id/clues/:key/image')
   async clueImage(

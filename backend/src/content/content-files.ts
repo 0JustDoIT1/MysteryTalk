@@ -7,6 +7,8 @@ import {
   IMAGE_MAX_BYTES,
   imageBytesMatch,
   imageMime,
+  imageSize,
+  MAP_TILE_PX,
   type CaseContent,
 } from '@mysterytalk/shared';
 
@@ -43,6 +45,7 @@ export function readCaseDirs(roots: string[]): LoadedCase[] {
         throw new Error(`${file}: invalid case content\n  ${issues}`);
       }
       const assets = readAssets(dir, caseImageNames(parsed.data));
+      checkBackgrounds(dir, parsed.data, assets);
       loaded.push({ dir, content: parsed.data, hash: contentHash(parsed.data, assets), assets });
     }
   }
@@ -76,6 +79,25 @@ function readAssets(dir: string, names: string[]): CaseAssetFile[] {
   }
   if (problems.length) throw new Error(`${dir}: invalid images\n  ${problems.join('\n  ')}`);
   return assets;
+}
+
+/** 맵 배경(D94)은 격자 크기(칸 × 32px)의 1~3배여야 한다(화면에서 격자 크기로 줄여 그린다) */
+function checkBackgrounds(dir: string, c: CaseContent, assets: CaseAssetFile[]): void {
+  const problems: string[] = [];
+  for (const m of c.maps) {
+    if (!m.background) continue;
+    const asset = assets.find((a) => a.name === m.background)!;
+    const size = imageSize(asset.bytes);
+    const w = m.grid[0]!.length * MAP_TILE_PX;
+    const h = m.grid.length * MAP_TILE_PX;
+    const ok = size && [1, 2, 3].some((k) => size.width === w * k && size.height === h * k);
+    if (!ok)
+      problems.push(
+        `map ${m.key}: background ${m.background} is ${size ? `${size.width}x${size.height}` : 'unreadable'}, expected ${w}x${h} (or 2x, 3x)`,
+      );
+  }
+  if (problems.length)
+    throw new Error(`${dir}: invalid map backgrounds\n  ${problems.join('\n  ')}`);
 }
 
 /**

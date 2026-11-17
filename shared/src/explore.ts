@@ -9,6 +9,8 @@ import { altSchema, imageNameSchema } from './images.js';
  */
 export const MAP_WALL = '#';
 export const MAP_FLOOR = '.';
+/** 격자 한 칸의 픽셀 크기. 맵 배경은 이 크기 × 칸 수의 1~3배(D94) */
+export const MAP_TILE_PX = 32;
 
 const pointSchema = z.object({ x: z.number().int().min(0), y: z.number().int().min(0) });
 export type Point = z.infer<typeof pointSchema>;
@@ -44,6 +46,8 @@ export const caseMapSchema = z.object({
     }),
   ),
   unlock: mapUnlockSchema,
+  /** 맵 배경 그림(선택, D94). 격자 크기(한 칸 32px)의 1~3배. 없으면 도형으로 그린다 */
+  background: imageNameSchema.optional(),
 });
 export type CaseMap = z.infer<typeof caseMapSchema>;
 
@@ -309,6 +313,8 @@ export const exploreMapSchema = z.object({
   key: z.string(),
   name: z.string(),
   unlocked: z.boolean(),
+  /** 배경 그림이 있는지(열린 맵만). 있으면 GET /sessions/{id}/maps/{key}/background 로 받는다(D94) */
+  background: z.boolean(),
   grid: z.array(z.string()).nullable(),
   exits: z.array(
     z.object({
