@@ -1,6 +1,6 @@
 # 아트 프롬프트 (PRD D67·D94·D98)
 
-AI 이미지 생성용 프롬프트 공통 규칙과 공개 사건(튜토리얼·샘플) 프롬프트. 비공개 사건 프롬프트는 각 사건 폴더 `images/SOURCES.md`에 있다.
+AI 이미지 생성용 프롬프트 공통 규칙과 공개 사건(튜토리얼·샘플) 프롬프트. 비공개 사건 프롬프트(카드·맵 배경·힌트)는 각 사건 폴더 `images/SOURCES.md`에 있다. 튜토리얼·샘플은 글 힌트라 힌트 이미지가 없다.
 
 ## 1. 공통 규칙
 - **화풍**: 쯔꾸르풍(16비트 JRPG) 탑뷰 3/4 시점 픽셀아트, 32px 격자. 모든 맵 프롬프트는 아래 스타일 블록으로 시작한다.
@@ -18,6 +18,17 @@ Top-down 3/4 view pixel art game map, classic 16-bit JRPG (RPG Maker) style, 32p
 orthographic, no perspective distortion, flat soft lighting, clean pixel edges, limited palette.
 ```
 맵 프롬프트 끝: `No people, no characters, no animals, no bodies, no blood, no text, no letters, no numbers, no logos, no watermark.`
+
+### 힌트 스타일 블록(D92)
+
+본편 힌트는 이미지 한 장(사건 자료 사진·화면 캡처처럼). 960×640(3:2). 글자·숫자는 비워 두고 생성한 뒤 편집으로 얹는다(사건 SOURCES.md에 "편집으로 얹을 글자"를 적어 둠). 사람은 얼굴이 보이지 않는 작은 인물로. 그림 내용은 데이터의 대체 텍스트(alt)와 맞아야 한다.
+
+```
+Pixel art evidence image for a detective game, 16-bit style, 3:2, 960x640,
+looks like a case file photo or screenshot, clear readable composition, limited palette, clean pixel edges.
+```
+
+힌트 프롬프트 끝: `No readable text, no letters, no numbers (leave blank areas for text added later), no logos, no watermark, no blood, no gore, no visible faces.`
 
 ### 카드 스타일 블록
 ```
