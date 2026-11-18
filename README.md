@@ -2,7 +2,7 @@
 
 질문으로 진실을 찾는 2D 픽셀아트 추리 웹 게임. 자유 질문에 예 / 아니오 / 그럴 수도 / 관계없음으로 답하고, 현장을 조사해 단서를 모은 뒤 진상을 제출한다.
 
-- 요구사항: [docs/PRD.md](docs/PRD.md) · 구현 명세: [docs/SPEC.md](docs/SPEC.md)
+- 요구사항: [docs/PRD.md](docs/PRD.md) · 구현 명세: [docs/SPEC.md](docs/SPEC.md) · 판정·채점 파이프라인: [docs/JUDGE_PIPELINE.md](docs/JUDGE_PIPELINE.md)
 
 ## 구조
 | 경로 | 내용 |
