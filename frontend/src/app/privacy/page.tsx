@@ -1,4 +1,7 @@
+import type { Metadata } from 'next';
 import { t } from '@/i18n/ko';
+
+export const metadata: Metadata = { title: t.legal.privacy };
 
 /** 자리 페이지: 문안은 출시 전 법률 검토 후 작성한다(PRD §15). */
 export default function PrivacyPage() {

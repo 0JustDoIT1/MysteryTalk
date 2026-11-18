@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useEnding, useSessionState, useStartSession } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
+import { useDocumentTitle } from '@/lib/useDocumentTitle';
 
 /**
  * 엔딩(PRD D19·D61): 결과·등급, 점수 내역, 요소별 충족, 진상 해설, 다시 하기.
@@ -16,6 +17,7 @@ export function EndingView() {
   const finished = !!session.data && session.data.status !== 'ACTIVE';
   const ending = useEnding(sessionId, finished);
   const again = useStartSession(session.data?.caseSlug ?? '');
+  useDocumentTitle(ending.data ? `${ending.data.title} 결과` : undefined);
 
   if (session.isPending || (finished && ending.isPending))
     return <p className="text-stone-400">{t.common.loading}</p>;

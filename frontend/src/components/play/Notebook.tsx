@@ -40,12 +40,38 @@ export function Notebook({ session }: { session: SessionState }) {
     router.replace(`${pathname}${q.size ? `?${q.toString()}` : ''}`, { scroll: false });
   }
 
+  function selectTab(k: Tab) {
+    setParams({ tab: k === 'clues' ? null : k, filter: null });
+  }
+
+  /** ←/→/Home/End로 탭을 바꾸고 그 탭으로 포커스를 옮긴다(WAI-ARIA 탭 방식, PRD D66) */
+  function onTabKey(e: React.KeyboardEvent) {
+    const i = TABS.indexOf(tab);
+    const keys: Record<string, Tab | undefined> = {
+      ArrowRight: TABS[(i + 1) % TABS.length],
+      ArrowLeft: TABS[(i + TABS.length - 1) % TABS.length],
+      Home: TABS[0],
+      End: TABS[TABS.length - 1],
+    };
+    const next = keys[e.key];
+    if (!next) return;
+    e.preventDefault();
+    selectTab(next);
+    document.getElementById(`tab-${next}`)?.focus();
+  }
+
   return (
     <section aria-labelledby="notebook-heading" className="flex flex-col gap-3">
       <h2 id="notebook-heading" className="font-semibold text-amber-100">
         {t.notebook.heading}
       </h2>
-      <div role="tablist" aria-label={t.notebook.heading} className="flex gap-1">
+      {/* Tab으로는 선택된 탭에만 멈춘다 */}
+      <div
+        role="tablist"
+        aria-label={t.notebook.heading}
+        className="flex gap-1"
+        onKeyDown={onTabKey}
+      >
         {TABS.map((k) => (
           <button
             key={k}
@@ -54,7 +80,8 @@ export function Notebook({ session }: { session: SessionState }) {
             id={`tab-${k}`}
             aria-selected={tab === k}
             aria-controls={`panel-${k}`}
-            onClick={() => setParams({ tab: k === 'clues' ? null : k, filter: null })}
+            tabIndex={tab === k ? 0 : -1}
+            onClick={() => selectTab(k)}
             className={`rounded-t px-3 py-1 text-sm ${tab === k ? 'bg-stone-800 text-amber-200' : 'text-stone-400 hover:text-stone-200'}`}
           >
             {t.notebook.tabs[k]}

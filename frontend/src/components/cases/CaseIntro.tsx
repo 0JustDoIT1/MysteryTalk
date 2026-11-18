@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCaseDetail, useCases, useStartSession } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
+import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { CaseArt } from './CaseArt';
 import { CaseMeta } from './CaseMeta';
 
@@ -14,6 +15,7 @@ export function CaseIntro() {
   const detail = useCaseDetail(slug);
   const cases = useCases();
   const start = useStartSession(slug);
+  useDocumentTitle(detail.data?.title);
   const summary = cases.data?.find((c) => c.slug === slug);
   const activeSessionId = summary?.activeSessionId ?? null;
   const record = summary?.record ?? null;

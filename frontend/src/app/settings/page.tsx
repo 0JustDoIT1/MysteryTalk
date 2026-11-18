@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { SettingsView } from '@/components/settings/SettingsView';
+import type { Metadata } from 'next';
 import { t } from '@/i18n/ko';
+
+export const metadata: Metadata = { title: t.menu.settings };
 
 export default function SettingsPage() {
   return (

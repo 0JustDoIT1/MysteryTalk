@@ -33,9 +33,9 @@ export function CaseList() {
   return (
     <section aria-labelledby="cases-heading" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id="cases-heading" className="text-xl font-semibold">
+        <h1 id="cases-heading" className="text-xl font-semibold">
           {t.cases.heading}
-        </h2>
+        </h1>
         <div role="group" aria-label="장르" className="flex gap-1">
           {GENRES_WITH_ALL.map((g) => (
             <button
@@ -70,7 +70,7 @@ export function CaseList() {
                       ? t.cases.caseNo(c.caseNo)
                       : t.cases.sample}
                 </p>
-                <h3 className="font-semibold text-amber-100">{c.title}</h3>
+                <h2 className="font-semibold text-amber-100">{c.title}</h2>
                 <div className="flex flex-wrap items-center gap-1 text-[11px]">
                   <span className="rounded bg-stone-800 px-1.5 py-0.5">
                     {t.difficulty[c.difficulty]}

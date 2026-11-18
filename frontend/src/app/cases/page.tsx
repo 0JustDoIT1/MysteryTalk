@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { CaseList } from '@/components/cases/CaseList';
+import type { Metadata } from 'next';
 import { t } from '@/i18n/ko';
+
+export const metadata: Metadata = { title: t.cases.heading };
 
 export default function CasesPage() {
   return (

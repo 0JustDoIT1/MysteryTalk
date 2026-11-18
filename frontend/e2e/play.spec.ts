@@ -47,6 +47,7 @@ async function submitAnswer(page: Page, answer: string) {
 test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 → 엔딩 → 목록 기록', async ({ page }) => {
   await openCase(page, '302호의 정전');
   // 왼쪽 위 사건 정보 한 줄(D99): 기준·최대 질문 수와 정답 요소 개수(D100)
+  await expect(page).toHaveTitle('302호의 정전 · MysteryTalk');
   const meta = page.getByRole('list', { name: '사건 정보' });
   await expect(meta.getByText('질문 기준 20 · 최대 60')).toBeVisible();
   await expect(meta.getByText('정답 요소 3개')).toBeVisible();
@@ -66,8 +67,10 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(page.getByText(/정전은 정말 건물 전체에/)).toHaveCount(2);
   await expect(page.getByText('열람한 힌트 1개')).toBeVisible();
 
-  // 수첩 탭·필터는 URL 상태
-  await page.getByRole('tab', { name: '질문 기록' }).click();
+  // 수첩 탭·필터는 URL 상태. 탭은 방향키로도 바꾼다(D66)
+  await page.getByRole('tab', { name: '단서' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: '질문 기록' })).toBeFocused();
   await expect(page).toHaveURL(/tab=questions/);
   await page
     .getByRole('group', { name: '판정별 보기' })

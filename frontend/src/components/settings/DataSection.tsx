@@ -78,7 +78,9 @@ export function DataSection({ me }: { me: MeResponse }) {
             disabled={del.isPending}
             onClick={() =>
               del.mutate(undefined, {
-                // 새 게스트로 시작하므로 화면 상태(숨겨진 채 보존된 화면 포함)를 모두 버리고 첫 화면을 새로 연다
+                // 새 게스트로 시작하므로 화면 상태(숨겨진 채 보존된 화면 포함)를 모두 버리고 첫 화면을 새로 연다.
+                // router.push는 Next가 보존한 이전 화면 상태(지운 탐정 이름 등)를 남겨서 일부러 전체 새로고침한다.
+                // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                 onSuccess: () => window.location.assign('/?deleted=1'),
               })
             }

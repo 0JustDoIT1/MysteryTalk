@@ -12,6 +12,7 @@ import {
 } from '@/lib/api/queries';
 import { tutorialStep } from '@/lib/play/tutorial';
 import { t } from '@/i18n/ko';
+import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { CaseMeta } from '@/components/cases/CaseMeta';
 import { AbandonDialog, SubmitDialog } from './Dialogs';
 import { ExploreView } from './explore/ExploreView';
@@ -32,6 +33,7 @@ export function PlayScreen() {
   const me = useMe();
   const [dialog, setDialog] = useState<'submit' | 'abandon' | null>(null);
   const [guideClosed, setGuideClosed] = useState(false);
+  useDocumentTitle(detail.data?.title);
 
   if (session.isPending || (session.data && detail.isPending))
     return <p className="text-stone-400">{t.common.loading}</p>;

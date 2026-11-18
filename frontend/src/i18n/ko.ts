@@ -2,6 +2,8 @@
  * 화면 문구(PRD D64: 번역 파일 구조로 작성하고 한국어만 채운다).
  * 판정 라벨·'다시 질문' 사유·오류 문구는 서버와 함께 쓰는 @mysterytalk/shared 에 있다.
  */
+import { DEFAULT_DETECTIVE_NAME } from '@mysterytalk/shared';
+
 export const ko = {
   app: { title: 'MysteryTalk', tagline: '질문으로 진실을 찾는 추리 게임' },
   age: {
@@ -141,7 +143,9 @@ export const ko = {
     submissionsLeft: (n: number) => `남은 제출 기회 ${n}회`,
     lengthHint: (n: number, max: number) => `${n} / ${max}`,
     openNotebook: '수첩',
-    detective: (name: string) => `탐정 ${name}의 수사`,
+    // 기본 이름('탐정')이면 '탐정 탐정의 수사'가 되지 않게
+    detective: (name: string) =>
+      name === DEFAULT_DETECTIVE_NAME ? '탐정의 수사' : `탐정 ${name}의 수사`,
     submit: '정답 제출',
     abandon: '수사 포기',
     finished: '이 사건은 끝났어요.',

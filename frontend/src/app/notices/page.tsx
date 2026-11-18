@@ -1,6 +1,9 @@
 import Link from 'next/link';
 import { NoticeList } from '@/components/NoticeList';
+import type { Metadata } from 'next';
 import { t } from '@/i18n/ko';
+
+export const metadata: Metadata = { title: t.menu.notices };
 
 export default function NoticesPage() {
   return (

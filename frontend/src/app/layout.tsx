@@ -6,7 +6,8 @@ import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MysteryTalk',
+  // 화면마다 '사건 선택 · MysteryTalk'처럼 제목을 붙인다(PRD D66)
+  title: { default: 'MysteryTalk', template: '%s · MysteryTalk' },
   description: '질문으로 진실을 찾는 픽셀아트 추리 게임',
 };
 
