@@ -14,6 +14,7 @@ import { checkJudge, criteriaLines } from '../src/eval/criteria.js';
 import { interleavedOrder } from '../src/eval/schedule.js';
 import { applyCompoundGuard } from '../src/judge/compound-guard.js';
 import { applyNegationCheck } from '../src/judge/negation.js';
+import { applyPartialRule } from '../src/judge/partial-rule.js';
 import { normalizeQuestion } from '../src/judge/normalize.js';
 import { OllamaJudge } from '../src/judge/ollama.judge.js';
 import { prefilterRetry } from '../src/judge/prefilter.js';
@@ -94,10 +95,16 @@ async function runOnce(raw: string): Promise<EvalRun> {
   const latencyMs = calls.reduce((n, c) => n + c.latencyMs, 0);
   const sum = (k: 'tokensIn' | 'tokensOut') =>
     calls.some((c) => c[k] !== null) ? calls.reduce((n, c) => n + (c[k] ?? 0), 0) : null;
-  const result = negation?.result ?? guard?.result ?? (outcome.ok ? outcome.result : null);
+  const beforePartial = negation?.result ?? guard?.result ?? (outcome.ok ? outcome.result : null);
+  // 서비스와 같은 순서: 마지막으로 부분 사실 보정
+  const partial = beforePartial ? applyPartialRule(input.facts, beforePartial) : null;
+  if (partial?.changed) partialChanged.push(raw);
+  const result = partial?.result ?? null;
   return {
     label: result ? result.label : null,
     retryReason: result ? result.retryReason : null,
+    // 진단용: AI가 근거로 든 사실(부분 사실 분석 등). 판정에는 쓰지 않는다
+    factIds: result ? result.factIds : [],
     latencyMs,
     calls: calls.length,
     invalidCalls: calls.filter((c) => !c.ok).length,
@@ -110,6 +117,7 @@ const reports: QuestionReport[] = [];
 const invalidSamples: string[] = [];
 const negationChanged: string[] = [];
 const compoundChanged: string[] = [];
+const partialChanged: string[] = [];
 // 모델 적재 시간이 첫 측정에 섞이지 않도록 한 번 미리 호출한다.
 await runOnce('예열 질문입니다');
 // 같은 질문을 연달아 묻지 않고 회차마다 섞어 한 바퀴씩 돈다(실행마다 달라지는 판정까지 잡기 위해).
@@ -158,6 +166,9 @@ const lines = [
   '',
   `## 부정형 재확인으로 바뀐 판정(${new Set(negationChanged).size}개 질문)`,
   ...[...new Set(negationChanged)].map((q) => `- ${q}`),
+  '',
+  `## 부분 사실 보정으로 바뀐 판정(${new Set(partialChanged).size}개 질문)`,
+  ...[...new Set(partialChanged)].map((q) => `- ${q}`),
   '',
   '## 형식 위반 AI 출력(최대 10개)',
   ...[...new Set(invalidSamples)].slice(0, 10).map((s) => `- ${s}`),

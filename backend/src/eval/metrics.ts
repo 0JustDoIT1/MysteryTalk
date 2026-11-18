@@ -5,6 +5,8 @@ import type { EvalQuestion } from './eval-set.js';
 export type EvalRun = {
   label: QuestionLabel | null;
   retryReason: RetryReason | null;
+  /** 진단용: AI가 근거로 든 사실 id(사전 필터·다시 질문이면 비어 있음) */
+  factIds?: string[];
   latencyMs: number;
   calls: number;
   invalidCalls: number;

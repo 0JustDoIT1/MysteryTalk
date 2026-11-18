@@ -19,6 +19,7 @@ import { loadVersion, questionCap } from './case-data.js';
 import { unlockZones } from './zones.js';
 import { applyCompoundGuard } from '../judge/compound-guard.js';
 import { applyNegationCheck } from '../judge/negation.js';
+import { applyPartialRule } from '../judge/partial-rule.js';
 import { claimLease, leaseMsFor, releaseLease } from './session-lease.js';
 import { SessionsService } from './sessions.service.js';
 
@@ -138,7 +139,8 @@ export class QuestionsService {
         const extra = await this.limits.spend('JUDGE', negation.calls);
         await recordAiCalls(this.prisma, 'JUDGE', session.id, negation.calls, extra);
       }
-      result = negation.result;
+      // 근거가 전부 부분 사실인 예/아니오는 그럴 수도로 바꾼다(부분 사실 보정, AI 호출 없음)
+      result = applyPartialRule(data.facts, negation.result).result;
       await this.limits.countQuestion(player, ip, session.case.isTutorial);
       model = this.judge.model;
     }
