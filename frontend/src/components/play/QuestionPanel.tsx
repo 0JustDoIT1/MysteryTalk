@@ -134,7 +134,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
               disabled={disabled}
               placeholder={t.play.questionPlaceholder}
               autoComplete="off"
-              className="flex-1 rounded border border-stone-600 bg-stone-950 px-3 py-2 text-stone-100 disabled:opacity-60"
+              className="min-w-0 flex-1 rounded border border-stone-600 bg-stone-950 px-3 py-2 text-stone-100 disabled:opacity-60"
             />
             <MicButton
               disabled={disabled}
@@ -143,7 +143,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
             <button
               type="submit"
               disabled={disabled || !text.trim()}
-              className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 hover:bg-amber-200 disabled:opacity-50"
+              className="whitespace-nowrap rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 hover:bg-amber-200 disabled:opacity-50"
             >
               {retryable ? t.common.retry : t.play.ask}
             </button>

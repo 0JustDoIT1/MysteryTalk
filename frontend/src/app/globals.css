@@ -15,6 +15,9 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: 'Pretendard', 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  /* 한국어는 단어(어절) 단위로 줄을 바꾼다. 화면보다 긴 문자열만 필요할 때 자른다 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 
 :focus-visible {

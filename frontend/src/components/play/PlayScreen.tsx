@@ -96,7 +96,7 @@ export function PlayScreen() {
         </p>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
         <div className="flex flex-col gap-4">
           <CaseMeta
             genres={c.genres}
@@ -106,12 +106,21 @@ export function PlayScreen() {
             elementCount={c.elementCount}
           />
           <ExploreView session={s} />
-          <section aria-labelledby="intro-heading" className="flex flex-col gap-2">
+          {/* PC: 맵 아래에 펼쳐 둔다. 좁은 화면: 질문창이 멀어지지 않게 접어 둔다(소개 화면에서 이미 읽음). */}
+          <section aria-labelledby="intro-heading" className="hidden flex-col gap-2 lg:flex">
             <h2 id="intro-heading" className="font-semibold text-amber-100">
               {t.intro.heading}
             </h2>
             <p className="whitespace-pre-line text-sm leading-relaxed text-stone-200">{c.intro}</p>
           </section>
+          <details className="rounded-lg bg-stone-900 px-3 py-2 lg:hidden">
+            <summary className="cursor-pointer font-semibold text-amber-100">
+              {t.intro.heading}
+            </summary>
+            <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-stone-200">
+              {c.intro}
+            </p>
+          </details>
         </div>
         <div className="flex flex-col gap-6">
           {/* 진행 수치만 보여 주고 점수·등급은 엔딩에서 공개한다(D76). */}

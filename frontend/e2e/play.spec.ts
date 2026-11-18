@@ -391,6 +391,16 @@ test('모바일: 가상 방향키로 걸어가 조사하고, 맵은 화면 폭 �
   const box = await canvas.boundingBox();
   expect(box!.width).toBeLessThanOrEqual(page.viewportSize()!.width);
 
+  // 좁은 화면(D99): 가로 스크롤이 없고, 사건 개요는 접어 둔다(눌러서 펼침)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+    page.viewportSize()!.width,
+  );
+  const intro = page.locator('details', { hasText: '사건 개요' });
+  await expect(intro).not.toHaveAttribute('open');
+  await intro.getByText('사건 개요').tap();
+  await expect(intro.getByText(/피아노 교습소를 운영하며/)).toBeVisible();
+  await intro.getByText('사건 개요').tap();
+
   // 시작 (6,6) → 위로 5칸 → 오른쪽 5칸: 전등 스위치 옆
   for (let i = 0; i < 5; i += 1) await pad.getByRole('button', { name: '위로' }).tap();
   for (let i = 0; i < 5; i += 1) await pad.getByRole('button', { name: '오른쪽으로' }).tap();
