@@ -1,10 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import {
-  caseFileSchema,
   clueChain,
   isAdjacent,
   isWalkable,
-  visibleCaseFile,
   type Clue,
   type ExploreContent,
   type ExploreState,
@@ -189,12 +187,6 @@ export class ExploreService {
     });
 
     const { chainedKeys, ...rest } = result;
-    const caseFile = caseFileSchema.parse(ctx.s.case.caseFile);
-    const before = visibleCaseFile(caseFile, ctx.found);
-    const after = visibleCaseFile(
-      caseFile,
-      new Set([...ctx.found, ...(clue && result.newClue ? [clue.key] : []), ...chainedKeys]),
-    );
     return {
       kind: obj ? 'OBJECT' : 'NPC',
       name: thing.name,
@@ -202,10 +194,6 @@ export class ExploreService {
       lines: npc ? npc.lines : null,
       clue: clue ? publicClue(clue) : null,
       chainedClues: chainedKeys.map((k) => publicClue(ctx.e.clues.find((c) => c.key === k)!)),
-      caseFileAdded: {
-        people: after.people.length - before.people.length,
-        timeline: after.timeline.length - before.timeline.length,
-      },
       ...rest,
     };
   }

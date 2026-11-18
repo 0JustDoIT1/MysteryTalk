@@ -65,7 +65,7 @@ export function HintPanel({ session }: { session: SessionState }) {
                 }
                 className="rounded border border-amber-300 px-3 py-1 text-sm text-amber-200 hover:bg-amber-300/10 disabled:opacity-50"
               >
-                {t.hints.open(h.no)}
+                {t.hints.open(h.no, h.penalty)}
               </button>
             </li>
           );

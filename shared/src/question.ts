@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { difficultySchema, genreSchema, ratingSchema, caseFileSchema } from './content.js';
+import { difficultySchema, genreSchema, ratingSchema } from './content.js';
 import { caseRecordSchema } from './play.js';
 
 /** 판정 라벨(PRD §5.2). RETRY = '다시 질문해 주세요'(질문 수 미차감, D1) */
@@ -70,6 +70,7 @@ export type QuestionLogItem = z.infer<typeof questionLogItemSchema>;
 export const caseSummarySchema = z.object({
   slug: z.string(),
   isTutorial: z.boolean(),
+  caseNo: z.number().int(),
   title: z.string(),
   summary: z.string(),
   difficulty: difficultySchema,
@@ -86,11 +87,16 @@ export type CaseSummary = z.infer<typeof caseSummarySchema>;
 export const caseDetailSchema = z.object({
   slug: z.string(),
   isTutorial: z.boolean(),
+  caseNo: z.number().int(),
   title: z.string(),
+  summary: z.string(),
   intro: z.string(),
-  caseFile: caseFileSchema,
   difficulty: difficultySchema,
   baseQuestions: z.number().int(),
+  /** 서버 상한(3B, PRD D49) */
+  maxQuestions: z.number().int(),
+  /** 정답 요소 개수(필수 요소, PRD D100) */
+  elementCount: z.number().int(),
   rating: ratingSchema,
   tags: z.array(z.string()),
   genres: z.array(genreSchema),

@@ -29,7 +29,7 @@
     {
       "id": "Q05",
       "category": "direct",
-      "q": "진상우가 열쇠를 가지고 있었나요?",
+      "q": "제빵사가 열쇠를 가지고 있었나요?",
       "expected": "YES"
     },
     {
@@ -41,7 +41,7 @@
     {
       "id": "Q07",
       "category": "direct",
-      "q": "이수아가 열쇠를 만졌나요?",
+      "q": "아르바이트생이 열쇠를 만졌나요?",
       "expected": "NO"
     },
     {
@@ -65,13 +65,13 @@
     {
       "id": "Q11",
       "category": "partial",
-      "q": "오태준이 열쇠를 가져갔나요?",
+      "q": "배달 기사가 열쇠를 가져갔나요?",
       "expected": "MAYBE"
     },
     {
       "id": "Q12",
       "category": "partial",
-      "q": "진상우가 열쇠를 잃어버렸나요?",
+      "q": "제빵사가 열쇠를 잃어버렸나요?",
       "expected": "MAYBE"
     },
     {
@@ -113,7 +113,7 @@
       "id": "Q18",
       "category": "synonym",
       "pairId": "apron",
-      "q": "진상우는 새벽에 앞치마를 바꿔 입었나요?",
+      "q": "제빵사는 새벽에 앞치마를 바꿔 입었나요?",
       "expected": "YES"
     },
     {
@@ -125,7 +125,7 @@
     {
       "id": "Q20",
       "category": "negation",
-      "q": "이수아는 열쇠와 관계가 없나요?",
+      "q": "아르바이트생은 열쇠와 관계가 없나요?",
       "expected": "YES"
     },
     {
@@ -137,7 +137,7 @@
     {
       "id": "Q22",
       "category": "compound",
-      "q": "진상우가 열쇠를 가졌고 오태준이 그걸 가져갔나요?",
+      "q": "제빵사가 열쇠를 가졌고 배달 기사가 그걸 가져갔나요?",
       "expected": "RETRY",
       "expectedReason": "COMPOUND"
     },
@@ -200,7 +200,7 @@
     {
       "id": "Q31",
       "category": "undefined_fact",
-      "q": "진상우는 안경을 썼나요?",
+      "q": "제빵사는 안경을 썼나요?",
       "expected": "IRRELEVANT"
     },
     {
@@ -234,7 +234,7 @@
     {
       "id": "S1",
       "category": "full",
-      "answer": "열쇠는 도둑맞은 게 아니라 제빵사 진상우가 앞치마 주머니에 넣어 둔 채 그 앞치마를 세탁 자루에 넣는 바람에 세탁소로 갔다.",
+      "answer": "열쇠는 도둑맞은 게 아니라 제빵사가 앞치마 주머니에 넣어 둔 채 그 앞치마를 세탁 자루에 넣는 바람에 세탁소로 갔다.",
       "expected": "SOLVED"
     },
     {
@@ -246,7 +246,7 @@
     {
       "id": "S3",
       "category": "casual",
-      "answer": "상우 씨가 앞치마 갈아입으면서 주머니에 있던 열쇠를 잊고 세탁물로 내보냄. 도난 아님",
+      "answer": "제빵사가 앞치마 갈아입으면서 주머니에 있던 열쇠를 잊고 세탁물로 내보냄. 도난 아님",
       "expected": "SOLVED",
       "accept": ["NEEDS_DETAIL"],
       "expectedFinal": "SOLVED"
@@ -254,7 +254,7 @@
     {
       "id": "W1",
       "category": "theft",
-      "answer": "배달 기사 오태준이 세탁 자루와 함께 열쇠를 일부러 훔쳐 갔다.",
+      "answer": "배달 기사가 세탁 자루와 함께 열쇠를 일부러 훔쳐 갔다.",
       "expected": "WRONG"
     },
     {
@@ -266,7 +266,7 @@
     {
       "id": "W3",
       "category": "wrong_person",
-      "answer": "아르바이트생 이수아가 실수로 앞치마 주머니에 넣어 세탁소로 보냈다.",
+      "answer": "아르바이트생이 실수로 앞치마 주머니에 넣어 세탁소로 보냈다.",
       "expected": "WRONG",
       "accept": ["NEEDS_DETAIL"],
       "expectedFinal": "WRONG"
@@ -274,7 +274,7 @@
     {
       "id": "K1",
       "category": "keyword_list",
-      "answer": "진상우 앞치마 세탁 실수 열쇠",
+      "answer": "제빵사 앞치마 세탁 실수 열쇠",
       "expected": "NEEDS_DETAIL",
       "accept": ["WRONG"],
       "expectedFinal": "WRONG"

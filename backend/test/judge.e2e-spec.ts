@@ -64,7 +64,8 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       ]);
       const detail = await http().get(`/cases/${SLUG}`).set('Cookie', cookie).expect(200);
       expect(detail.body.baseQuestions).toBe(15);
-      expect(detail.body.caseFile.people).toHaveLength(4);
+      expect(detail.body).toMatchObject({ caseNo: 0, maxQuestions: 45, elementCount: 2 });
+      expect(detail.body).not.toHaveProperty('caseFile');
       const text = JSON.stringify([list.body, detail.body]);
       for (const secret of ['facts', 'elements', 'hints', 'explanation', 'F01', '앞치마', '세탁']) {
         expect(text).not.toContain(secret);
@@ -128,7 +129,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       judge
         .set('열쇠는 세탁소에 있나요?', { label: 'YES', retryReason: null, factIds: ['F13'] })
         .set('열쇠를 도둑맞았나요?', { label: 'NO', retryReason: null, factIds: ['F01'] })
-        .set('오태준이 열쇠를 가져갔나요?', {
+        .set('배달 기사가 열쇠를 가져갔나요?', {
           label: 'MAYBE',
           retryReason: null,
           factIds: ['F14'],
@@ -152,11 +153,11 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
         label: 'NO',
         turnNo: 2,
       });
-      expect((await ask(cookie, id, '오태준이 열쇠를 가져갔나요?')).body).toMatchObject({
+      expect((await ask(cookie, id, '배달 기사가 열쇠를 가져갔나요?')).body).toMatchObject({
         label: 'MAYBE',
         turnNo: 3,
       });
-      expect((await ask(cookie, id, '진상우는 안경을 썼나요?')).body).toMatchObject({
+      expect((await ask(cookie, id, '제빵사는 안경을 썼나요?')).body).toMatchObject({
         label: 'IRRELEVANT',
         turnNo: 4,
       });
@@ -177,7 +178,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
         turnNo: null,
         questionsUsed: 0,
       });
-      await ask(cookie, id, '진상우는 안경을 썼나요?').expect(200);
+      await ask(cookie, id, '제빵사는 안경을 썼나요?').expect(200);
 
       const log = await http().get(`/sessions/${id}/questions`).set('Cookie', cookie).expect(200);
       expect(
@@ -270,8 +271,8 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);
       const key = randomUUID();
-      const first = await ask(cookie, id, '진상우는 안경을 썼나요?', key).expect(200);
-      const replay = await ask(cookie, id, '진상우는 안경을 썼나요?', key).expect(200);
+      const first = await ask(cookie, id, '제빵사는 안경을 썼나요?', key).expect(200);
+      const replay = await ask(cookie, id, '제빵사는 안경을 썼나요?', key).expect(200);
       expect(replay.body).toEqual(first.body);
       expect(judge.received).toHaveLength(1);
       expect(await prisma.questionLog.count()).toBe(1);

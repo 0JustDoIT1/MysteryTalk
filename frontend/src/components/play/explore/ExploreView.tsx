@@ -122,9 +122,6 @@ export function ExploreView({ session }: { session: SessionState }) {
             lastSaved.current = c.at;
             setResult(r);
             if (r.unlockedMaps.length) pushToast(t.explore.unlocked(r.unlockedMaps));
-            const added = r.caseFileAdded;
-            if (added.people || added.timeline)
-              pushToast(t.explore.caseFileAdded(added.people, added.timeline));
           },
           onError: (error) => {
             setLocked(false);

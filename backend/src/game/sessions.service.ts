@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import {
   MAX_SUBMISSIONS,
-  caseFileSchema,
-  visibleCaseFile,
   type Ending,
   type Hint,
   type HintState,
@@ -18,7 +16,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { loadAsset, loadVersion, questionCap, type CaseVersionData } from './case-data.js';
 import { finishSession } from './finish.js';
 import { unlockZones } from './zones.js';
-import { computeScore, hintUnlockAt } from './scoring.js';
+import { computeScore, hintUnlockAt, SCORE_RULES } from './scoring.js';
 
 const uuid = z.uuid();
 const matchedSchema = z.array(z.object({ id: z.string(), agreement: z.string() }));
@@ -53,7 +51,6 @@ export class SessionsService {
             baseQuestions: true,
             currentVersion: true,
             explanation: true,
-            caseFile: true,
           },
         },
       },
@@ -66,7 +63,6 @@ export class SessionsService {
     const s = await this.loadOwned(player, sessionId);
     const data = await loadVersion(this.prisma, s.case.id, s.case.currentVersion);
     const viewed = await this.viewedHints(s.id);
-    const found = await this.foundClues(s.id);
     return {
       sessionId: s.id,
       caseSlug: s.case.slug,
@@ -80,7 +76,6 @@ export class SessionsService {
       submissionsLeft: MAX_SUBMISSIONS - s.wrongSubmissions,
       hints: this.hintStates(data, s.case.baseQuestions, s.questionsUsed, viewed),
       memo: s.memo,
-      caseFile: visibleCaseFile(caseFileSchema.parse(s.case.caseFile), found),
     };
   }
 
@@ -260,6 +255,7 @@ export class SessionsService {
       .map((h) => ({
         no: h.no,
         unlockAt: unlockAt[h.no - 1]!,
+        penalty: SCORE_RULES.hintPenaltySteps[h.no - 1] ?? 0,
         unlocked: questionsUsed >= unlockAt[h.no - 1]!,
         viewed: viewed.has(h.no),
         ...(viewed.has(h.no) ? hintContent(h) : { text: null, image: 'image' in h, alt: null }),

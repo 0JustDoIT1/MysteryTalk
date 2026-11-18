@@ -375,8 +375,6 @@ export const inspectResponseSchema = z.object({
   newClue: z.boolean(),
   /** 단서 연쇄로 이번에 함께 얻은 단서(PRD D91) */
   chainedClues: z.array(foundClueSchema),
-  /** 이번에 수사 자료에 새로 공개된 항목 수(PRD D90, 알림용). 내용은 세션 상태로 다시 받는다 */
-  caseFileAdded: z.object({ people: z.number().int(), timeline: z.number().int() }),
   /** 이번에 새로 열린 맵 이름 */
   unlockedMaps: z.array(z.string()),
 });

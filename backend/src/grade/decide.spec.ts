@@ -41,7 +41,7 @@ describe('요소별 합의 (SPEC §7-5, PRD D20)', () => {
 });
 
 describe('제출 결과 결정 (SPEC §7-6)', () => {
-  const full = '조카 문태성이 밀쳐 죽이고 차단기를 내려 사고로 위장했다. 돈 문제였다.';
+  const full = '조카가 밀쳐 죽이고 차단기를 내려 사고로 위장했다. 돈 문제였다.';
 
   it('필수 요소가 모두 확정 일치하면 해결(선택 요소는 무관)', () => {
     const d = decide(elements, full, { ...all('MATCH'), A4: 'NO_MATCH' }, false);
@@ -49,14 +49,9 @@ describe('제출 결과 결정 (SPEC §7-6)', () => {
   });
 
   it('필수 요소에 확정 불일치가 있으면 오답, 개수는 확정 일치한 필수 요소만', () => {
-    const d = decide(elements, '조카 문태성이 독을 먹였다', all('NO_MATCH'), false);
+    const d = decide(elements, '조카가 독을 먹였다', all('NO_MATCH'), false);
     expect(d.result).toBe('WRONG');
-    const d2 = decide(
-      elements,
-      '조카 문태성이 독을 먹였다',
-      { ...all('NO_MATCH'), A1: 'MATCH' },
-      false,
-    );
+    const d2 = decide(elements, '조카가 독을 먹였다', { ...all('NO_MATCH'), A1: 'MATCH' }, false);
     expect(d2).toMatchObject({ result: 'WRONG', matchedCount: 1, totalCount: 3 });
   });
 

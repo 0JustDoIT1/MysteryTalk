@@ -118,7 +118,10 @@ model MysteryCase {
   title          String
   summary        String
   intro          String
-  caseFile       Json       @map("case_file_json")
+  /// 카드 표시용 사건 번호(PRD D98)
+  caseNo         Int        @default(0) @map("case_no")
+  /// 처음부터 공개하는 정답 요소 개수(필수 요소, PRD D100)
+  elementCount   Int        @default(0) @map("element_count")
   difficulty     Difficulty
   baseQuestions  Int        @map("base_questions")
   rating         Rating

@@ -106,15 +106,20 @@ export const ko = {
     unsolved: '미해결',
     best: (grade: string, playNo: number, total: number) =>
       `최고 ${grade} · ${playNo}회차 달성 · 총 ${total}회`,
+    bestShort: (grade: string) => `최고 ${grade}`,
     open: '사건 보기',
     empty: '공개된 사건이 없어요.',
+    caseNo: (no: number) => `CASE ${String(no).padStart(2, '0')}`,
+    sample: '샘플',
+  },
+  /** 사건 정보 한 줄(PRD D99): 장르·난이도·기준/최대 질문 수·정답 요소 개수(D100) */
+  caseMeta: {
+    label: '사건 정보',
+    questions: (base: number, max: number) => `질문 기준 ${base} · 최대 ${max}`,
+    elements: (n: number) => `정답 요소 ${n}개`,
   },
   intro: {
-    caseFile: '수사 자료',
-    overview: '개요',
-    people: '관련자',
-    timeline: '확인된 타임라인',
-    baseQuestions: (b: number) => `기준 질문 수 ${b}개`,
+    heading: '사건 개요',
     start: '수사 시작',
     resume: '이어서 수사',
     starting: '시작하는 중…',
@@ -153,8 +158,6 @@ export const ko = {
     unlocked: (names: string[]) => `새 장소가 열렸어요: ${names.join(', ')}`,
     clueFound: '단서를 찾았어요',
     chainedClue: '함께 수첩에 기록했어요',
-    caseFileAdded: (people: number, timeline: number) =>
-      `수사 자료에 ${[people ? `관련자 ${people}명` : '', timeline ? `타임라인 ${timeline}건` : ''].filter(Boolean).join('·')}이 추가됐어요`,
     alreadyInspected: '이미 조사한 곳이에요. 단서는 수첩에 있어요.',
     noClue: '특별한 단서는 없어 보여요.',
     saving: '이동 중…',
@@ -168,11 +171,13 @@ export const ko = {
   },
   hints: {
     heading: '힌트',
-    open: (no: number) => `힌트 ${no} 열기`,
-    locked: (no: number, left: number) => `힌트 ${no} · 질문 ${left}개 더 하면 열려요`,
-    waiting: (no: number) => `힌트 ${no} · 앞 힌트를 먼저 열어 주세요`,
-    penaltyNote: '힌트를 열면 점수가 깎여요.',
-    unlockedToast: (no: number) => `힌트 ${no}이(가) 열렸어요.`,
+    open: (no: number, penalty: number) => `힌트 ${no} 보기 (−${penalty}점)`,
+    locked: (no: number, left: number) => `힌트 ${no} · 질문 ${left}개 더 하면 볼 수 있어요`,
+    waiting: (no: number) => `힌트 ${no} · 앞 힌트를 먼저 봐 주세요`,
+    penaltyNote: '힌트는 질문을 하면 자동으로 볼 수 있게 되고, 직접 볼 때만 점수가 깎여요.',
+    // 숫자 읽기에 맞춘 조사(일·삼 → 을, 이 → 를)
+    unlockedToast: (no: number) =>
+      `힌트 ${no}${[2, 4, 5, 9].includes(no % 10) ? '를' : '을'} 볼 수 있어요. 보기 전에는 점수가 깎이지 않아요.`,
     label: (no: number) => `힌트 ${no}`,
   },
   image: {
@@ -180,7 +185,7 @@ export const ko = {
   },
   notebook: {
     heading: '수첩',
-    tabs: { file: '수사 자료', clues: '단서', questions: '질문 기록', memo: '메모' },
+    tabs: { clues: '단서', questions: '질문 기록', memo: '메모' },
     noClues: '아직 찾은 단서가 없어요. 현장을 조사해 보세요.',
     hintTag: '힌트',
     clueKind: { ITEM: '물건', RECORD: '기록', TESTIMONY: '진술' },

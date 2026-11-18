@@ -30,46 +30,15 @@ export const factSchema = z.object({
 export type Fact = z.infer<typeof factSchema>;
 
 /**
- * 이 단서를 얻으면 공개되는 항목(PRD D90). 없으면 처음부터 공개.
- * 사건 데이터에만 있고, 플레이어에게 보내는 수사 자료(`visibleCaseFile`)에서는 지운다.
+ * 등장인물(PRD D101): 이름 없이 호칭만 쓴다. 플레이어에게 목록으로 보여 주지 않고(수사 자료 폐지, D99),
+ * 호칭이 겹치거나 서로 포함되지 않는지 검사하는 데만 쓴다.
  */
-const revealedBySchema = z
-  .string()
-  .regex(/^[a-z0-9-]+$/)
-  .optional();
-
-/** 수사 자료 탭(PRD D77): 플레이어에게 공개되는 정보만. 관련자·타임라인은 단서를 얻을 때마다 늘어난다(D90). */
-export const caseFileSchema = z.object({
-  overview: z.array(z.object({ label: z.string().min(1), value: z.string().min(1) })).min(1),
-  people: z
-    .array(
-      z.object({
-        id: z.string().regex(/^P\d+$/),
-        name: z.string().min(1),
-        role: z.string().min(1),
-        publicInfo: z.string().min(1).max(120),
-        revealedBy: revealedBySchema,
-      }),
-    )
-    .min(1),
-  timeline: z.array(
-    z.object({ at: z.string().min(1), text: z.string().min(1), revealedBy: revealedBySchema }),
-  ),
+export const personSchema = z.strictObject({
+  id: z.string().regex(/^P\d+$/),
+  /** 호칭(예: '조카', '숨진 경비원'). 사실·단서·도입에서 이 말로 부른다 */
+  designation: z.string().min(1).max(20),
 });
-export type CaseFile = z.infer<typeof caseFileSchema>;
-
-/**
- * 플레이어에게 보낼 수사 자료(PRD D90): 처음부터 공개된 항목 + 얻은 단서로 공개된 항목.
- * 아직 공개되지 않은 항목과 공개 조건(revealedBy)은 내보내지 않는다.
- */
-export function visibleCaseFile(cf: CaseFile, foundClues: ReadonlySet<string>): CaseFile {
-  const shown = (r: string | undefined) => r === undefined || foundClues.has(r);
-  return {
-    overview: cf.overview,
-    people: cf.people.filter((p) => shown(p.revealedBy)).map(({ revealedBy: _r, ...p }) => p),
-    timeline: cf.timeline.filter((t) => shown(t.revealedBy)).map(({ revealedBy: _r, ...t }) => t),
-  };
-}
+export type Person = z.infer<typeof personSchema>;
 
 /** 정답 요소(PRD §8, D20). 키워드 그룹: 그룹 안은 OR, 그룹 사이는 AND */
 export const answerElementSchema = z.object({
@@ -120,7 +89,9 @@ export const caseContentSchema = z
     summary: z.string().min(1).max(80),
     /** 첫 진입 시 보여 주는 짧은 도입 이야기 */
     intro: z.string().min(1).max(800),
-    caseFile: caseFileSchema,
+    /** 사건 번호(PRD D98). 카드에 'CASE 01'로 표시한다. 튜토리얼은 0 */
+    caseNo: z.number().int().min(0).max(999),
+    people: z.array(personSchema).min(1),
     difficulty: difficultySchema,
     /** 기준 질문 수 B(PRD D49). 서버 상한은 3B */
     baseQuestions: z.number().int().min(5).max(100),
@@ -140,7 +111,7 @@ export const caseContentSchema = z
     for (const [label, values] of [
       ['fact id', c.facts.map((f) => f.id)],
       ['element id', c.elements.map((e) => e.id)],
-      ['person id', c.caseFile.people.map((p) => p.id)],
+      ['person id', c.people.map((p) => p.id)],
     ] as const) {
       const d = dup([...values]);
       if (d.length)
@@ -153,82 +124,34 @@ export const caseContentSchema = z
     if (!c.elements.some((e) => e.required)) {
       ctx.addIssue({ code: 'custom', message: 'at least one required answer element' });
     }
-    const clueKeys = new Set(c.clues.map((k) => k.key));
-    for (const item of [...c.caseFile.people, ...c.caseFile.timeline]) {
-      if (item.revealedBy !== undefined && !clueKeys.has(item.revealedBy)) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `case file item revealed by unknown clue ${item.revealedBy}`,
-        });
-      }
-    }
-    if (c.caseFile.people.every((p) => p.revealedBy !== undefined)) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'at least one person must be visible from the start',
-      });
-    }
-    for (const message of personNamingIssues(c)) ctx.addIssue({ code: 'custom', message });
+    for (const message of designationIssues(c.people)) ctx.addIssue({ code: 'custom', message });
     for (const message of exploreIssues(c, { factIds: c.facts.map((f) => f.id) }))
       ctx.addIssue({ code: 'custom', message });
   });
 export type CaseContent = z.infer<typeof caseContentSchema>;
 
-/** 인물 지칭 = 관련자 역할에서 괄호 앞부분(예: '사장(의뢰인)' → '사장') */
-export function designationOf(role: string): string {
-  return role.split('(')[0]!.trim();
+/** 정답 요소 개수(PRD D100): 처음부터 공개하는 수. 오답 안내의 '3개 중 2개'와 같은 기준(필수 요소) */
+export function requiredElementCount(c: { elements: { required: boolean }[] }): number {
+  return c.elements.filter((e) => e.required).length;
 }
 
 const compact = (v: string) => v.replace(/\s/g, '');
 
 /**
- * 인물 표기 규칙(사건 작성 규칙): 지칭 중심 + 이름 병기.
- * 1) 인물마다 지칭이 겹치지 않는다.
- * 2) AI가 읽는 사실·정답 요소 설명과 힌트에서 이름은 항상 '지칭 이름'으로 쓴다(예: '제빵사 진상우').
- * 3) 정답 키워드 그룹에 성명이 있으면 이름만(성 제외)과 지칭도 함께 넣는다(예: 조카 / 문태성 / 태성).
- * 도입 이야기·해설은 플레이어가 읽는 이야기라 자유롭게 쓴다.
+ * 호칭 규칙(PRD D101): 한 사건 안에서 호칭이 겹치거나 한쪽이 다른 쪽을 포함하면 안 된다.
+ * 예: '간호사'와 '수간호사'는 "간호사가 ~했나요?"가 누구인지 모호하다 → '당직 간호사'와 '수간호사'.
  */
-export function personNamingIssues(c: {
-  caseFile: { people: { name: string; role: string }[] };
-  facts: { id: string; text: string }[];
-  hints: Hint[];
-  elements: { id: string; description: string; keywordGroups: string[][] }[];
-}): string[] {
+export function designationIssues(people: { designation: string }[]): string[] {
   const issues: string[] = [];
-  const people = c.caseFile.people.map((p) => ({
-    name: p.name,
-    designation: designationOf(p.role),
-  }));
-  const designations = people.map((p) => p.designation);
-  const dup = designations.filter((d, i) => designations.indexOf(d) !== i);
-  if (dup.length) issues.push(`duplicate person designation: ${[...new Set(dup)].join(', ')}`);
-  const texts = [
-    ...c.facts.map((f) => [f.id, f.text] as const),
-    ...c.hints.map((h) => [`hint ${h.no}`, hintWords(h)] as const),
-    ...c.elements.map((e) => [e.id, e.description] as const),
-  ];
-  for (const { name, designation } of people) {
-    for (const [where, text] of texts) {
-      let from = 0;
-      for (let i = text.indexOf(name, from); i !== -1; i = text.indexOf(name, from)) {
-        if (!text.slice(0, i).endsWith(`${designation} `)) {
-          issues.push(`${where}: write "${designation} ${name}" instead of "${name}"`);
-          break;
-        }
-        from = i + name.length;
-      }
+  const names = people.map((p) => compact(p.designation));
+  for (let i = 0; i < names.length; i++)
+    for (let j = i + 1; j < names.length; j++) {
+      const [a, b] = [names[i]!, names[j]!];
+      if (a === b) issues.push(`duplicate person designation: ${people[i]!.designation}`);
+      else if (a.includes(b) || b.includes(a))
+        issues.push(
+          `person designation "${people[i]!.designation}" and "${people[j]!.designation}" overlap`,
+        );
     }
-    for (const e of c.elements) {
-      for (const group of e.keywordGroups) {
-        const keys = group.map(compact);
-        if (!keys.includes(compact(name))) continue;
-        for (const need of [name.slice(1), designation]) {
-          if (!keys.includes(compact(need))) {
-            issues.push(`${e.id}: keyword group with "${name}" must also include "${need}"`);
-          }
-        }
-      }
-    }
-  }
   return issues;
 }

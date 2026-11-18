@@ -155,7 +155,7 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
     const res = await inspect(cookie, id, 'seoyun', 'hall', 9, 2).expect(200);
     expect(res.body).toMatchObject({
       kind: 'NPC',
-      name: '제자 배서윤',
+      name: '제자',
       description: null,
       clue: { kind: 'TESTIMONY' },
       newClue: true,
@@ -238,9 +238,7 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
     expect((await move(cookie, id, 'hall', 3, 1).expect(409)).body.code).toBe('SESSION_FINISHED');
   });
 
-  describe('수사 자료 점진 공개·단서 연쇄 (D90·D91)', () => {
-    const state = async (cookie: string, id: string) =>
-      (await http().get(`/sessions/${id}`).set('Cookie', cookie).expect(200)).body;
+  describe('단서 연쇄 (D91)', () => {
     /** 관리실로 들어가 관리인 옆(4,3)에서 말을 건다 */
     async function talkToManager(cookie: string, id: string) {
       await openOffice(cookie, id);
@@ -251,13 +249,8 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
       return inspect(cookie, id, 'manager', 'office', 4, 3).expect(200);
     }
 
-    it('관리인 진술을 얻으면 CCTV 기록이 함께 기록되고, 그 단서로 타임라인이 늘어난다. 공개 전 항목은 보내지 않는다', async () => {
-      const detail = (await http().get(`/cases/${SAMPLE}`).expect(200)).body;
-      expect(detail.caseFile.timeline).toHaveLength(3);
-      expect(JSON.stringify(detail)).not.toMatch(/revealedBy|건물에 들어옴/);
-
+    it('관리인 진술을 얻으면 CCTV 기록이 함께 기록된다', async () => {
       const { cookie, id } = await setup();
-      expect((await state(cookie, id)).caseFile.timeline).toHaveLength(3);
 
       const res = await talkToManager(cookie, id);
       expect(res.body).toMatchObject({
@@ -265,31 +258,20 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
         newClue: true,
         clue: { key: 'manager', kind: 'TESTIMONY' },
         chainedClues: [{ key: 'cctv', kind: 'RECORD', title: '입구 CCTV 기록' }],
-        caseFileAdded: { people: 0, timeline: 2 },
       });
       expect(res.body.chainedClues[0]).not.toHaveProperty('decoy');
 
-      const after = await state(cookie, id);
-      expect(after.caseFile.timeline.map((e: { at: string }) => e.at)).toEqual([
-        '11/14 20:40',
-        '11/14 21:10경',
-        '11/14 21:20경',
-        '11/14 21:30',
-        '11/15 07:50',
-      ]);
-      expect(JSON.stringify(after)).not.toContain('revealedBy');
       expect((await explore(cookie, id)).clues.map((c: { key: string }) => c.key)).toEqual([
         'breaker',
         'manager',
         'cctv',
       ]);
 
-      // 다시 말을 걸어도 연쇄·공개는 한 번만
+      // 다시 말을 걸어도 연쇄는 한 번만
       const again = await inspect(cookie, id, 'manager', 'office', 4, 3).expect(200);
       expect(again.body).toMatchObject({
         newClue: false,
         chainedClues: [],
-        caseFileAdded: { people: 0, timeline: 0 },
       });
       expect(await prisma.sessionClue.count({ where: { sessionId: id } })).toBe(3);
 
@@ -302,36 +284,6 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
         decoy: false,
         found: true,
       });
-    });
-
-    it('단서로 공개되는 관련자는 그 단서를 얻기 전에는 사건 소개·세션 어디에도 없다', async () => {
-      const loaded = sampleCase();
-      loaded.content.caseFile.people.push({
-        id: 'P5',
-        name: '유지환',
-        role: '전기 기사',
-        publicInfo: '차단기를 점검한 전기 기사.',
-        revealedBy: 'breaker',
-      });
-      loaded.content.version += 1;
-      await syncCase(prisma, loaded);
-
-      expect(JSON.stringify((await http().get(`/cases/${SAMPLE}`).expect(200)).body)).not.toContain(
-        '유지환',
-      );
-      const { cookie, id } = await setup();
-      expect(JSON.stringify(await state(cookie, id))).not.toContain('유지환');
-
-      const res = await openOffice(cookie, id);
-      expect(res.body.caseFileAdded).toEqual({ people: 1, timeline: 0 });
-      const after = await state(cookie, id);
-      expect(after.caseFile.people.map((p: { id: string }) => p.id)).toEqual([
-        'P1',
-        'P2',
-        'P3',
-        'P4',
-        'P5',
-      ]);
     });
   });
 

@@ -12,13 +12,17 @@ import {
 } from '@/lib/api/queries';
 import { tutorialStep } from '@/lib/play/tutorial';
 import { t } from '@/i18n/ko';
+import { CaseMeta } from '@/components/cases/CaseMeta';
 import { AbandonDialog, SubmitDialog } from './Dialogs';
 import { ExploreView } from './explore/ExploreView';
 import { HintPanel } from './HintPanel';
 import { Notebook } from './Notebook';
 import { QuestionPanel } from './QuestionPanel';
 
-/** 추리 화면(SPEC §12): 질문·판정, 진행 수치, 힌트, 수첩, 정답 제출, 사건 메뉴(포기). */
+/**
+ * 추리 화면(SPEC §12, PRD D99). 왼쪽: 사건 정보 한 줄 → 현장 조사 맵 → 사건 도입.
+ * 오른쪽: 진행 수치 → 질문 → 힌트 → 정답 제출·포기 → 수첩. 좁은 화면에서는 왼쪽 → 오른쪽 순으로 쌓인다.
+ */
 export function PlayScreen() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const session = useSessionState(sessionId);
@@ -61,12 +65,6 @@ export function PlayScreen() {
             <p className="text-xs text-stone-400">{t.play.detective(me.data.detectiveName)}</p>
           )}
         </div>
-        {/* 진행 수치만 보여 주고 점수·등급은 엔딩에서 공개한다(D76). */}
-        <ul aria-label="진행 상황" className="flex flex-wrap gap-3 text-sm text-stone-300">
-          <li>{t.play.questions(s.questionsUsed, s.baseQuestions)}</li>
-          <li>{t.play.hintsViewed(viewed)}</li>
-          <li>{t.play.submissionsLeft(s.submissionsLeft)}</li>
-        </ul>
       </header>
 
       {s.isTutorial && active && !guideClosed && (
@@ -98,14 +96,35 @@ export function PlayScreen() {
         </p>
       )}
 
-      {/* PC: 현장 조사 맵과 질문창을 나란히(4단계 결정). 좁은 화면에서는 위아래로 쌓인다. */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,auto)_minmax(22rem,1fr)]">
-        <div className="flex flex-col gap-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
+        <div className="flex flex-col gap-4">
+          <CaseMeta
+            genres={c.genres}
+            difficulty={c.difficulty}
+            baseQuestions={c.baseQuestions}
+            maxQuestions={c.maxQuestions}
+            elementCount={c.elementCount}
+          />
           <ExploreView session={s} />
-          <HintPanel session={s} />
+          <section aria-labelledby="intro-heading" className="flex flex-col gap-2">
+            <h2 id="intro-heading" className="font-semibold text-amber-100">
+              {t.intro.heading}
+            </h2>
+            <p className="whitespace-pre-line text-sm leading-relaxed text-stone-200">{c.intro}</p>
+          </section>
         </div>
         <div className="flex flex-col gap-6">
+          {/* 진행 수치만 보여 주고 점수·등급은 엔딩에서 공개한다(D76). */}
+          <ul
+            aria-label="진행 상황"
+            className="flex flex-wrap gap-x-4 gap-y-1 rounded-lg bg-stone-900 px-3 py-2 text-sm text-stone-200"
+          >
+            <li>{t.play.questions(s.questionsUsed, s.baseQuestions)}</li>
+            <li>{t.play.hintsViewed(viewed)}</li>
+            <li>{t.play.submissionsLeft(s.submissionsLeft)}</li>
+          </ul>
           <QuestionPanel session={s} />
+          <HintPanel session={s} />
           {active && (
             <div className="flex flex-wrap gap-2">
               <button
@@ -124,7 +143,7 @@ export function PlayScreen() {
               </button>
             </div>
           )}
-          <Notebook session={s} caseFile={s.caseFile} />
+          <Notebook session={s} />
         </div>
       </div>
 

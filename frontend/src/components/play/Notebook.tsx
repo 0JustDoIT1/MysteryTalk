@@ -5,7 +5,6 @@ import {
   LABEL_TEXT,
   MEMO_MAX_LENGTH,
   RETRY_REASON_TEXT,
-  type CaseFile,
   type QuestionLabel,
   type SessionState,
 } from '@mysterytalk/shared';
@@ -13,21 +12,20 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useExploreState, useQuestionLog, useSaveMemo } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
-import { CaseFileView } from './CaseFileView';
 import { CaseImage, clueImageUrl, hintImageUrl } from './CaseImage';
 import { VerdictBadge } from './VerdictBadge';
 
-const TABS = ['file', 'clues', 'questions', 'memo'] as const;
+const TABS = ['clues', 'questions', 'memo'] as const;
 type Tab = (typeof TABS)[number];
 
-/** 수첩(PRD D77·D75·D48·D62): 수사 자료·단서(진술 포함)·질문 기록·메모. 탭과 필터는 URL 상태(?tab=&filter=). */
-export function Notebook({ session, caseFile }: { session: SessionState; caseFile: CaseFile }) {
+/** 수첩(PRD D75·D48·D62·D99): 단서(진술 포함)·질문 기록·메모. 탭과 필터는 URL 상태(?tab=&filter=). */
+export function Notebook({ session }: { session: SessionState }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const tab: Tab = (TABS as readonly string[]).includes(params.get('tab') ?? '')
     ? (params.get('tab') as Tab)
-    : 'file';
+    : 'clues';
   const filterParam = params.get('filter');
   const filter = (QUESTION_LABELS as readonly string[]).includes(filterParam ?? '')
     ? (filterParam as QuestionLabel)
@@ -56,7 +54,7 @@ export function Notebook({ session, caseFile }: { session: SessionState; caseFil
             id={`tab-${k}`}
             aria-selected={tab === k}
             aria-controls={`panel-${k}`}
-            onClick={() => setParams({ tab: k === 'file' ? null : k, filter: null })}
+            onClick={() => setParams({ tab: k === 'clues' ? null : k, filter: null })}
             className={`rounded-t px-3 py-1 text-sm ${tab === k ? 'bg-stone-800 text-amber-200' : 'text-stone-400 hover:text-stone-200'}`}
           >
             {t.notebook.tabs[k]}
@@ -69,7 +67,6 @@ export function Notebook({ session, caseFile }: { session: SessionState; caseFil
         aria-labelledby={`tab-${tab}`}
         className="rounded-b rounded-tr bg-stone-800/60 p-3"
       >
-        {tab === 'file' && <CaseFileView caseFile={caseFile} />}
         {tab === 'clues' && <ClueList session={session} />}
         {tab === 'questions' && (
           <QuestionLog

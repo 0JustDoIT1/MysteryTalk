@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { GENRES_WITH_ALL, filterByGenre, type GenreFilter } from '@/lib/play/cases';
 import { useCases } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
+import { CaseArt } from './CaseArt';
 
-/** 사건 선택(SPEC §12): 장르 필터는 URL 상태(?genre=), 카드는 서버 상태. */
+/** 사건 선택(SPEC §12): 장르 필터는 URL 상태(?genre=), 카드는 서버 상태. 카드는 그림·번호·제목·상태만(PRD D98). */
 export function CaseList() {
   const router = useRouter();
   const params = useSearchParams();
@@ -53,39 +54,41 @@ export function CaseList() {
       </div>
       {firstVisit && <p className="text-sm text-amber-200/80">{t.cases.tutorialHint}</p>}
       {cases.length === 0 && <p className="text-stone-400">{t.cases.empty}</p>}
-      <ul className="grid gap-3 sm:grid-cols-2">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
         {cases.map((c) => (
           <li key={c.slug}>
             <Link
               href={`/cases/${c.slug}`}
-              className="flex h-full flex-col gap-2 rounded-lg border border-stone-700 bg-stone-900 p-4 hover:border-amber-300/60"
+              className="flex h-full flex-col gap-2 rounded-lg border border-stone-700 bg-stone-900 p-2 hover:border-amber-300/60"
             >
-              <div className="flex flex-wrap items-center gap-2 text-xs">
-                {c.isTutorial && (
-                  <span className="rounded bg-sky-900 px-2 py-0.5 text-sky-200">
-                    {t.cases.tutorialBadge}
+              <CaseArt caseNo={c.caseNo} isTutorial={c.isTutorial} genre={c.genres[0]} />
+              <div className="flex flex-col gap-1 px-1 pb-1">
+                <p className="font-mono text-xs text-stone-400">
+                  {c.isTutorial
+                    ? t.cases.tutorialBadge
+                    : c.caseNo > 0
+                      ? t.cases.caseNo(c.caseNo)
+                      : t.cases.sample}
+                </p>
+                <h3 className="font-semibold text-amber-100">{c.title}</h3>
+                <div className="flex flex-wrap items-center gap-1 text-[11px]">
+                  <span className="rounded bg-stone-800 px-1.5 py-0.5">
+                    {t.difficulty[c.difficulty]}
                   </span>
-                )}
-                <span className="rounded bg-stone-800 px-2 py-0.5">
-                  {t.difficulty[c.difficulty]}
-                </span>
-                <span className="rounded bg-stone-800 px-2 py-0.5">{t.rating[c.rating]}</span>
-                {c.activeSessionId && (
-                  <span className="rounded bg-amber-900 px-2 py-0.5 text-amber-200">
-                    {t.cases.inProgress}
-                  </span>
+                  <span className="rounded bg-stone-800 px-1.5 py-0.5">{t.rating[c.rating]}</span>
+                  {c.activeSessionId && (
+                    <span className="rounded bg-amber-900 px-1.5 py-0.5 text-amber-200">
+                      {t.cases.inProgress}
+                    </span>
+                  )}
+                </div>
+                {!c.isTutorial && (
+                  <p className="text-xs text-stone-400">
+                    {c.record?.solved ? `✔ ${t.cases.solved}` : t.cases.unsolved}
+                    {c.record && ` · ${t.cases.bestShort(c.record.bestGrade)}`}
+                  </p>
                 )}
               </div>
-              <h3 className="text-lg font-semibold text-amber-100">{c.title}</h3>
-              <p className="text-sm text-stone-300">{c.summary}</p>
-              <p className="text-xs text-stone-400">{c.tags.map((tag) => `#${tag}`).join(' ')}</p>
-              {!c.isTutorial && (
-                <p className="mt-auto text-xs text-stone-400">
-                  {c.record?.solved ? `✔ ${t.cases.solved}` : t.cases.unsolved}
-                  {c.record &&
-                    ` · ${t.cases.best(c.record.bestGrade, c.record.bestPlayNo, c.record.totalPlays)}`}
-                </p>
-              )}
             </Link>
           </li>
         ))}

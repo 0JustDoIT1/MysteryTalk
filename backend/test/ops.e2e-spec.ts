@@ -16,7 +16,7 @@ const OVERRIDES: Record<string, string> = {
 
 const SAMPLE = 'sample-blackout-302';
 const TUTORIAL = 'tutorial-missing-key';
-const FULL = '조카 문태성이 돈 문제로 다투다 한정숙을 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.';
+const FULL = '조카가 돈 문제로 다투다 피해자를 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.';
 
 // 실제 PostgreSQL 테스트 DB 필요.
 describe('7단계 운영: 일일 한도·월 예산·공지·정리·통계 (e2e, SPEC §10, PRD D41·D46·D47·D58·D72·D83)', () => {

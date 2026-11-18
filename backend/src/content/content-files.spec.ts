@@ -2,14 +2,13 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import {
-  caseContentSchema,
   clueChain,
   exploreIssues,
   hintSchema,
   IMAGE_MAX_BYTES,
   imageSize,
-  personNamingIssues,
-  visibleCaseFile,
+  designationIssues,
+  requiredElementCount,
   type ExploreContent,
 } from '@mysterytalk/shared';
 import { evalSetSchema } from '../eval/eval-set.js';
@@ -58,63 +57,28 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
     expect(readCaseDirs([join(tmpdir(), 'mt-no-such-dir-xyz')])).toEqual([]);
   });
 
-  describe('인물 표기 규칙(지칭 중심 + 이름 병기)', () => {
-    const base = {
-      caseFile: {
-        people: [
-          { name: '문태성', role: '조카' },
-          { name: '오만식', role: '관리인' },
-        ],
-      },
-      facts: [{ id: 'F01', text: '조카 문태성이 밀쳤다. 조카 문태성은 달아났다.' }],
-      hints: [{ no: 1 as const, text: '관리인 오만식에게 물어보세요.' }],
-      elements: [
-        {
-          id: 'A1',
-          description: '범인은 조카 문태성',
-          keywordGroups: [['문태성', '태성', '조카']],
-        },
-      ],
-    };
-
-    it('규칙을 지킨 사건은 문제가 없다', () => {
-      expect(personNamingIssues(base)).toEqual([]);
+  describe('등장인물 호칭(D101)', () => {
+    it('호칭이 모두 다르고 서로 포함하지 않으면 문제가 없다', () => {
+      expect(
+        designationIssues([{ designation: '숨진 경비원' }, { designation: '동료 기사' }]),
+      ).toEqual([]);
     });
 
-    it('사실·힌트·정답 요소에서 이름만 쓰면 지칭을 붙이라고 알려 준다', () => {
-      const issues = personNamingIssues({
-        ...base,
-        facts: [{ id: 'F01', text: '조카 문태성이 밀쳤다. 문태성은 달아났다.' }],
-        hints: [{ no: 1, text: '오만식에게 물어보세요.' }],
-      });
-      expect(issues).toEqual([
-        'F01: write "조카 문태성" instead of "문태성"',
-        'hint 1: write "관리인 오만식" instead of "오만식"',
+    it('겹치거나 한쪽이 다른 쪽을 포함하면 실패한다(공백 무시)', () => {
+      expect(designationIssues([{ designation: '조카' }, { designation: '조 카' }])).toEqual([
+        'duplicate person designation: 조카',
+      ]);
+      expect(designationIssues([{ designation: '간호사' }, { designation: '수간호사' }])).toEqual([
+        'person designation "간호사" and "수간호사" overlap',
       ]);
     });
 
-    it('지칭이 겹치면 실패한다(괄호 앞부분 기준)', () => {
-      const issues = personNamingIssues({
-        ...base,
-        caseFile: {
-          people: [
-            { name: '문태성', role: '조카' },
-            { name: '문태희', role: '조카(동생)' },
-          ],
-        },
-      });
-      expect(issues).toContain('duplicate person designation: 조카');
-    });
-
-    it('정답 키워드에 성명이 있으면 이름만·지칭도 있어야 한다', () => {
-      const issues = personNamingIssues({
-        ...base,
-        elements: [{ id: 'A1', description: '범인은 조카 문태성', keywordGroups: [['문태성']] }],
-      });
-      expect(issues).toEqual([
-        'A1: keyword group with "문태성" must also include "태성"',
-        'A1: keyword group with "문태성" must also include "조카"',
-      ]);
+    it('정답 요소 개수는 필수 요소만 센다(D100)', () => {
+      expect(
+        requiredElementCount({
+          elements: [{ required: true }, { required: false }, { required: true }],
+        }),
+      ).toBe(2);
     });
   });
 
@@ -244,50 +208,6 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
       );
     });
   });
-
-  describe('수사 자료 점진 공개(D90)', () => {
-    const tutorial = () =>
-      JSON.parse(readFileSync(join(publicRoot, 'tutorial', 'case.json'), 'utf8')) as {
-        caseFile: { people: { revealedBy?: string }[]; timeline: { revealedBy?: string }[] };
-        clues: { key: string }[];
-      };
-
-    it('처음 공개 항목 + 얻은 단서로 공개된 항목만 보이고, 공개 조건은 내보내지 않는다', () => {
-      const cf = {
-        overview: [{ label: '장소', value: '빵집' }],
-        people: [
-          { id: 'P1', name: '갑', role: '사장', publicInfo: '처음부터' },
-          { id: 'P2', name: '을', role: '직원', publicInfo: '나중에', revealedBy: 'note' },
-        ],
-        timeline: [
-          { at: '09:00', text: '처음부터' },
-          { at: '10:00', text: '나중에', revealedBy: 'memo' },
-        ],
-      };
-      const start = visibleCaseFile(cf, new Set());
-      expect(start.people.map((p) => p.id)).toEqual(['P1']);
-      expect(start.timeline.map((t) => t.at)).toEqual(['09:00']);
-      const later = visibleCaseFile(cf, new Set(['note', 'memo']));
-      expect(later.people.map((p) => p.id)).toEqual(['P1', 'P2']);
-      expect(later.timeline).toHaveLength(2);
-      expect(JSON.stringify(later)).not.toContain('revealedBy');
-    });
-
-    it('없는 단서를 공개 조건으로 쓰거나 처음 보이는 관련자가 없으면 실패한다', () => {
-      const c = tutorial();
-      c.caseFile.timeline[0]!.revealedBy = 'no-such-clue';
-      for (const p of c.caseFile.people) p.revealedBy = c.clues[0]!.key;
-      const r = caseContentSchema.safeParse(c);
-      expect(r.success).toBe(false);
-      const messages = r.error!.issues.map((i) => i.message);
-      expect(messages).toEqual(
-        expect.arrayContaining([
-          'case file item revealed by unknown clue no-such-clue',
-          'at least one person must be visible from the start',
-        ]),
-      );
-    });
-  });
 });
 
 describe('사건 이미지(D92·D93)', () => {
@@ -363,14 +283,6 @@ describe('사건 이미지(D92·D93)', () => {
       ],
     };
     expect(exploreIssues(e, { factIds: [] })).toContain('clue note: image needs alt text');
-    expect(
-      personNamingIssues({
-        caseFile: { people: [{ name: '오만식', role: '관리인' }] },
-        facts: [],
-        hints: [{ no: 1, image: 'h.png', alt: '오만식의 순찰 일지' }],
-        elements: [],
-      }),
-    ).toEqual(['hint 1: write "관리인 오만식" instead of "오만식"']);
   });
 });
 

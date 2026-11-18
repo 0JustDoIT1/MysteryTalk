@@ -17,8 +17,8 @@ const SAMPLE = 'sample-blackout-302'; // B=20 → 힌트 해금 7, 14, 20
 const TUTORIAL = 'tutorial-missing-key'; // B=15
 
 // 정답 요소 키워드와 맞는 답안(키워드 판정 통과). AI 판정은 ScriptedGrader로 정한다.
-const FULL = '조카 문태성이 돈 문제로 다투다 한정숙을 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.';
-const CULPRIT_ONLY = '조카 문태성이 한정숙을 독으로 죽인 것 같아요.';
+const FULL = '조카가 돈 문제로 다투다 피해자를 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.';
+const CULPRIT_ONLY = '조카가 피해자를 독으로 죽인 것 같아요.';
 const NOTHING = '관리인이 범인이고 독을 썼다고 생각합니다.';
 const MATCH_ALL = { A1: 'MATCH', A2: 'MATCH', A3: 'MATCH', A4: 'MATCH' } as const;
 
@@ -176,8 +176,8 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
     it('마지막 판정에서 AI가 일치로 보면 키워드와 엇갈려도 해결된다(D23)', async () => {
       const cookie = await newPlayer();
       const id = await start(cookie);
-      // 이름만 쓴 답안: A1 키워드(문태성·조카·태성)는 맞지만 AI가 A2를 애매하게 봄 → 재작성 요청
-      const vague = '조카 문태성이 이모와 다투다 무슨 일이 있었고 차단기를 내려 사고로 꾸몄다.';
+      // 이름만 쓴 답안: A1 키워드(조카)는 맞지만 AI가 A2를 애매하게 봄 → 재작성 요청
+      const vague = '조카가 이모와 다투다 무슨 일이 있었고 차단기를 내려 사고로 꾸몄다.';
       grader.set(vague, { ...MATCH_ALL, A2: 'UNCLEAR' });
       await submit(cookie, id, vague).expect(200);
       await submit(cookie, id, vague).expect(200);
@@ -190,8 +190,7 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
         return start(cookie);
       })();
       // 키워드 '밀쳐'가 없지만 AI가 일치로 보는 답안 → 두 번 재작성 요청 뒤 마지막 판정에서 해결
-      const synonym =
-        '조카 문태성이 이모를 떠미는 바람에 피아노에 부딪혔고 차단기를 내려 사고로 꾸몄다.';
+      const synonym = '조카가 이모를 떠미는 바람에 피아노에 부딪혔고 차단기를 내려 사고로 꾸몄다.';
       grader.set(synonym, MATCH_ALL);
       for (let i = 0; i < 2; i += 1) {
         expect((await submit(cookie, id2, synonym).expect(200)).body.result).toBe('NEEDS_DETAIL');
@@ -205,7 +204,7 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
     it('단어 나열·여러 가능성 나열은 형식 사유로 재작성 요청, 마지막 판정에서는 오답', async () => {
       const cookie = await newPlayer();
       const id = await start(cookie);
-      const list = '문태성 밀쳐 차단기 돈 조카 정전';
+      const list = '조카 밀쳐 차단기 돈 정전';
       grader.set(list, MATCH_ALL, 'KEYWORD_LIST');
       const first = await submit(cookie, id, list).expect(200);
       expect(first.body).toMatchObject({ result: 'NEEDS_DETAIL', detailReason: 'FORM' });
@@ -305,8 +304,8 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
       const partial = await start(cookie);
       grader.set(NOTHING, {});
       grader.set(CULPRIT_ONLY, { A1: 'MATCH' });
-      // 문태성 + 밀쳐 → 필수 3개 중 2개
-      const twoOfThree = '조카 문태성이 한정숙을 밀쳐서 죽였다고 봅니다.';
+      // 조카 + 밀쳐 → 필수 3개 중 2개
+      const twoOfThree = '조카가 피해자를 밀쳐서 죽였다고 봅니다.';
       grader.set(twoOfThree, { A1: 'MATCH', A2: 'MATCH' });
       await submit(cookie, partial, NOTHING).expect(200);
       await submit(cookie, partial, CULPRIT_ONLY).expect(200);
@@ -341,8 +340,7 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
     it('튜토리얼은 점수·등급을 보여 주되 개인 기록에는 남기지 않는다(PRD v1.3)', async () => {
       const cookie = await newPlayer();
       const id = await start(cookie, TUTORIAL);
-      const answer =
-        '제빵사 진상우가 앞치마 주머니에 열쇠를 넣고 세탁 자루에 넣었다. 도난이 아니다.';
+      const answer = '제빵사가 앞치마 주머니에 열쇠를 넣고 세탁 자루에 넣었다. 도난이 아니다.';
       grader.set(answer, { A1: 'MATCH', A2: 'MATCH' });
       await submit(cookie, id, answer).expect(200);
       const ending = (await http().get(`/sessions/${id}/ending`).set('Cookie', cookie).expect(200))

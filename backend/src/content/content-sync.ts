@@ -1,3 +1,4 @@
+import { requiredElementCount } from '@mysterytalk/shared';
 import type { PrismaClient } from '../generated/prisma/client.js';
 import type { LoadedCase } from './content-files.js';
 
@@ -17,7 +18,8 @@ export async function syncCase(prisma: PrismaClient, loaded: LoadedCase): Promis
     title: c.title,
     summary: c.summary,
     intro: c.intro,
-    caseFile: c.caseFile,
+    caseNo: c.caseNo,
+    elementCount: requiredElementCount(c),
     difficulty: c.difficulty,
     baseQuestions: c.baseQuestions,
     rating: c.rating,

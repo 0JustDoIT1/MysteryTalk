@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import {
-  caseFileSchema,
-  visibleCaseFile,
   genreSchema,
   type CaseDetail,
   type CaseSummary,
@@ -11,6 +9,7 @@ import { z } from 'zod';
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { questionCap } from './case-data.js';
 
 const genresSchema = z.array(genreSchema);
 
@@ -22,11 +21,12 @@ export class CasesService {
   async list(player: Player): Promise<CaseSummary[]> {
     const cases = await this.prisma.mysteryCase.findMany({
       where: { isPublished: true },
-      orderBy: [{ isTutorial: 'desc' }, { difficulty: 'asc' }, { title: 'asc' }],
+      orderBy: [{ isTutorial: 'desc' }, { difficulty: 'asc' }, { caseNo: 'asc' }],
       select: {
         id: true,
         slug: true,
         isTutorial: true,
+        caseNo: true,
         title: true,
         summary: true,
         difficulty: true,
@@ -43,6 +43,7 @@ export class CasesService {
     return cases.map((c) => ({
       slug: c.slug,
       isTutorial: c.isTutorial,
+      caseNo: c.caseNo,
       title: c.title,
       summary: c.summary,
       difficulty: c.difficulty,
@@ -60,9 +61,11 @@ export class CasesService {
       select: {
         slug: true,
         isTutorial: true,
+        caseNo: true,
         title: true,
+        summary: true,
         intro: true,
-        caseFile: true,
+        elementCount: true,
         difficulty: true,
         baseQuestions: true,
         rating: true,
@@ -73,8 +76,7 @@ export class CasesService {
     if (!c) throw new AppException(404, 'NOT_FOUND');
     return {
       ...c,
-      // 세션 시작 전에는 처음부터 공개된 항목만(PRD D90)
-      caseFile: visibleCaseFile(caseFileSchema.parse(c.caseFile), new Set()),
+      maxQuestions: questionCap(c.baseQuestions),
       genres: genresSchema.parse(c.genres),
     };
   }

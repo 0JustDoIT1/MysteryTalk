@@ -3,17 +3,20 @@
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useCaseDetail, useCases, useStartSession } from '@/lib/api/queries';
-import { CaseFileView } from '@/components/play/CaseFileView';
 import { t } from '@/i18n/ko';
+import { CaseArt } from './CaseArt';
+import { CaseMeta } from './CaseMeta';
 
-/** 도입 이야기 + 수사 자료 + 시작/이어서(PRD D77, D54) */
+/** 사건 소개(PRD D98·D99): 그림·번호·제목, 사건 정보, 수위·태그·기록, 한 줄 요약, 도입, 시작/이어서(D54) */
 export function CaseIntro() {
   const { slug } = useParams<{ slug: string }>();
   const router = useRouter();
   const detail = useCaseDetail(slug);
   const cases = useCases();
   const start = useStartSession(slug);
-  const activeSessionId = cases.data?.find((c) => c.slug === slug)?.activeSessionId ?? null;
+  const summary = cases.data?.find((c) => c.slug === slug);
+  const activeSessionId = summary?.activeSessionId ?? null;
+  const record = summary?.record ?? null;
 
   if (detail.isPending) return <p className="text-stone-400">{t.common.loading}</p>;
   if (detail.error)
@@ -32,15 +35,42 @@ export function CaseIntro() {
       <Link href="/cases" className="text-sm text-stone-400 hover:text-stone-200">
         ← {t.common.back}
       </Link>
+      <div className="w-full max-w-xl">
+        <CaseArt caseNo={c.caseNo} isTutorial={c.isTutorial} genre={c.genres[0]} />
+      </div>
       <header className="flex flex-col gap-2">
-        <h1 className="text-2xl font-bold text-amber-200">{c.title}</h1>
-        <p className="text-xs text-stone-400">
-          {t.difficulty[c.difficulty]} · {t.rating[c.rating]} ·{' '}
-          {t.intro.baseQuestions(c.baseQuestions)} · {c.tags.map((tag) => `#${tag}`).join(' ')}
+        <p className="font-mono text-xs text-stone-400">
+          {c.isTutorial
+            ? t.cases.tutorialBadge
+            : c.caseNo > 0
+              ? t.cases.caseNo(c.caseNo)
+              : t.cases.sample}
         </p>
+        <h1 className="text-2xl font-bold text-amber-200">{c.title}</h1>
+        <p className="text-stone-300">{c.summary}</p>
+        <CaseMeta
+          genres={c.genres}
+          difficulty={c.difficulty}
+          baseQuestions={c.baseQuestions}
+          maxQuestions={c.maxQuestions}
+          elementCount={c.elementCount}
+        />
+        <p className="text-xs text-stone-400">
+          {t.rating[c.rating]} · {c.tags.map((tag) => `#${tag}`).join(' ')}
+        </p>
+        {record && (
+          <p className="text-xs text-stone-400">
+            {record.solved ? `✔ ${t.cases.solved}` : t.cases.unsolved} ·{' '}
+            {t.cases.best(record.bestGrade, record.bestPlayNo, record.totalPlays)}
+          </p>
+        )}
       </header>
-      <section className="whitespace-pre-line leading-relaxed text-stone-200">{c.intro}</section>
-      <CaseFileView caseFile={c.caseFile} />
+      <section aria-labelledby="intro-heading" className="flex flex-col gap-2">
+        <h2 id="intro-heading" className="font-semibold text-amber-100">
+          {t.intro.heading}
+        </h2>
+        <p className="whitespace-pre-line leading-relaxed text-stone-200">{c.intro}</p>
+      </section>
       <div className="flex gap-3">
         {activeSessionId ? (
           <Link

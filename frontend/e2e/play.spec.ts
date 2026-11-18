@@ -46,15 +46,24 @@ async function submitAnswer(page: Page, answer: string) {
 
 test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 → 엔딩 → 목록 기록', async ({ page }) => {
   await openCase(page, '302호의 정전');
+  // 왼쪽 위 사건 정보 한 줄(D99): 기준·최대 질문 수와 정답 요소 개수(D100)
+  const meta = page.getByRole('list', { name: '사건 정보' });
+  await expect(meta.getByText('질문 기준 20 · 최대 60')).toBeVisible();
+  await expect(meta.getByText('정답 요소 3개')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '사건 개요' })).toBeVisible();
 
   // 기준 질문 20개 → 힌트 1은 질문 7개째에 열린다(⌈20/3⌉).
   for (let i = 1; i <= 7; i += 1) await ask(page, `연습 질문 ${i}번인가요?`, i);
   const verdict = page.locator('[aria-live="polite"]').filter({ hasText: 'Q. 연습 질문 7번' });
   await expect(verdict.getByText('관계없음')).toBeVisible();
-  await expect(page.getByRole('status').getByText('힌트 1이(가) 열렸어요.')).toBeVisible();
+  // 해금(자동, 감점 없음)과 보기(직접, 감점)를 구분해 안내한다(PRD D15)
+  await expect(
+    page.getByRole('status').getByText('힌트 1을 볼 수 있어요. 보기 전에는 점수가 깎이지 않아요.'),
+  ).toBeVisible();
 
-  await page.getByRole('button', { name: '힌트 1 열기' }).click();
-  await expect(page.getByText(/정전은 정말 건물 전체에/)).toBeVisible();
+  await page.getByRole('button', { name: '힌트 1 보기 (−10점)' }).click();
+  // 힌트 패널과 수첩 단서 탭(기본 탭) 양쪽에 보인다
+  await expect(page.getByText(/정전은 정말 건물 전체에/)).toHaveCount(2);
   await expect(page.getByText('열람한 힌트 1개')).toBeVisible();
 
   // 수첩 탭·필터는 URL 상태
@@ -68,14 +77,14 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(page.getByRole('tabpanel').getByRole('listitem')).toHaveCount(7);
 
   // 오답: 맞힌 핵심 요소 개수만 알려 준다
-  const dialog = await submitAnswer(page, '관리인 오만식이 독을 먹여 죽였다고 생각합니다.');
+  const dialog = await submitAnswer(page, '관리인이 독을 먹여 죽였다고 생각합니다.');
   await expect(dialog.getByText('핵심 요소 3개 중 0개를 맞혔어요.')).toBeVisible();
   await expect(dialog.getByText('남은 제출 기회 2회')).toBeVisible();
 
   // 정답 → 엔딩(100 - 힌트 10 - 오답 10 = 80 → A)
   await dialog
     .getByLabel('사건의 진상을 자유롭게 써 주세요')
-    .fill('조카 문태성이 돈 문제로 다투다 한정숙을 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.');
+    .fill('조카가 돈 문제로 다투다 피해자를 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.');
   await dialog.getByRole('button', { name: '제출하기' }).click();
   await expect(page).toHaveURL(/\/ending$/);
   await expect(page.getByRole('heading', { name: '사건 결과' })).toBeVisible();
@@ -88,7 +97,10 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
 
   await page.getByRole('link', { name: '목록으로' }).click();
   const card = page.getByRole('link', { name: /302호의 정전/ });
-  await expect(card.getByText(/해결 · 최고 A · 1회차 달성 · 총 1회/)).toBeVisible();
+  // 카드는 상태·최고 등급만, 달성 회차·총 회차는 사건 소개에(D98)
+  await expect(card.getByText(/해결 · 최고 A/)).toBeVisible();
+  await card.click();
+  await expect(page.getByText(/해결 · 최고 A · 1회차 달성 · 총 1회/)).toBeVisible();
 });
 
 test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수와 감점 규칙 설명을 보여 준다', async ({
@@ -102,7 +114,7 @@ test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수와 �
 
   await submitAnswer(
     page,
-    '제빵사 진상우가 앞치마 주머니에 열쇠를 넣은 채 세탁 자루에 넣었다. 도난이 아니다.',
+    '제빵사가 앞치마 주머니에 열쇠를 넣은 채 세탁 자루에 넣었다. 도난이 아니다.',
   );
   await expect(page).toHaveURL(/\/ending$/);
   await expect(page.getByText('점수 100')).toBeVisible();
@@ -212,25 +224,22 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await expect(page.getByText('가까이: 두꺼비집 — E·Enter로 조사')).toBeVisible();
 
   // 관리실 출입구(12,4)로 → 관리실(1,1) → 관리인 옆(4,3)에서 말 걸기
-  // 진술과 함께 CCTV 기록이 기록되고(단서 연쇄 D91), 수사 자료 타임라인이 늘어난다(D90)
-  await page.getByRole('tab', { name: '수사 자료' }).click();
-  await expect(page.getByRole('tabpanel').getByText(/계단으로 나감/)).toHaveCount(0);
+  // 진술과 함께 CCTV 기록이 수첩에 기록된다(단서 연쇄 D91)
+  await page.getByRole('tab', { name: '단서' }).click();
+  await expect(page.getByRole('tabpanel').getByText('입구 CCTV 기록')).toHaveCount(0);
   await map.click();
   await walk(page, 'ArrowRight', 10);
   await walk(page, 'ArrowDown', 3);
   await expect(page.getByText('현재 위치: 빌라 관리실')).toBeVisible();
   await walk(page, 'ArrowDown', 2);
   await walk(page, 'ArrowRight', 3);
-  await expect(page.getByText('가까이: 관리인 오만식 — E·Enter로 말 걸기')).toBeVisible();
+  await expect(page.getByText('가까이: 관리인 — E·Enter로 말 걸기')).toBeVisible();
   await page.keyboard.press('e');
-  const talk = page.getByRole('dialog', { name: '관리인 오만식' });
+  const talk = page.getByRole('dialog', { name: '관리인' });
   await expect(talk.getByText(/함께 수첩에 기록했어요: 입구 CCTV 기록/)).toBeVisible();
-  await expect(
-    page.getByRole('status').getByText('수사 자료에 타임라인 2건이 추가됐어요'),
-  ).toBeVisible();
   await page.keyboard.press('Escape');
-  await page.getByRole('tab', { name: '수사 자료' }).click();
-  await expect(page.getByRole('tabpanel').getByText(/계단으로 나감/)).toBeVisible();
+  await expect(page.getByRole('tabpanel').getByText('입구 CCTV 기록')).toBeVisible();
+  await expect(page.getByRole('tab', { name: '수사 자료' })).toHaveCount(0);
 });
 
 test('18세 확인: 처음 방문하면 묻고, 예를 고르면 다시 묻지 않는다', async ({ page }) => {

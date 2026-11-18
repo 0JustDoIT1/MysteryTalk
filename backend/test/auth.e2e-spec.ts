@@ -9,7 +9,7 @@ import type { PrismaService } from '../src/prisma/prisma.service.js';
 import { createTestApp, loadSample, loadTutorial, resetDb } from './helpers.js';
 
 const SAMPLE = 'sample-blackout-302';
-const FULL = '조카 문태성이 돈 문제로 다투다 한정숙을 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.';
+const FULL = '조카가 돈 문제로 다투다 피해자를 밀쳐 죽게 하고 차단기를 내려 사고로 꾸몄다.';
 const MATCH_ALL = { A1: 'MATCH', A2: 'MATCH', A3: 'MATCH', A4: 'MATCH' } as const;
 
 /** Set-Cookie 들을 쿠키 상자에 반영한다(값이 비거나 만료면 지움). */

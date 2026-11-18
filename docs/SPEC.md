@@ -93,7 +93,7 @@
 ### 4.2 사건 콘텐츠 (사건 데이터 파일에서 적재, §11)
 | 테이블 | 주요 필드 |
 |---|---|
-| `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_file_json(수사 자료: 개요·관련자·타임라인), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
+| `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_no(카드 번호, D98), element_count(공개하는 정답 요소 개수 = 필수 요소 수, D100), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
 | `case_version` | case_id, version, facts_json, elements_json(정답 요소·키워드), hints_json, content_hash, published_at |
 | `case_asset` | (case_id, version, name) PK, mime, bytes, sha256. 힌트·단서 이미지(D92·D93). 사건 버전과 함께 적재(버전 삭제 시 함께 삭제) |
 | (현장 조사) | 4단계 구현: 맵·구역 해금 조건·조사 대상·NPC·단서·시작 위치는 별도 테이블 대신 `case_version.explore_json`에 버전과 함께 저장한다(사실 목록처럼 D59 버전 규칙을 그대로 따르고, 적재 전 검사로 정합성을 보장) |
@@ -131,9 +131,9 @@
 | DELETE | `/me` | 계정 삭제(로그인) 또는 이 브라우저의 기록 지우기(게스트), 즉시 영구 삭제 [D95, D96]. 이 플레이어와 이 계정으로 옮겨진 게스트 기록을 지우고(세션·질문 원문·답안·메모·힌트·단서·구역·기록·로그인 세션은 연쇄 삭제, AI 호출 비용 기록은 세션 연결만 끊김) 게스트·로그인 쿠키를 지운다. 이 브라우저는 다음 요청부터 빈 새 게스트. 화면은 삭제 뒤 첫 화면을 새로 연다(`/?deleted=1`에서 한 번 알림). 이 기기의 연령 확인 다시 하기(D97)는 브라우저 저장값만 지운다 |
 | GET | `/auth/google` · `/auth/google/callback` · POST `/auth/logout` | 구글 로그인, 콜백에서 기록 이전 실행 [D31, D82] |
 | GET | `/cases` | 사건 목록: 제목, 한 줄 요약, 난이도, 수위, 태그, 장르, 상태(미해결/해결), 최고 등급·달성 회차·총 회차, 진행 중 여부 |
-| GET | `/cases/{slug}` | 사건 공개 정보: 도입 이야기, 수사 자료(처음 공개 항목만, D90), B, 맵 목록(공개 메타데이터만) |
+| GET | `/cases/{slug}` | 사건 공개 정보: 번호, 제목, 한 줄 요약, 도입 이야기, B와 상한 3B(maxQuestions), 정답 요소 개수(elementCount, D100), 수위·태그·장르 |
 | POST | `/cases/{slug}/sessions` | 새 세션 시작(진행 중이 있으면 409 `ACTIVE_SESSION_EXISTS`) |
-| GET | `/sessions/{id}` | 진행 상태 전체(복원용): 진행 수치, 힌트 해금·열람, 열린 구역, 현재 맵·위치, 획득 단서, 메모, 남은 제출 기회, 지금까지 공개된 수사 자료(caseFile) [D53, D76, D90] |
+| GET | `/sessions/{id}` | 진행 상태 전체(복원용): 진행 수치, 힌트 해금·열람, 열린 구역, 현재 맵·위치, 획득 단서, 메모, 남은 제출 기회 [D53, D76] |
 | GET | `/sessions/{id}/questions` | 질문 기록(순번·질문·판정, 판정별 필터) [D48] |
 | POST | `/sessions/{id}/questions` | `{question}` → 판정(§6) |
 | POST | `/sessions/{id}/hints/{no}` | 힌트 열람(해금된 것만, 순서대로). 글 힌트는 text, 이미지 힌트는 image=true·alt [D15, D92] |
@@ -141,7 +141,7 @@
 | GET | `/sessions/{id}/clues/{key}/image` | 얻은 단서의 이미지. 얻기 전·이미지 없음·남의 세션은 404 [D93] |
 | GET | `/sessions/{id}/maps/{key}/background` | 열린 맵의 배경 그림. 닫힌 맵·배경 없음·남의 세션은 404 [D94] |
 | POST | `/sessions/{id}/move` | `{mapKey, x, y}` 맵 이동·위치 저장(구역 해금 검사) |
-| POST | `/sessions/{id}/inspect` | `{objectKey 또는 npcKey}` 조사·대화 → 설명·단서·진술, 연쇄 단서(chainedClues), 수사 자료 추가 수(caseFileAdded), 단서 해금 처리 [D90, D91] |
+| POST | `/sessions/{id}/inspect` | `{objectKey 또는 npcKey}` 조사·대화 → 설명·단서·진술, 연쇄 단서(chainedClues), 단서 해금 처리 [D91] |
 | PUT | `/sessions/{id}/memo` | 메모 저장 [D62] |
 | POST | `/sessions/{id}/submissions` | `{answer}` → 채점(§7) |
 | POST | `/sessions/{id}/abandon` | 포기 → F, 해설 공개 [D80] |
@@ -192,7 +192,7 @@
    - 미확정만 있고 불일치 없음 → **NEEDS_DETAIL**: 제출 기회 미차감, 개수 미표시, detail_requests_used + 1. 2회를 넘으면 미확정을 AI 판정으로 확정해 다시 결정 [D23].
 7. AI 실패 시 미차감·기록 안 함·같은 키 재시도 [D73].
 8. 종료 시 점수·등급 계산(§8) → `case_record` 갱신 → 엔딩 공개.
-- 정답 요소의 개수·종류는 제출 전 어떤 응답에도 포함하지 않는다 [D84].
+- 정답 요소의 **종류**는 제출 전 어떤 응답에도 포함하지 않는다. **개수**(필수 요소 수)는 사건 소개에 처음부터 공개한다 [D84 → D100].
 - 구현 세부(3단계):
   - 결과 결정과 오답 개수("n개 / m개")는 **필수 요소만** 센다. 선택 요소는 엔딩의 요소별 충족에만 보인다.
   - 재작성 요청을 다 쓴 뒤의 **마지막 판정**에서는 AI가 MATCH/NO_MATCH만 고르게 한다(출력 스키마로 강제, grade-v3). 키워드와 엇갈린 요소도 이 판정으로 확정한다 [D23].
@@ -239,7 +239,6 @@ grade = SOLVED  → score >= 90 ? S : >= 80 ? A : >= 70 ? B : C
 - NPC: 대화하면 대사 1~3줄을 보여 주고 처음 대화 시 진술 단서 획득 [D28, D75].
 - 단서 해금: 단서 획득 직후 그 단서로 열리는 구역을 개방.
 - 단서 연쇄(D91): 처음 얻은 단서에 `reveals`가 있으면 그 단서들도 같은 트랜잭션에서 기록하고(여러 단계), 연쇄로 얻은 단서로 열리는 구역도 연다. 다시 조사하면 연쇄·해금을 반복하지 않는다.
-- 수사 자료 점진 공개(D90): 관련자·타임라인 항목의 `revealedBy`(단서 key)를 세션이 얻은 단서와 비교해 공개 범위를 계산한다. 별도 저장 없이 `session_clue`로 계산하므로 이어하기도 그대로 복원된다. 사건 소개(`/cases/{slug}`)는 처음 공개 항목만, 응답에는 `revealedBy`를 넣지 않는다.
 
 ### 9.3 Phaser·React 경계 [확정]
 - Phaser는 이동·애니메이션·충돌·상호작용 키 입력만 처리하고 **API를 직접 호출하지 않는다**. 조사·이동 요청은 이벤트로 React에 넘기고, React가 API를 호출해 결과(모달 등)를 표시한다.
@@ -270,20 +269,17 @@ grade = SOLVED  → score >= 90 ? S : >= 80 ? A : >= 70 ? B : C
 
 ```
 content/public/tutorial/
-  case.json        # 메타·도입·수사 자료·사실 목록·정답 요소·힌트·구역·오브젝트·NPC·단서·해설
+  case.json        # 메타·도입·등장인물 호칭·사실 목록·정답 요소·힌트·구역·오브젝트·NPC·단서·해설
   eval.json        # 평가 질문(30개 이상)·평가 답안
 ```
 
-`case.json` 핵심 필드: `slug, isTutorial, title, summary, intro, caseFile, difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?},background?}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. `caseFile.people[]`·`caseFile.timeline[]`에는 선택 항목 `revealedBy`(공개 조건 단서 key, D90). 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93). 맵 배경(`background`)은 격자 크기(칸 × 32px)의 1~3배여야 하고 적재 전 검사가 이미지 머리말에서 크기를 읽어 확인한다(D94).
+`case.json` 핵심 필드: `slug, isTutorial, caseNo, title, summary, intro, people[{id,designation}], difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?},background?}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93). 맵 배경(`background`)은 격자 크기(칸 × 32px)의 1~3배여야 하고 적재 전 검사가 이미지 머리말에서 크기를 읽어 확인한다(D94).
 - 맵 격자: '#' 벽, '.' 바닥. 조사 대상·NPC는 바닥 칸에 서고 그 칸은 지나갈 수 없다. 출입구 칸에 들어서면 대상 맵의 도착 좌표로 이동한다.
 
-- **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 수사 자료의 `revealedBy`가 있는 단서를 가리키고 처음 보이는 관련자가 1명 이상, 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 이미지 파일이 있고 확장자와 내용(매직 바이트)이 맞고 크기 상한 이하, 단서 이미지에 대체 텍스트, 이미지 힌트는 대체 텍스트로 인물 표기 검사, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
+- **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 등장인물 호칭이 겹치거나 서로 포함하지 않음(D101), 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 이미지 파일이 있고 확장자와 내용(매직 바이트)이 맞고 크기 상한 이하, 단서 이미지에 대체 텍스트, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
 - 버전: 내용이 바뀌면 `version`을 올리고 `case_version`에 저장, 진행 중 세션은 새 버전 적용 + 세션에 판정 당시 버전 기록 [D59].
 - 작성 규칙(개연성 점검표, 표현 수위, 글쓰기)은 `docs/cases/README.md`로 따로 정리한다(사건 제작 단계에서).
-- **인물 표기 규칙**(3단계, 적재 전 자동 검사):
-  1. 관련자마다 겹치지 않는 지칭을 붙인다. 지칭은 역할 표기에서 괄호 앞부분이다(예: '사장(의뢰인)' → 사장).
-  2. AI가 읽는 사실·정답 요소 설명과 힌트에서는 항상 '지칭 이름'으로 쓴다(예: '제빵사 진상우'). 도입 이야기와 해설은 자유롭게 쓴다.
-  3. 정답 키워드 그룹에 성명이 있으면 이름만(성 제외)과 지칭도 함께 넣는다(예: 조카 / 문태성 / 태성).
+- **등장인물 호칭 규칙**(PRD D101, 적재 전 자동 검사): 인물은 이름 없이 호칭(역할·관계)만 쓰고 `people[{id, designation}]`에 등록한다. 한 사건 안에서 호칭은 겹치거나 한쪽이 다른 쪽을 포함하면 안 된다(공백 무시, 예: '간호사'와 '수간호사' ✗ → '야간 간호사'와 '수간호사'). 도입·단서·대사·사실·정답 요소·힌트·해설 모두 같은 호칭을 쓴다. 호칭 목록은 화면에 보여 주지 않는다.
 
 ---
 
@@ -292,11 +288,12 @@ content/public/tutorial/
 |---|---|
 | 18세 확인 | 팝업, 약관·처리방침 새 탭 링크, '아니오'면 차단 화면 [D33, D60] |
 | 메인 | 배너, 새 스토리 / 이어서 / 공지 / 설정 [§2]. 구현(5단계): `/` 메인 메뉴 + 계정 상태(로그인·로그아웃), `/cases` 사건 선택, `/continue` 이어서. 공지·설정은 '준비 중' |
-| 사건 선택 | 장르 필터, 사건 카드(요약·난이도·수위·태그·상태·최고 등급·회차), 시작 버튼. 첫 방문 시 튜토리얼 권장 [D55] |
+| 사건 선택 | 장르 필터, 사건 카드(대표 그림 자리·CASE 번호·제목·난이도·수위 배지·상태·최고 등급). 대표 그림이 없으면 장르 색 + 번호 임시 그림. 첫 방문 시 튜토리얼 권장 [D55, D98] |
+| 사건 소개 | 그림 자리·번호·제목·한 줄 요약, 사건 정보 한 줄, 수위·태그, 기록(최고 등급·달성 회차·총 회차), 사건 개요(도입), 시작/이어서 [D98] |
 | 이어서 | 진행 중인 사건 목록 [D54] |
-| 추리 화면 | 도입 이야기(첫 진입), 질문 입력(마이크 버튼은 지원 브라우저만), 판정 표시, 진행 수치, 힌트 버튼(다음 힌트까지 N개), 수첩 열기, 현장 조사, 정답 제출, 사건 메뉴(포기) |
-| 수첩 | 수사 자료 / 단서(진술 포함) / 질문 기록(필터) / 메모 [D77, D48, D62] |
-| 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키(6단계). **PC에서는 추리 화면 안에 맵과 질문창을 나란히 배치**(4단계 결정), 좁은 화면에서는 위아래로 쌓음. 그림: 맵에 배경 그림이 있으면 배경을 깔고 벽·바닥 도형을 숨기며, 조사 대상은 그림 위의 투명한 조사 영역(조사 전에는 작은 점 표시), 출입구는 반투명 표시. 배경이 없으면 임시 도형. 캐릭터는 쯔꾸르식 스프라이트 시트(가로 3프레임 × 세로 4방향 아래·왼쪽·오른쪽·위, 32px), 기본은 자체 제작 탐정(`frontend/scripts/make-detective-sprite.mjs`), NPC는 같은 시트에 색조를 입힌다. 렌더러가 늦게 준비돼도 마지막 상태를 바로 그린다 [D94] |
+| 추리 화면 | PC 2단(D99). 왼쪽: 사건 정보 한 줄(장르·난이도·"질문 기준 B · 최대 3B"·정답 요소 n개) → 현장 조사 맵 → 사건 개요(도입). 오른쪽: 진행 수치 → 질문 입력(마이크 버튼은 지원 브라우저만), 판정 표시, 진행 수치, 힌트 버튼(다음 힌트까지 N개), 수첩 열기, 현장 조사, 정답 제출, 사건 메뉴(포기) |
+| 수첩 | 단서(진술 포함) / 질문 기록(필터) / 메모 [D48, D62, D99] |
+| 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키(6단계). **PC에서는 추리 화면 왼쪽에 맵, 오른쪽에 질문창**(D99), 좁은 화면에서는 위아래로 쌓음. 그림: 맵에 배경 그림이 있으면 배경을 깔고 벽·바닥 도형을 숨기며, 조사 대상은 그림 위의 투명한 조사 영역(조사 전에는 작은 점 표시), 출입구는 반투명 표시. 배경이 없으면 임시 도형. 캐릭터는 쯔꾸르식 스프라이트 시트(가로 3프레임 × 세로 4방향 아래·왼쪽·오른쪽·위, 32px), 기본은 자체 제작 탐정(`frontend/scripts/make-detective-sprite.mjs`), NPC는 같은 시트에 색조를 입힌다. 렌더러가 늦게 준비돼도 마지막 상태를 바로 그린다 [D94] |
 | 정답 제출 | 입력(10~300자), 확인 창, 결과(오답 개수·재작성 요청) |
 | 엔딩 | 결과·등급, 점수 내역, 요소별 충족, 해설, 미끼·놓친 단서, 다시 하기 [D61] |
 | 설정 | 탐정 이름, BGM·효과음 볼륨, 구글 로그인/로그아웃, 버그 제보(외부 폼), 언어 선택은 숨김 [D39~D41, D64]. 구현(6단계): `/settings`. 볼륨은 기기(Zustand persist)에만 저장해 로그인해도 기기마다 다르다. 버그 제보는 `NEXT_PUBLIC_BUG_FORM_URL`이 있을 때만 보인다 |
