@@ -19,6 +19,7 @@ export async function syncCase(prisma: PrismaClient, loaded: LoadedCase): Promis
     summary: c.summary,
     intro: c.intro,
     caseNo: c.caseNo,
+    cover: c.cover ?? null,
     elementCount: requiredElementCount(c),
     difficulty: c.difficulty,
     baseQuestions: c.baseQuestions,

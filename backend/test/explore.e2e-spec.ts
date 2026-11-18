@@ -325,6 +325,37 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
       await image(cookie, `/sessions/${id}/clues/NOPE/image`).expect(422);
     });
 
+    it('카드 대표 그림(D98)은 세션 없이 공개 사건이면 내려주고, 목록·소개에 그림 버전을 준다', async () => {
+      const { cookie } = await setup();
+      const summary = async () =>
+        (
+          (await http().get('/cases').set('Cookie', cookie).expect(200)).body as { slug: string }[]
+        ).find((c) => c.slug === SAMPLE);
+      // 대표 그림이 없으면 null·404
+      expect(await summary()).toMatchObject({ coverVersion: null });
+      await image(cookie, `/cases/${SAMPLE}/cover`).expect(404);
+
+      const loaded = sampleCase();
+      loaded.content.cover = 'light-switch.png';
+      loaded.content.version += 1;
+      await syncCase(prisma, { ...loaded, hash: `${loaded.hash}-cover` });
+
+      const v = loaded.content.version;
+      expect(await summary()).toMatchObject({ coverVersion: v });
+      expect((await http().get(`/cases/${SAMPLE}`).expect(200)).body).toMatchObject({
+        coverVersion: v,
+      });
+      const ok = await image(cookie, `/cases/${SAMPLE}/cover?v=${v}`).expect(200);
+      expect(ok.headers['content-type']).toBe('image/png');
+      expect(ok.headers['x-content-type-options']).toBe('nosniff');
+      expect(Buffer.compare(ok.body as Buffer, png())).toBe(0);
+
+      // 공개하지 않은 사건·없는 사건
+      await prisma.mysteryCase.update({ where: { slug: SAMPLE }, data: { isPublished: false } });
+      await image(cookie, `/cases/${SAMPLE}/cover`).expect(404);
+      await image(cookie, '/cases/no-such-case/cover').expect(404);
+    });
+
     it('이미지 힌트는 열람한 뒤에만 이미지·대체 텍스트를 주고, 글 힌트에는 이미지가 없다', async () => {
       const loaded = sampleCase();
       loaded.content.hints[0] = { no: 1, image: 'light-switch.png', alt: '전등 스위치 사진' };

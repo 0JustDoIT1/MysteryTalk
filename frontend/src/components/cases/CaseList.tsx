@@ -61,7 +61,13 @@ export function CaseList() {
               href={`/cases/${c.slug}`}
               className="flex h-full flex-col gap-2 rounded-lg border border-stone-700 bg-stone-900 p-2 hover:border-amber-300/60"
             >
-              <CaseArt caseNo={c.caseNo} isTutorial={c.isTutorial} genre={c.genres[0]} />
+              <CaseArt
+                slug={c.slug}
+                caseNo={c.caseNo}
+                isTutorial={c.isTutorial}
+                genre={c.genres[0]}
+                coverVersion={c.coverVersion}
+              />
               <div className="flex flex-col gap-1 px-1 pb-1">
                 <p className="font-mono text-xs text-stone-400">
                   {c.isTutorial

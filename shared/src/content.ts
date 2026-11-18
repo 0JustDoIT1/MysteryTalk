@@ -65,13 +65,15 @@ export function hintWords(h: Hint): string {
   return 'text' in h ? h.text : h.alt;
 }
 
-/** 사건이 쓰는 이미지 파일 이름(힌트·단서). 적재 때 사건 폴더의 images/에서 읽는다 */
+/** 사건이 쓰는 이미지 파일 이름(대표 그림·맵 배경·힌트·단서). 적재 때 사건 폴더의 images/에서 읽는다 */
 export function caseImageNames(c: {
+  cover?: string;
   hints: Hint[];
   clues: { image?: string }[];
   maps?: { background?: string }[];
 }): string[] {
   const names = [
+    ...(c.cover ? [c.cover] : []),
     ...(c.maps ?? []).flatMap((m) => (m.background ? [m.background] : [])),
     ...c.hints.flatMap((h) => ('image' in h ? [h.image] : [])),
     ...c.clues.flatMap((k) => (k.image ? [k.image] : [])),
@@ -91,6 +93,8 @@ export const caseContentSchema = z
     intro: z.string().min(1).max(800),
     /** 사건 번호(PRD D98). 카드에 'CASE 01'로 표시한다. 튜토리얼은 0 */
     caseNo: z.number().int().min(0).max(999),
+    /** 카드 대표 그림(PRD D98, 선택). images/의 파일 이름, 16:9. 없으면 화면이 장르 색 임시 그림을 그린다 */
+    cover: imageNameSchema.optional(),
     people: z.array(personSchema).min(1),
     difficulty: difficultySchema,
     /** 기준 질문 수 B(PRD D49). 서버 상한은 3B */

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { questionCap } from './case-data.js';
+import { loadAsset, questionCap } from './case-data.js';
 
 const genresSchema = z.array(genreSchema);
 
@@ -27,6 +27,8 @@ export class CasesService {
         slug: true,
         isTutorial: true,
         caseNo: true,
+        cover: true,
+        currentVersion: true,
         title: true,
         summary: true,
         difficulty: true,
@@ -44,6 +46,7 @@ export class CasesService {
       slug: c.slug,
       isTutorial: c.isTutorial,
       caseNo: c.caseNo,
+      coverVersion: c.cover ? c.currentVersion : null,
       title: c.title,
       summary: c.summary,
       difficulty: c.difficulty,
@@ -62,6 +65,8 @@ export class CasesService {
         slug: true,
         isTutorial: true,
         caseNo: true,
+        cover: true,
+        currentVersion: true,
         title: true,
         summary: true,
         intro: true,
@@ -74,11 +79,23 @@ export class CasesService {
       },
     });
     if (!c) throw new AppException(404, 'NOT_FOUND');
+    const { cover, currentVersion, ...rest } = c;
     return {
-      ...c,
+      ...rest,
+      coverVersion: cover ? currentVersion : null,
       maxQuestions: questionCap(c.baseQuestions),
       genres: genresSchema.parse(c.genres),
     };
+  }
+
+  /** 카드 대표 그림(D98). 시작 전에 보여 주는 그림이라 세션 없이 공개 사건이면 내려준다 */
+  async cover(slug: string): Promise<{ mime: string; bytes: Uint8Array }> {
+    const c = await this.prisma.mysteryCase.findFirst({
+      where: { slug, isPublished: true },
+      select: { id: true, cover: true, currentVersion: true },
+    });
+    if (!c?.cover) throw new AppException(404, 'NOT_FOUND');
+    return loadAsset(this.prisma, c.id, c.currentVersion, c.cover);
   }
 
   /**

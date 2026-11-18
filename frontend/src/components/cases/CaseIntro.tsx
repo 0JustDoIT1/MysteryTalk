@@ -38,7 +38,13 @@ export function CaseIntro() {
         ← {t.common.back}
       </Link>
       <div className="w-full max-w-xl">
-        <CaseArt caseNo={c.caseNo} isTutorial={c.isTutorial} genre={c.genres[0]} />
+        <CaseArt
+          slug={c.slug}
+          caseNo={c.caseNo}
+          isTutorial={c.isTutorial}
+          genre={c.genres[0]}
+          coverVersion={c.coverVersion}
+        />
       </div>
       <header className="flex flex-col gap-2">
         <p className="font-mono text-xs text-stone-400">

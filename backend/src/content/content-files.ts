@@ -46,6 +46,7 @@ export function readCaseDirs(roots: string[]): LoadedCase[] {
       }
       const assets = readAssets(dir, caseImageNames(parsed.data));
       checkBackgrounds(dir, parsed.data, assets);
+      checkCover(dir, parsed.data, assets);
       loaded.push({ dir, content: parsed.data, hash: contentHash(parsed.data, assets), assets });
     }
   }
@@ -98,6 +99,17 @@ function checkBackgrounds(dir: string, c: CaseContent, assets: CaseAssetFile[]):
   }
   if (problems.length)
     throw new Error(`${dir}: invalid map backgrounds\n  ${problems.join('\n  ')}`);
+}
+
+/** 카드 대표 그림(D98)은 16:9, 가로 512~1920px(카드·소개 화면에서 16:9 칸에 채워 그린다) */
+function checkCover(dir: string, c: CaseContent, assets: CaseAssetFile[]): void {
+  if (!c.cover) return;
+  const size = imageSize(assets.find((a) => a.name === c.cover)!.bytes);
+  const ok = size && size.width * 9 === size.height * 16 && size.width >= 512 && size.width <= 1920;
+  if (!ok)
+    throw new Error(
+      `${dir}: invalid cover\n  cover ${c.cover} is ${size ? `${size.width}x${size.height}` : 'unreadable'}, expected 16:9 between 512x288 and 1920x1080`,
+    );
 }
 
 /**

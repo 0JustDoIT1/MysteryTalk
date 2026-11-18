@@ -71,6 +71,8 @@ export const caseSummarySchema = z.object({
   slug: z.string(),
   isTutorial: z.boolean(),
   caseNo: z.number().int(),
+  /** 대표 그림이 있으면 그 사건 버전(그림 주소의 캐시 구분용), 없으면 null(PRD D98) */
+  coverVersion: z.number().int().nullable(),
   title: z.string(),
   summary: z.string(),
   difficulty: difficultySchema,
@@ -88,6 +90,7 @@ export const caseDetailSchema = z.object({
   slug: z.string(),
   isTutorial: z.boolean(),
   caseNo: z.number().int(),
+  coverVersion: z.number().int().nullable(),
   title: z.string(),
   summary: z.string(),
   intro: z.string(),

@@ -120,6 +120,8 @@ model MysteryCase {
   intro          String
   /// 카드 표시용 사건 번호(PRD D98)
   caseNo         Int        @default(0) @map("case_no")
+  /// 카드 대표 그림 파일 이름(PRD D98). 그림은 case_asset에 사건 버전과 함께 저장한다
+  cover          String?
   /// 처음부터 공개하는 정답 요소 개수(필수 요소, PRD D100)
   elementCount   Int        @default(0) @map("element_count")
   difficulty     Difficulty

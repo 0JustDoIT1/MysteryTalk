@@ -74,6 +74,14 @@ export class GameController {
     return this.cases.detail(slug);
   }
 
+  @Get('cases/:slug/cover')
+  async caseCover(
+    @Param('slug') slug: string,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<StreamableFile> {
+    return imageFile(res, await this.cases.cover(slug));
+  }
+
   @Post('cases/:slug/sessions')
   createSession(
     @CurrentPlayer() player: Player,

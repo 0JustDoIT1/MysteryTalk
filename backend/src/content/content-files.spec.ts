@@ -326,3 +326,57 @@ describe('맵 배경(D94)', () => {
     expect(s!.assets.map((a) => a.name).sort()).toEqual(['light-switch.png', 'living-bg.png']);
   });
 });
+
+describe('카드 대표 그림(D98)', () => {
+  /** 크기만 읽히는 PNG 머리말(서명 + IHDR) */
+  const pngHeader = (w: number, h: number) => {
+    const b = Buffer.alloc(33);
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).copy(b, 0);
+    b.writeUInt32BE(13, 8);
+    b.write('IHDR', 12, 'ascii');
+    b.writeUInt32BE(w, 16);
+    b.writeUInt32BE(h, 20);
+    return b;
+  };
+  /** 샘플 사건에 대표 그림을 붙인 임시 사건 폴더 */
+  const withCover = (w: number, h: number) => {
+    const c = JSON.parse(readFileSync(join(publicRoot, 'sample', 'case.json'), 'utf8'));
+    const root = mkdtempSync(join(tmpdir(), 'mt-cover-'));
+    mkdirSync(join(root, 's', 'images'), { recursive: true });
+    for (const f of ['living-bg.png', 'light-switch.png'])
+      writeFileSync(
+        join(root, 's', 'images', f),
+        readFileSync(join(publicRoot, 'sample', 'images', f)),
+      );
+    writeFileSync(join(root, 's', 'images', 'cover.png'), pngHeader(w, h));
+    writeFileSync(join(root, 's', 'case.json'), JSON.stringify({ ...c, cover: 'cover.png' }));
+    return root;
+  };
+
+  it('16:9 대표 그림은 사건 이미지로 함께 적재하고, 그림이 바뀌면 해시도 바뀐다', () => {
+    const [a] = readCaseDirs([withCover(1024, 576)]);
+    expect(a!.assets.map((x) => x.name).sort()).toEqual([
+      'cover.png',
+      'light-switch.png',
+      'living-bg.png',
+    ]);
+    const [b] = readCaseDirs([withCover(1280, 720)]);
+    expect(b!.hash).not.toBe(a!.hash);
+  });
+
+  it('16:9가 아니거나 너무 작거나 크면 거부한다', () => {
+    for (const [w, h] of [
+      [1024, 768],
+      [448, 252],
+      [2048, 1152],
+    ] as const)
+      expect(() => readCaseDirs([withCover(w, h)])).toThrow(
+        new RegExp(`cover cover\.png is ${w}x${h}, expected 16:9`),
+      );
+  });
+
+  it('대표 그림이 없는 사건은 그대로 통과한다(선택 항목)', () => {
+    const [s] = readCaseDirs([publicRoot]).filter((c) => c.content.slug === 'sample-blackout-302');
+    expect(s!.content.cover).toBeUndefined();
+  });
+});

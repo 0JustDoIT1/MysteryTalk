@@ -93,7 +93,7 @@
 ### 4.2 사건 콘텐츠 (사건 데이터 파일에서 적재, §11)
 | 테이블 | 주요 필드 |
 |---|---|
-| `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_no(카드 번호, D98), element_count(공개하는 정답 요소 개수 = 필수 요소 수, D100), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
+| `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_no(카드 번호, D98), cover(대표 그림 파일 이름, 선택, D98), element_count(공개하는 정답 요소 개수 = 필수 요소 수, D100), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
 | `case_version` | case_id, version, facts_json, elements_json(정답 요소·키워드), hints_json, content_hash, published_at |
 | `case_asset` | (case_id, version, name) PK, mime, bytes, sha256. 힌트·단서 이미지(D92·D93). 사건 버전과 함께 적재(버전 삭제 시 함께 삭제) |
 | (현장 조사) | 4단계 구현: 맵·구역 해금 조건·조사 대상·NPC·단서·시작 위치는 별도 테이블 대신 `case_version.explore_json`에 버전과 함께 저장한다(사실 목록처럼 D59 버전 규칙을 그대로 따르고, 적재 전 검사로 정합성을 보장) |
@@ -131,7 +131,8 @@
 | DELETE | `/me` | 계정 삭제(로그인) 또는 이 브라우저의 기록 지우기(게스트), 즉시 영구 삭제 [D95, D96]. 이 플레이어와 이 계정으로 옮겨진 게스트 기록을 지우고(세션·질문 원문·답안·메모·힌트·단서·구역·기록·로그인 세션은 연쇄 삭제, AI 호출 비용 기록은 세션 연결만 끊김) 게스트·로그인 쿠키를 지운다. 이 브라우저는 다음 요청부터 빈 새 게스트. 화면은 삭제 뒤 첫 화면을 새로 연다(`/?deleted=1`에서 한 번 알림). 이 기기의 연령 확인 다시 하기(D97)는 브라우저 저장값만 지운다 |
 | GET | `/auth/google` · `/auth/google/callback` · POST `/auth/logout` | 구글 로그인, 콜백에서 기록 이전 실행 [D31, D82] |
 | GET | `/cases` | 사건 목록: 제목, 한 줄 요약, 난이도, 수위, 태그, 장르, 상태(미해결/해결), 최고 등급·달성 회차·총 회차, 진행 중 여부 |
-| GET | `/cases/{slug}` | 사건 공개 정보: 번호, 제목, 한 줄 요약, 도입 이야기, B와 상한 3B(maxQuestions), 정답 요소 개수(elementCount, D100), 수위·태그·장르 |
+| GET | `/cases/{slug}/cover` | 카드 대표 그림(D98). 공개 사건이고 그림이 있으면 세션 없이 내려준다(없으면 404). 화면은 `?v=사건 버전`을 붙여 그림이 바뀌면 새로 받는다 |
+| GET | `/cases/{slug}` | 사건 공개 정보: 번호, 대표 그림 버전(coverVersion, 없으면 null), 제목, 한 줄 요약, 도입 이야기, B와 상한 3B(maxQuestions), 정답 요소 개수(elementCount, D100), 수위·태그·장르 |
 | POST | `/cases/{slug}/sessions` | 새 세션 시작(진행 중이 있으면 409 `ACTIVE_SESSION_EXISTS`) |
 | GET | `/sessions/{id}` | 진행 상태 전체(복원용): 진행 수치, 힌트 해금·열람, 열린 구역, 현재 맵·위치, 획득 단서, 메모, 남은 제출 기회 [D53, D76] |
 | GET | `/sessions/{id}/questions` | 질문 기록(순번·질문·판정, 판정별 필터) [D48] |
@@ -273,7 +274,7 @@ content/public/tutorial/
   eval.json        # 평가 질문(30개 이상)·평가 답안
 ```
 
-`case.json` 핵심 필드: `slug, isTutorial, caseNo, title, summary, intro, people[{id,designation}], difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?},background?}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93). 맵 배경(`background`)은 격자 크기(칸 × 32px)의 1~3배여야 하고 적재 전 검사가 이미지 머리말에서 크기를 읽어 확인한다(D94).
+`case.json` 핵심 필드: `slug, isTutorial, caseNo, cover?, title, summary, intro, people[{id,designation}], difficulty, baseQuestions, rating, tags, genres, version, facts[{id,text,kind}], elements[{id,description,required,keywordGroups}], hints[{no,text} 또는 {no,image,alt}], maps[{key,name,grid,exits[{x,y,to,toX,toY}],unlock:{type:OPEN|CLUE|FACT,clue?,fact?,keywords?,hint?},background?}], spawn{x,y}, objects[{key,map,x,y,name,description,clue?}], npcs[{key,map,x,y,name,lines,clue}], clues[{key,kind,title,content,decoy,reveals?,image?,alt?}], explanation`. 이미지 파일은 사건 폴더 `images/`에 두고 데이터에는 파일 이름만 적는다(png·jpg·webp, 장당 1MB 이하 [잠정], D92·D93). 대표 그림(`cover`)은 16:9, 가로 512~1920px(D98). 맵 배경(`background`)은 격자 크기(칸 × 32px)의 1~3배여야 하고 적재 전 검사가 이미지 머리말에서 크기를 읽어 확인한다(D94).
 - 맵 격자: '#' 벽, '.' 바닥. 조사 대상·NPC는 바닥 칸에 서고 그 칸은 지나갈 수 없다. 출입구 칸에 들어서면 대상 맵의 도착 좌표로 이동한다.
 
 - **적재 전 검사**(콘텐츠 테스트): 형식 검증, 맵과 오브젝트·NPC 좌표 일치, 모든 맵·오브젝트에 도달 가능한지(해금 조건 포함), 단서마다 출처(오브젝트·NPC·연쇄로 여는 단서)가 정확히 1개, 연쇄가 가리키는 단서가 있고 순환하지 않아 모든 단서를 얻을 수 있음, 등장인물 호칭이 겹치거나 서로 포함하지 않음(D101), 사실 해금 구역은 연결된 힌트가 있음(D26 보완), 힌트 3개, 이미지 파일이 있고 확장자와 내용(매직 바이트)이 맞고 크기 상한 이하, 단서 이미지에 대체 텍스트, 정답 요소의 필수 여부, 공개 API로 나갈 필드에 비공개 필드가 섞이지 않음.
