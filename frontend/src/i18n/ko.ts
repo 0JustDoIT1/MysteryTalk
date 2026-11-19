@@ -36,19 +36,13 @@ export const ko = {
     settings: '설정',
     soon: '준비 중',
   },
-  /** 탐정 캐릭터 8종(PRD D103) */
+  /** 탐정 캐릭터 2종(PRD D103) */
   detective: {
     heading: '탐정',
     characterLabel: '탐정 캐릭터',
     characters: {
-      classic: { name: '고전 명탐정', desc: '체크무늬 사냥모자와 케이프, 돋보기' },
-      noir: { name: '하드보일드 사설탐정', desc: '중절모와 트렌치코트' },
-      patrol: { name: '만화풍 순경', desc: '경찰 모자와 제복, 호루라기' },
-      boy: { name: '소년 탐정', desc: '야구모자와 멜빵바지, 손전등' },
-      inspector: { name: '강력계 형사', desc: '가죽 재킷과 배지, 무전기' },
-      forensic: { name: '과학수사관', desc: '흰 감식복과 장갑, 증거 봉투' },
-      reporter: { name: '기자 탐정', desc: '취재 조끼와 카메라, 수첩' },
-      granny: { name: '할머니 탐정', desc: '숄과 뜨개질바구니, 돋보기 안경' },
+      noir: '사설탐정',
+      inspector: '강력계 형사',
     },
     setupTitle: '탐정 정하기',
     setupBody: '수사할 탐정의 이름과 모습을 골라 주세요. 나중에 설정에서 바꿀 수 있어요.',

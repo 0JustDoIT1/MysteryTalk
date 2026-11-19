@@ -178,4 +178,8 @@ No people, no characters, no animals, no bodies, no blood, no text, no letters, 
 
 ## 3. 캐릭터
 
-탐정 캐릭터 8종·NPC 프롬프트는 [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)로 옮겼다.
+탐정 캐릭터 2종·NPC 프롬프트는 [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)로 옮겼다.
+
+## 3. 캐릭터
+
+탐정 캐릭터 2종·NPC 프롬프트는 [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)로 옮겼다.

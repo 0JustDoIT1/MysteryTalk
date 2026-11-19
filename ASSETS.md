@@ -5,7 +5,7 @@
 | 파일 | 출처 | 라이선스 |
 |---|---|---|
 | `frontend/public/sprites/detective.png` | 자체 제작. `frontend/scripts/make-detective-sprite.mjs`가 16×16 도안을 2배로 키워 생성 | 이 저장소의 일부(자체 제작) |
-| `frontend/public/sprites/detectives/*.png`(8종) | 자체 제작 임시 그림. 같은 스크립트가 탐정 도안에 옷·모자 색만 바꿔 생성(PRD D103). AI 생성 그림이 오면 바꿔 끼운다 | 이 저장소의 일부(자체 제작) |
+| `frontend/public/sprites/detectives/*.png`(2종) | 자체 제작 임시 그림. 같은 스크립트가 탐정 도안에 옷·모자 색만 바꿔 생성(PRD D103). AI 생성 그림이 오면 바꿔 끼운다 | 이 저장소의 일부(자체 제작) |
 | `content/public/sample/images/light-switch.png` | 자체 제작 자리표시(회색 바탕 + X) | 이 저장소의 일부(자체 제작) |
 | `content/public/tutorial/images/backdoor-bg.png` | 맵 배경, ChatGPT 이미지 생성(OpenAI)로 생성(2026-11), 2026-11-19 적용(규격 크기로 축소·무손실 압축). 프롬프트는 [docs/ART_PROMPTS.md](docs/ART_PROMPTS.md) | 생성 도구 이용약관에 따름(출시 전 법률 검토에서 상업 이용 조건 확인, D67) |
 | `content/public/tutorial/images/cover.png` | 카드 대표 그림, ChatGPT 이미지 생성(OpenAI)로 생성(2026-11), 2026-11-19 적용(규격 크기로 축소·무손실 압축). 프롬프트는 [docs/ART_PROMPTS.md](docs/ART_PROMPTS.md) | 생성 도구 이용약관에 따름(출시 전 법률 검토에서 상업 이용 조건 확인, D67) |

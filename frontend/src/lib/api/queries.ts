@@ -20,6 +20,7 @@ import {
   type UpdateMeRequest,
 } from '@mysterytalk/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 import { apiOrThrow } from './client';
 
@@ -191,6 +192,26 @@ export function useInspect(id: string) {
       apiOrThrow(`/sessions/${id}/inspect`, inspectResponseSchema, { method: 'POST', body: v }),
     onSuccess: refresh,
   });
+}
+
+const noopSubscribe = () => () => {};
+/** 서버 화면을 이어받는(하이드레이션) 동안은 false, 끝나면 true */
+function useHydrated() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
+
+/**
+ * 서버가 그린 화면(아직 플레이어 정보 없음)을 이어받는 동안에는 정보가 없는 것처럼 돌려준다.
+ * 다른 곳(예: '탐정 정하기' 창)이 먼저 불러 놓은 값 때문에 첫 화면이 서버와 달라지는 하이드레이션 불일치를 막는다.
+ */
+export function useHydratedMe() {
+  const me = useMe();
+  const hydrated = useHydrated();
+  return hydrated ? me : { ...me, data: undefined };
 }
 
 /** 현재 플레이어. enabled=false면 불러오지 않는다(이미 불러온 값은 그대로 보인다). */

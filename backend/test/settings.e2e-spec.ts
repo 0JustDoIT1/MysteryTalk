@@ -84,23 +84,23 @@ describe('탐정 캐릭터 선택 (e2e, PRD D103)', () => {
       detectiveName: '탐정',
       detectiveCharacter: null,
     });
-    const res = await patch(cookie, { detectiveCharacter: 'granny' }).expect(200);
-    expect(res.body).toMatchObject({ detectiveName: '탐정', detectiveCharacter: 'granny' });
+    const res = await patch(cookie, { detectiveCharacter: 'inspector' }).expect(200);
+    expect(res.body).toMatchObject({ detectiveName: '탐정', detectiveCharacter: 'inspector' });
     expect(
       (await http().get('/me').set('Cookie', cookie).expect(200)).body.detectiveCharacter,
-    ).toBe('granny');
+    ).toBe('inspector');
   });
 
   it('이름과 캐릭터를 한 번에 바꿀 수 있다', async () => {
     const cookie = await guest();
     const res = await patch(cookie, {
-      detectiveName: '순경 김',
-      detectiveCharacter: 'patrol',
+      detectiveName: '형사 김',
+      detectiveCharacter: 'inspector',
     }).expect(200);
-    expect(res.body).toMatchObject({ detectiveName: '순경 김', detectiveCharacter: 'patrol' });
+    expect(res.body).toMatchObject({ detectiveName: '형사 김', detectiveCharacter: 'inspector' });
   });
 
-  it('8종에 없는 캐릭터나 빈 요청은 거부한다', async () => {
+  it('정해진 2종에 없는 캐릭터나 빈 요청은 거부한다', async () => {
     const cookie = await guest();
     expect((await patch(cookie, { detectiveCharacter: 'conan' }).expect(422)).body.code).toBe(
       'INVALID_INPUT',

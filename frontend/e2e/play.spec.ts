@@ -275,15 +275,15 @@ test('탐정 정하기: 처음 한 번 이름과 캐릭터를 고르고, 설정�
   await page.goto('/');
   const setup = page.getByRole('dialog', { name: '탐정 정하기' });
   await expect(setup).toBeVisible();
-  await expect(setup.getByRole('radio')).toHaveCount(8);
-  await setup.getByLabel('탐정 이름 입력').fill('순경 김');
-  await setup.getByRole('radio', { name: /만화풍 순경/ }).check({ force: true });
+  await expect(setup.getByRole('radio')).toHaveCount(2);
+  await setup.getByLabel('탐정 이름 입력').fill('형사 김');
+  await setup.getByRole('radio', { name: /강력계 형사/ }).check({ force: true });
   await setup.getByRole('button', { name: '이 탐정으로 시작' }).click();
   await expect(setup).toBeHidden();
 
   await page.getByRole('link', { name: '설정' }).click();
-  await expect(page.getByLabel('탐정 이름 입력')).toHaveValue('순경 김');
-  await expect(page.getByRole('radio', { name: /만화풍 순경/ })).toBeChecked();
+  await expect(page.getByLabel('탐정 이름 입력')).toHaveValue('형사 김');
+  await expect(page.getByRole('radio', { name: /강력계 형사/ })).toBeChecked();
   // 다시 와도 창은 뜨지 않는다
   await page.reload();
   await expect(page.getByRole('dialog', { name: '탐정 정하기' })).toBeHidden();

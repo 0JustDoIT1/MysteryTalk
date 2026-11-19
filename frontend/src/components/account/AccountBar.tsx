@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef } from 'react';
-import { useConfirmAge, useLogout, useMe } from '@/lib/api/queries';
+import { useConfirmAge, useLogout, useHydratedMe } from '@/lib/api/queries';
 import { useDeviceStore } from '@/stores/device';
 import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
@@ -12,7 +12,7 @@ import { t } from '@/i18n/ko';
  * 로그인 직후 이 기기에서 18세 확인을 했으면 계정에도 기록한다(D33). 로그인 결과(?login=)를 알림으로 보여 준다.
  */
 export function AccountBar() {
-  const me = useMe();
+  const me = useHydratedMe();
   const logout = useLogout();
   const confirmAge = useConfirmAge();
   const age = useDeviceStore((s) => s.age);

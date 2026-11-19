@@ -76,9 +76,8 @@ export function DetectivePicker({
       </label>
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-1 text-sm">{t.detective.characterLabel}</legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid max-w-sm grid-cols-2 gap-2">
           {DETECTIVE_CHARACTERS.map((id) => {
-            const c = t.detective.characters[id];
             return (
               <label
                 key={id}
@@ -93,8 +92,7 @@ export function DetectivePicker({
                   className="sr-only"
                 />
                 <DetectiveSprite id={id} />
-                <span className="font-semibold text-amber-100">{c.name}</span>
-                <span className="text-stone-400">{c.desc}</span>
+                <span className="font-semibold text-amber-100">{t.detective.characters[id]}</span>
               </label>
             );
           })}

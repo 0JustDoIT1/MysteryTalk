@@ -1,6 +1,6 @@
 'use client';
 
-import { useMe } from '@/lib/api/queries';
+import { useHydratedMe } from '@/lib/api/queries';
 import { useSfx } from '@/lib/audio/use-sfx';
 import { useDeviceHydrated, useDeviceStore } from '@/stores/device';
 import { AccountBar } from '../account/AccountBar';
@@ -16,7 +16,7 @@ const BUG_FORM_URL = process.env.NEXT_PUBLIC_BUG_FORM_URL ?? '';
  * 언어 선택은 영어가 준비될 때까지 숨긴다(D64).
  */
 export function SettingsView() {
-  const me = useMe();
+  const me = useHydratedMe();
   const { bgm, sfx, setBgm, setSfx } = useDeviceStore();
   // 기기에 저장된 볼륨은 저장소 복원이 끝난 뒤에 보여 준다(서버 렌더 값과 어긋나지 않게).
   const hydrated = useDeviceHydrated();

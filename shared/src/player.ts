@@ -7,23 +7,14 @@ export type PlayerKind = z.infer<typeof playerKindSchema>;
 export const DEFAULT_DETECTIVE_NAME = '탐정';
 
 /**
- * 탐정 캐릭터 8종(PRD D103). 그림은 frontend/public/sprites/detectives/<id>.png(걷기 3프레임 × 4방향, 한 칸 64px).
+ * 탐정 캐릭터 2종(PRD D103): 사설탐정과 강력계 형사. 그림은 frontend/public/sprites/detectives/<id>.png(걷기 3프레임 × 4방향, 한 칸 64px).
  * 화면 표시에만 쓰고 AI에 전달하지 않는다.
  */
-export const DETECTIVE_CHARACTERS = [
-  'classic',
-  'noir',
-  'patrol',
-  'boy',
-  'inspector',
-  'forensic',
-  'reporter',
-  'granny',
-] as const;
+export const DETECTIVE_CHARACTERS = ['noir', 'inspector'] as const;
 export const detectiveCharacterSchema = z.enum(DETECTIVE_CHARACTERS);
 export type DetectiveCharacter = z.infer<typeof detectiveCharacterSchema>;
 /** 고르지 않았을 때 쓰는 캐릭터 */
-export const DEFAULT_DETECTIVE_CHARACTER: DetectiveCharacter = 'classic';
+export const DEFAULT_DETECTIVE_CHARACTER: DetectiveCharacter = 'noir';
 
 /** GET /me 응답(SPEC §5). 내부 식별자·토큰은 내보내지 않는다. */
 export const meResponseSchema = z.object({
