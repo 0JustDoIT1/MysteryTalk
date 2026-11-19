@@ -97,9 +97,13 @@ export const ko = {
     resume: '이어서 수사',
   },
   legal: {
+    heading: '약관·정책',
     terms: '이용약관',
     privacy: '개인정보처리방침',
-    pending: '출시 전 법률 검토를 거쳐 작성할 예정이에요.',
+    draftNotice:
+      '법률 검토 전 초안이에요. 강조 표시된 [ ] 부분은 출시 전에 채우고, 내용은 검토 후 바뀔 수 있어요.',
+    updated: '최종 수정',
+    effective: '시행일',
   },
   common: {
     loading: '불러오는 중…',

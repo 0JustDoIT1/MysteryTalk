@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useHydratedMe } from '@/lib/api/queries';
 import { useSfx } from '@/lib/audio/use-sfx';
 import { useDeviceHydrated, useDeviceStore } from '@/stores/device';
@@ -104,6 +105,20 @@ export function SettingsView() {
           </a>
         </section>
       )}
+
+      <section aria-labelledby="legal-heading" className="flex flex-col gap-2">
+        <h2 id="legal-heading" className="font-semibold text-amber-100">
+          {t.legal.heading}
+        </h2>
+        <p className="flex flex-wrap gap-4 text-sm">
+          <Link href="/terms" target="_blank" className="underline hover:text-stone-200">
+            {t.legal.terms}
+          </Link>
+          <Link href="/privacy" target="_blank" className="underline hover:text-stone-200">
+            {t.legal.privacy}
+          </Link>
+        </p>
+      </section>
     </div>
   );
 }

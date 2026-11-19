@@ -453,3 +453,25 @@ test('공지: 메인 메뉴에서 공지 목록을 열고 최신 공지 본문�
   await expect(page.getByText('MysteryTalk 개발 중 안내')).toBeVisible();
   await expect(page.getByText(/튜토리얼과 샘플 사건으로/)).toBeVisible();
 });
+
+test('약관: 설정에서 이용약관·개인정보처리방침을 새 탭으로 열고, 초안 안내와 채울 자리를 보여 준다', async ({
+  page,
+  context,
+}) => {
+  await page.goto('/settings');
+  const legal = page.getByRole('region', { name: '약관·정책' });
+  const [terms] = await Promise.all([
+    context.waitForEvent('page'),
+    legal.getByRole('link', { name: '이용약관' }).click(),
+  ]);
+  await expect(terms).toHaveURL(/\/terms$/);
+  await expect(terms.getByRole('heading', { name: '이용약관', level: 1 })).toBeVisible();
+  await expect(terms.getByRole('note')).toContainText('법률 검토 전 초안');
+  await expect(terms.getByRole('heading', { name: '제4조 이용 조건' })).toBeVisible();
+  await expect(terms.locator('mark', { hasText: '[운영자 성명]' }).first()).toBeVisible();
+
+  await page.goto('/privacy');
+  await expect(page.getByRole('heading', { name: '개인정보처리방침', level: 1 })).toBeVisible();
+  await expect(page.getByText(/이메일, 이름, 프로필 사진을 요청하지 않으며/)).toBeVisible();
+  await expect(page.locator('mark', { hasText: '[문의 이메일]' }).first()).toBeVisible();
+});

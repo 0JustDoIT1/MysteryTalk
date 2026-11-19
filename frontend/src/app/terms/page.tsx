@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
+import { LegalDocument } from '@/components/LegalDocument';
 import { t } from '@/i18n/ko';
 
 export const metadata: Metadata = { title: t.legal.terms };
 
-/** 자리 페이지: 문안은 출시 전 법률 검토 후 작성한다(PRD §15). */
+/** 이용약관(PRD §1). 문안은 frontend/legal/terms.md, 출시 전 법률 검토 대상. */
 export default function TermsPage() {
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-10">
-      <h1 className="text-xl font-semibold">{t.legal.terms}</h1>
-      <p className="text-stone-300">{t.legal.pending}</p>
+      <LegalDocument name="terms" />
     </main>
   );
 }
