@@ -16,6 +16,14 @@ import { contentHash, readCaseDirs } from './content-files.js';
 
 const publicRoot = resolve(import.meta.dirname, '../../../content/public');
 
+/** 공개 사건 데이터에서 그림 참조(대표 그림·맵 배경)를 뺀 사본. 그림과 상관없는 검사를 임시 폴더에서 할 때 쓴다 */
+function withoutImages(dir: 'tutorial' | 'sample') {
+  const c = JSON.parse(readFileSync(join(publicRoot, dir, 'case.json'), 'utf8'));
+  delete c.cover;
+  for (const m of c.maps) delete m.background;
+  return c;
+}
+
 describe('사건 데이터 파일 (SPEC §11)', () => {
   it('공개 사건(튜토리얼·샘플)은 형식 검사를 통과하고 평가 세트도 유효하다(D65: 질문 30개 이상)', () => {
     const cases = readCaseDirs([publicRoot]);
@@ -44,7 +52,7 @@ describe('사건 데이터 파일 (SPEC §11)', () => {
   });
 
   it('slug가 겹치면 실패한다', () => {
-    const tutorial = readFileSync(join(publicRoot, 'tutorial', 'case.json'), 'utf8');
+    const tutorial = JSON.stringify(withoutImages('tutorial'));
     const root = mkdtempSync(join(tmpdir(), 'mt-cases-'));
     for (const d of ['a', 'b']) {
       mkdirSync(join(root, d));
@@ -214,7 +222,7 @@ describe('사건 이미지(D92·D93)', () => {
   const PNG = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
   /** 튜토리얼을 복사해 힌트 1을 이미지 힌트로 바꾼 임시 사건 폴더 */
   function imageCase(image: Buffer | null, name = 'hint-1.png') {
-    const c = JSON.parse(readFileSync(join(publicRoot, 'tutorial', 'case.json'), 'utf8'));
+    const c = withoutImages('tutorial');
     c.hints[0] = { no: 1, image: name, alt: '열쇠 걸이 사진' };
     const root = mkdtempSync(join(tmpdir(), 'mt-img-'));
     mkdirSync(join(root, 'tut', 'images'), { recursive: true });
@@ -233,7 +241,10 @@ describe('사건 이미지(D92·D93)', () => {
   });
 
   it('이미지가 없는 사건의 해시는 예전 방식과 같다(기존 버전 재적재 시 오류 방지)', () => {
-    const [t] = readCaseDirs([publicRoot]).filter((c) => c.content.isTutorial);
+    const root = mkdtempSync(join(tmpdir(), 'mt-noimg-'));
+    mkdirSync(join(root, 'tut'));
+    writeFileSync(join(root, 'tut', 'case.json'), JSON.stringify(withoutImages('tutorial')));
+    const [t] = readCaseDirs([root]);
     expect(t!.assets).toEqual([]);
     expect(t!.hash).toBe(contentHash(t!.content));
   });
@@ -289,7 +300,7 @@ describe('사건 이미지(D92·D93)', () => {
 describe('맵 배경(D94)', () => {
   it('PNG·JPEG·WebP 머리말에서 크기를 읽는다', () => {
     const png = readFileSync(join(publicRoot, 'sample', 'images', 'living-bg.png'));
-    expect(imageSize(png)).toEqual({ width: 448, height: 288 });
+    expect(imageSize(png)).toEqual({ width: 896, height: 576 });
     // JPEG: SOI + APP0(길이 4) + SOF0(높이 0x0120=288, 너비 0x01C0=448)
     const jpeg = Uint8Array.from([
       0xff, 0xd8, 0xff, 0xe0, 0x00, 0x04, 0x00, 0x00, 0xff, 0xc0, 0x00, 0x11, 0x08, 0x01, 0x20,
@@ -305,7 +316,7 @@ describe('맵 배경(D94)', () => {
   });
 
   it('배경이 격자 크기(칸 × 32px)의 1~3배가 아니면 거부한다', () => {
-    const c = JSON.parse(readFileSync(join(publicRoot, 'sample', 'case.json'), 'utf8'));
+    const c = withoutImages('sample');
     const root = mkdtempSync(join(tmpdir(), 'mt-bg-'));
     mkdirSync(join(root, 's', 'images'), { recursive: true });
     for (const f of ['living-bg.png', 'light-switch.png'])
@@ -313,17 +324,24 @@ describe('맵 배경(D94)', () => {
         join(root, 's', 'images', f),
         readFileSync(join(publicRoot, 'sample', 'images', f)),
       );
-    // 거실 배경(448×288)을 크기가 다른 현관·복도에 붙인다
+    // 거실 배경(896×576, 14×9칸의 2배)을 크기가 다른 현관·복도(14×5칸)에 붙인다
     c.maps.find((m: { key: string }) => m.key === 'hall').background = 'living-bg.png';
     writeFileSync(join(root, 's', 'case.json'), JSON.stringify(c));
     expect(() => readCaseDirs([root])).toThrow(
-      /map hall: background living-bg\.png is 448x288, expected 448x160 \(or 2x, 3x\)/,
+      /map hall: background living-bg\.png is 896x576, expected 448x160 \(or 2x, 3x\)/,
     );
   });
 
   it('배경 그림도 사건 이미지로 함께 적재한다', () => {
     const [s] = readCaseDirs([publicRoot]).filter((c) => c.content.slug === 'sample-blackout-302');
-    expect(s!.assets.map((a) => a.name).sort()).toEqual(['light-switch.png', 'living-bg.png']);
+    expect(s!.assets.map((a) => a.name).sort()).toEqual([
+      'bedroom-bg.png',
+      'cover.png',
+      'hall-bg.png',
+      'light-switch.png',
+      'living-bg.png',
+      'office-bg.png',
+    ]);
   });
 });
 
@@ -338,28 +356,26 @@ describe('카드 대표 그림(D98)', () => {
     b.writeUInt32BE(h, 20);
     return b;
   };
-  /** 샘플 사건에 대표 그림을 붙인 임시 사건 폴더 */
+  /** 그림 없는 샘플 사본(단서 그림만)에 크기를 정한 대표 그림을 붙인 임시 사건 폴더. w=0이면 대표 그림 없음 */
   const withCover = (w: number, h: number) => {
-    const c = JSON.parse(readFileSync(join(publicRoot, 'sample', 'case.json'), 'utf8'));
+    const c = withoutImages('sample');
     const root = mkdtempSync(join(tmpdir(), 'mt-cover-'));
     mkdirSync(join(root, 's', 'images'), { recursive: true });
-    for (const f of ['living-bg.png', 'light-switch.png'])
-      writeFileSync(
-        join(root, 's', 'images', f),
-        readFileSync(join(publicRoot, 'sample', 'images', f)),
-      );
-    writeFileSync(join(root, 's', 'images', 'cover.png'), pngHeader(w, h));
-    writeFileSync(join(root, 's', 'case.json'), JSON.stringify({ ...c, cover: 'cover.png' }));
+    writeFileSync(
+      join(root, 's', 'images', 'light-switch.png'),
+      readFileSync(join(publicRoot, 'sample', 'images', 'light-switch.png')),
+    );
+    if (w) writeFileSync(join(root, 's', 'images', 'cover.png'), pngHeader(w, h));
+    writeFileSync(
+      join(root, 's', 'case.json'),
+      JSON.stringify(w ? { ...c, cover: 'cover.png' } : c),
+    );
     return root;
   };
 
   it('16:9 대표 그림은 사건 이미지로 함께 적재하고, 그림이 바뀌면 해시도 바뀐다', () => {
     const [a] = readCaseDirs([withCover(1024, 576)]);
-    expect(a!.assets.map((x) => x.name).sort()).toEqual([
-      'cover.png',
-      'light-switch.png',
-      'living-bg.png',
-    ]);
+    expect(a!.assets.map((x) => x.name).sort()).toEqual(['cover.png', 'light-switch.png']);
     const [b] = readCaseDirs([withCover(1280, 720)]);
     expect(b!.hash).not.toBe(a!.hash);
   });
@@ -376,7 +392,8 @@ describe('카드 대표 그림(D98)', () => {
   });
 
   it('대표 그림이 없는 사건은 그대로 통과한다(선택 항목)', () => {
-    const [s] = readCaseDirs([publicRoot]).filter((c) => c.content.slug === 'sample-blackout-302');
+    const [s] = readCaseDirs([withCover(0, 0)]);
     expect(s!.content.cover).toBeUndefined();
+    expect(s!.assets.map((x) => x.name)).toEqual(['light-switch.png']);
   });
 });

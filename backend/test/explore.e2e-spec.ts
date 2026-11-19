@@ -331,16 +331,9 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
         (
           (await http().get('/cases').set('Cookie', cookie).expect(200)).body as { slug: string }[]
         ).find((c) => c.slug === SAMPLE);
-      // 대표 그림이 없으면 null·404
-      expect(await summary()).toMatchObject({ coverVersion: null });
-      await image(cookie, `/cases/${SAMPLE}/cover`).expect(404);
-
-      const loaded = sampleCase();
-      loaded.content.cover = 'light-switch.png';
-      loaded.content.version += 1;
-      await syncCase(prisma, { ...loaded, hash: `${loaded.hash}-cover` });
-
-      const v = loaded.content.version;
+      // 샘플은 대표 그림이 있다: 그 사건 버전을 주고 그림을 내려준다
+      const sample = sampleCase();
+      const v = sample.content.version;
       expect(await summary()).toMatchObject({ coverVersion: v });
       expect((await http().get(`/cases/${SAMPLE}`).expect(200)).body).toMatchObject({
         coverVersion: v,
@@ -348,7 +341,16 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
       const ok = await image(cookie, `/cases/${SAMPLE}/cover?v=${v}`).expect(200);
       expect(ok.headers['content-type']).toBe('image/png');
       expect(ok.headers['x-content-type-options']).toBe('nosniff');
-      expect(Buffer.compare(ok.body as Buffer, png())).toBe(0);
+      const cover = readFileSync(join(sample.dir, 'images', 'cover.png'));
+      expect(Buffer.compare(ok.body as Buffer, cover)).toBe(0);
+
+      // 대표 그림을 뺀 버전: null·404
+      const loaded = sampleCase();
+      delete loaded.content.cover;
+      loaded.content.version += 1;
+      await syncCase(prisma, { ...loaded, hash: `${loaded.hash}-nocover` });
+      expect(await summary()).toMatchObject({ coverVersion: null });
+      await image(cookie, `/cases/${SAMPLE}/cover`).expect(404);
 
       // 공개하지 않은 사건·없는 사건
       await prisma.mysteryCase.update({ where: { slug: SAMPLE }, data: { isPublished: false } });
@@ -387,19 +389,14 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
 
   describe('맵 배경 (D94)', () => {
     it('열린 맵의 배경만 내려주고, 닫힌 맵은 열린 뒤에야 준다', async () => {
-      const loaded = sampleCase();
-      // 관리실(처음엔 닫힘)에도 같은 배경을 붙인 버전
-      loaded.content.maps.find((m) => m.key === 'office')!.background = 'living-bg.png';
-      loaded.content.version += 1;
-      await syncCase(prisma, { ...loaded, hash: `${loaded.hash}-bg` });
-
+      // 샘플은 모든 맵에 배경이 있다. 거실·현관은 처음부터 열림, 관리실(단서)·안방(사실)은 닫힘
       const { cookie, id } = await setup();
       const s = await explore(cookie, id);
       expect(
         s.maps.map((m: { key: string; background: boolean }) => [m.key, m.background]),
       ).toEqual([
         ['living', true],
-        ['hall', false],
+        ['hall', true],
         ['office', false],
         ['bedroom', false],
       ]);
@@ -410,7 +407,8 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
       expect(living.headers['content-type']).toBe('image/png');
       expect(living.headers['cache-control']).toBe('private, max-age=3600');
       await http().get(`/sessions/${id}/maps/office/background`).set('Cookie', cookie).expect(404);
-      await http().get(`/sessions/${id}/maps/hall/background`).set('Cookie', cookie).expect(404);
+      await http().get(`/sessions/${id}/maps/bedroom/background`).set('Cookie', cookie).expect(404);
+      await http().get(`/sessions/${id}/maps/hall/background`).set('Cookie', cookie).expect(200);
 
       await openOffice(cookie, id);
       await http().get(`/sessions/${id}/maps/office/background`).set('Cookie', cookie).expect(200);
