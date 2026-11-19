@@ -15,6 +15,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? 'github' : 'list',
   timeout: 60_000,
+  // 서버가 뜬 뒤 모든 페이지를 미리 컴파일해 둔다(첫 방문 컴파일 지연으로 인한 간헐 실패 방지)
+  globalSetup: './e2e/warmup.ts',
   use: {
     baseURL: `http://localhost:${frontendPort}`,
     trace: 'retain-on-failure',
