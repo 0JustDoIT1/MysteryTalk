@@ -21,12 +21,23 @@ const COLORS = {
   npcTint: 0x7dd3c0,
   npcTalkedTint: 0x4b8f84,
 };
-/** 자체 제작 탐정 캐릭터(frontend/scripts/make-detective-sprite.mjs) */
+/**
+ * 탐정 걷기 그림(가로 3프레임 × 세로 4방향). 캐릭터 그림은 칸의 2배(64px)로 받아 32px 칸에 맞춰 그린다(D102).
+ * 기본은 자체 제작(frontend/scripts/make-detective-sprite.mjs), AI 생성 그림으로 같은 파일을 바꿔 끼운다.
+ */
+const SPRITE_PX = 64;
 const SHEET = { key: 'detective', url: '/sprites/detective.png' };
+/** NPC 그림(앞모습 한 장, 64×64): frontend/public/sprites/npc/<이름>.png */
+const npcSpriteUrl = (name: string) => `/sprites/npc/${name}.png`;
 const ROW: Record<Dir, number> = { down: 0, left: 1, right: 2, up: 3 };
 /** 가운데 열이 서 있는 모습, 양옆이 걸음 */
 const STAND = 1;
 const STEP_MS = 110;
+/**
+ * 화면 크기는 맵과 상관없이 16:9로 고정한다(가장 큰 맵 16×9칸). 맵을 옮길 때 화면이 커졌다 작아지지 않게,
+ * 작은 맵은 이 안에 맞춰 확대하고 가운데 둔다(남는 곳은 여백).
+ */
+const VIEW = { width: TILE * 16, height: TILE * 9 };
 
 export type ExploreRenderer = {
   draw: (map: ExploreMap, pos: Position, facing: Dir) => void;
@@ -78,6 +89,39 @@ export async function createRenderer(
     s.load.start();
   }
 
+  /** NPC 그림을 불러와 그린다. 이미 대화한 NPC는 조금 어둡게. 그 사이 다른 맵으로 옮겼으면 버린다. */
+  function drawNpcSprite(
+    s: Scene,
+    name: string,
+    x: number,
+    y: number,
+    talked: boolean,
+    mark: string,
+  ) {
+    const key = `npc:${name}`;
+    const place = () => {
+      if (drawnMap !== mark || !s.textures.exists(key)) return;
+      const img = s.add.image(center(x), center(y), key).setDisplaySize(TILE, TILE).setDepth(5);
+      if (talked) img.setTint(0xb0b0b0);
+    };
+    if (s.textures.exists(key)) return place();
+    s.load.image(key, npcSpriteUrl(name));
+    s.load.once('complete', place);
+    // 그림이 없거나 못 불러오면 색 입힌 탐정 그림으로 대신 그린다
+    s.load.once('loaderror', () => {
+      if (drawnMap === mark) drawTintedNpc(s, x, y, talked);
+    });
+    s.load.start();
+  }
+
+  function drawTintedNpc(s: Scene, x: number, y: number, talked: boolean) {
+    s.add
+      .sprite(center(x), center(y), SHEET.key, ROW.down * 3 + STAND)
+      .setDisplaySize(TILE, TILE)
+      .setTint(talked ? COLORS.npcTalkedTint : COLORS.npcTint)
+      .setDepth(5);
+  }
+
   function render(map: ExploreMap, pos: Position, facing: Dir) {
     if (!scene) {
       pending = { map, pos, facing };
@@ -91,21 +135,30 @@ export async function createRenderer(
     if (drawnMap !== mark) {
       drawnMap = mark;
       s.children.removeAll(true);
-      s.scale.resize(width, height);
+      // 고정 크기 화면 안에 맵 전체가 보이게 확대하고 가운데 둔다
+      const cam = s.cameras.main;
+      cam.setZoom(Math.min(VIEW.width / width, VIEW.height / height));
+      cam.centerOn(width / 2, height / 2);
       if (map.background) drawBackground(s, map, width, height, mark);
       else drawShapes(s, map);
 
       for (const e of map.exits) {
-        // 그림이 있어도 출입구는 작게 표시한다(열림·잠김 구분)
-        s.add
-          .rectangle(
-            center(e.x),
-            center(e.y),
-            TILE - 4,
-            TILE - 4,
-            e.locked ? COLORS.exitLocked : COLORS.exit,
-          )
-          .setAlpha(map.background ? 0.45 : 1);
+        if (map.background) {
+          // 그림 속 문이 출입구다. 아직 못 가는 곳만 작은 자물쇠를 둔다
+          if (e.locked)
+            s.add
+              .text(center(e.x), center(e.y), '🔒', { fontSize: '12px' })
+              .setOrigin(0.5)
+              .setAlpha(0.85);
+          continue;
+        }
+        s.add.rectangle(
+          center(e.x),
+          center(e.y),
+          TILE - 4,
+          TILE - 4,
+          e.locked ? COLORS.exitLocked : COLORS.exit,
+        );
         s.add
           .text(center(e.x), center(e.y), e.locked ? '🔒' : '🚪', { fontSize: '16px' })
           .setOrigin(0.5);
@@ -132,12 +185,17 @@ export async function createRenderer(
           .setOrigin(0.5);
       }
       for (const n of map.npcs) {
-        s.add
-          .sprite(center(n.x), center(n.y), SHEET.key, ROW.down * 3 + STAND)
-          .setTint(n.talked ? COLORS.npcTalkedTint : COLORS.npcTint)
-          .setDepth(5);
+        if (n.sprite) {
+          drawNpcSprite(s, n.sprite, n.x, n.y, n.talked, mark);
+          continue;
+        }
+        // NPC 그림이 없으면 탐정 그림에 색을 입혀 구분한다
+        drawTintedNpc(s, n.x, n.y, n.talked);
       }
-      player = s.add.sprite(0, 0, SHEET.key, ROW[facing] * 3 + STAND).setDepth(10);
+      player = s.add
+        .sprite(0, 0, SHEET.key, ROW[facing] * 3 + STAND)
+        .setDisplaySize(TILE, TILE)
+        .setDepth(10);
       last = null;
     }
     if (player) {
@@ -173,7 +231,10 @@ export async function createRenderer(
       super('explore');
     }
     preload() {
-      this.load.spritesheet(SHEET.key, SHEET.url, { frameWidth: TILE, frameHeight: TILE });
+      this.load.spritesheet(SHEET.key, SHEET.url, {
+        frameWidth: SPRITE_PX,
+        frameHeight: SPRITE_PX,
+      });
     }
     create() {
       onCreate(this);
@@ -186,8 +247,8 @@ export async function createRenderer(
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: TILE * 10,
-    height: TILE * 6,
+    width: VIEW.width,
+    height: VIEW.height,
     backgroundColor: '#1c1917',
     pixelArt: true,
     // 키 입력은 React가 받는다(질문 입력과 충돌하지 않게). Phaser 키보드·마우스 입력은 끈다.

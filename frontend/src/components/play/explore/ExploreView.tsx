@@ -249,12 +249,13 @@ export function ExploreView({ session }: { session: SessionState }) {
         onKeyDown={onKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className={`relative w-fit max-w-full overflow-auto rounded border-2 ${focused ? 'border-amber-300' : 'border-stone-700'}`}
+        className={`relative w-full max-w-3xl overflow-hidden rounded border-2 ${focused ? 'border-amber-300' : 'border-stone-700'}`}
       >
         <div
           ref={canvasRef}
           data-testid="explore-canvas"
-          className="[&_canvas]:!h-auto [&_canvas]:!max-w-full"
+          // 고정 16:9 캔버스를 칸 너비에 맞춰 늘린다(맵을 옮겨도 화면 크기가 그대로)
+          className="aspect-[16/9] [&_canvas]:!h-full [&_canvas]:!w-full"
         />
         {!focused && (
           <p className="pointer-events-none absolute inset-x-0 bottom-1 text-center text-xs text-stone-200/80">

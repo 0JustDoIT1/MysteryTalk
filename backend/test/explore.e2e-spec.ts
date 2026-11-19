@@ -111,7 +111,7 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
     const { cookie, id } = await setup();
     await goHall(cookie, id);
     await move(cookie, id, 'hall', 10, 3).expect(200);
-    await move(cookie, id, 'hall', 12, 4).expect(200); // 관리실 출입구 칸
+    await move(cookie, id, 'hall', 11, 4).expect(200); // 관리실 출입구 칸
     expect((await move(cookie, id, 'office', 1, 1).expect(409)).body.code).toBe('ZONE_LOCKED');
 
     await move(cookie, id, 'hall', 8, 3).expect(200);
@@ -131,8 +131,8 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
     expect(again.body).toMatchObject({ newClue: false, unlockedMaps: [] });
 
     await move(cookie, id, 'hall', 7, 2).expect(200);
-    await move(cookie, id, 'hall', 12, 3).expect(200);
-    await move(cookie, id, 'hall', 12, 4).expect(200);
+    await move(cookie, id, 'hall', 11, 3).expect(200);
+    await move(cookie, id, 'hall', 11, 4).expect(200);
     await move(cookie, id, 'office', 1, 1).expect(200);
     const s = await explore(cookie, id);
     expect(s.position).toEqual({ map: 'office', x: 1, y: 1 });
@@ -243,8 +243,8 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
     async function talkToManager(cookie: string, id: string) {
       await openOffice(cookie, id);
       await move(cookie, id, 'hall', 7, 2).expect(200);
-      await move(cookie, id, 'hall', 12, 3).expect(200);
-      await move(cookie, id, 'hall', 12, 4).expect(200);
+      await move(cookie, id, 'hall', 11, 3).expect(200);
+      await move(cookie, id, 'hall', 11, 4).expect(200);
       await move(cookie, id, 'office', 1, 1).expect(200);
       return inspect(cookie, id, 'manager', 'office', 4, 3).expect(200);
     }

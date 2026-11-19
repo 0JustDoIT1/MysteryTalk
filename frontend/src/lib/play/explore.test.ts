@@ -10,7 +10,7 @@ const map: ExploreMap = {
   grid: ['#####', '#...#', '#...#', '##.##'],
   exits: [{ x: 2, y: 3, to: 'hall', toX: 1, toY: 1, toName: '복도', locked: true }],
   objects: [{ key: 'desk', name: '책상', x: 1, y: 1, inspected: false }],
-  npcs: [{ key: 'kim', name: '관리인', x: 3, y: 2, talked: false }],
+  npcs: [{ key: 'kim', name: '관리인', x: 3, y: 2, talked: false, sprite: null }],
 };
 
 describe('현장 조사 이동 판단', () => {

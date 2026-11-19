@@ -1,6 +1,6 @@
 // 자체 제작 탐정 캐릭터 도트(PRD D94, 라이선스 문제 없는 자리표시 겸 기본 캐릭터).
-// 16×16 도안을 2배로 키워 32×32 프레임을 만들고, 쯔꾸르식 배치(가로 3프레임: 걸음1·서기·걸음2,
-// 세로 4방향: 아래·왼쪽·오른쪽·위)로 96×128 PNG를 쓴다. 의존성 없이 zlib만 쓴다.
+// 16×16 도안을 4배로 키워 64×64 프레임을 만들고, 쯔꾸르식 배치(가로 3프레임: 걸음1·서기·걸음2,
+// 세로 4방향: 아래·왼쪽·오른쪽·위)로 192×256 PNG를 쓴다. 의존성 없이 zlib만 쓴다.
 // 실행: node frontend/scripts/make-detective-sprite.mjs
 import { writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
@@ -87,7 +87,7 @@ function frame(dir, step) {
 
 const DIRS = ['down', 'left', 'right', 'up'];
 const STEPS = ['stepA', 'stand', 'stepB'];
-const SCALE = 2;
+const SCALE = 4; // 64×64 프레임(캐릭터 그림 규격, PRD D102)
 const FW = 16 * SCALE;
 const W = FW * 3;
 const H = FW * 4;

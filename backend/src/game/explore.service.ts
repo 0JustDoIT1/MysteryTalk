@@ -114,6 +114,7 @@ export class ExploreService {
                   x: n.x,
                   y: n.y,
                   talked: found.has(n.clue),
+                  sprite: n.sprite ?? null,
                 }))
             : [],
         };

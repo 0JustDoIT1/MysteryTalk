@@ -175,3 +175,57 @@ Leave the rest of the floor clear and walkable.
 warm amber and dark brown palette, tense mood.
 No people, no characters, no animals, no bodies, no blood, no text, no letters, no numbers, no logos, no watermark.
 ```
+
+## 3. 캐릭터(D102)
+
+- **저장 위치·이름**: 탐정은 `frontend/public/sprites/detective.png`, NPC는 `frontend/public/sprites/npc/<그림 이름>.png`. NPC 그림 이름은 역할 기준의 일반 이름이라(예: `head-nurse`) 진상을 드러내지 않는다. 그림을 넣으면 사건 데이터의 NPC에 `sprite`를 적는다(Claude가 함).
+- **규격(화면 반영 전 Claude가 맞춤)**: 한 칸 64×64px(화면에서는 32px 칸에 맞춰 그림). 탐정은 3열 × 4행 = 192×256, NPC는 앞모습 한 장 64×64. 배경은 투명. 생성 도구가 큰 그림을 내면 줄이고 가장자리를 다듬는다.
+- **탐정이 한 장의 격자로 잘 안 나올 때**: 앞·왼쪽·오른쪽·뒤 네 방향 서 있는 그림을 따로 만들어도 된다(걷기 프레임은 서 있는 그림으로 채움).
+- **겉모습만 묘사**: 범인·피해자 여부가 드러나는 표정·소품(피, 무기, 술병 등)은 넣지 않는다(D35).
+- **기록**: 도구·생성일을 `ASSETS.md`에 적는다(공개 폴더에 들어가는 그림).
+
+### 캐릭터 스타일 블록
+```
+Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
+clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
+fully transparent background, no shadow on the ground, no text, no logos, no watermark.
+```
+
+### 탐정 `detective.png`(192×256, 3열 × 4행)
+```
+Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
+clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
+fully transparent background, no shadow on the ground, no text, no logos, no watermark.
+Character sprite sheet: 3 columns x 4 rows, every cell the same size and the character centered in each cell.
+Columns: left foot forward, standing, right foot forward. Rows from top: facing down (toward viewer), facing left, facing right, facing up (back view).
+The same character in every cell: a young detective in a beige trench coat, dark short hair, small notebook in hand, brown shoes.
+```
+
+### 튜토리얼 아르바이트생 `npc/part-timer.png`(64×64)
+```
+Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
+clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
+fully transparent background, no shadow on the ground, no text, no logos, no watermark.
+Single full-body character standing and facing the viewer (front view), centered, square image.
+A young bakery part-timer in her early 20s, ponytail, cream apron over a striped shirt.
+```
+
+### 샘플 제자 `npc/student-girl.png`(64×64)
+```
+Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
+clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
+fully transparent background, no shadow on the ground, no text, no logos, no watermark.
+Single full-body character standing and facing the viewer (front view), centered, square image.
+A Korean high school girl in a navy school uniform with a backpack, shoulder-length hair.
+```
+
+### 샘플 관리인 `npc/building-manager.png`(64×64)
+```
+Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
+clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
+fully transparent background, no shadow on the ground, no text, no logos, no watermark.
+Single full-body character standing and facing the viewer (front view), centered, square image.
+An older building manager in his 60s, gray hair, khaki work jacket, holding a flashlight.
+```
+
+본편 NPC 프롬프트는 비공개 사건 저장소 `drafts/ART_PROMPTS_CHARACTERS.md`(전체 25명).

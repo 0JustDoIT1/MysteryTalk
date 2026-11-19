@@ -102,6 +102,14 @@ export const caseNpcSchema = pointSchema.extend({
   name: z.string().min(1).max(20),
   lines: z.array(z.string().min(1).max(120)).min(1).max(3),
   clue: z.string(),
+  /**
+   * NPC 그림(PRD D102, 선택): frontend/public/sprites/npc/<sprite>.png(앞모습 한 장, 64×64).
+   * 역할에 맞춘 일반 이름(예: 'nurse')이라 사건 진상을 드러내지 않는다. 없으면 탐정 그림에 색을 입혀 쓴다.
+   */
+  sprite: z
+    .string()
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
 });
 
 export const exploreContentSchema = z.object({
@@ -343,6 +351,8 @@ export const exploreMapSchema = z.object({
       x: z.number().int(),
       y: z.number().int(),
       talked: z.boolean(),
+      /** NPC 그림 이름(D102). 없으면 null */
+      sprite: z.string().nullable(),
     }),
   ),
 });

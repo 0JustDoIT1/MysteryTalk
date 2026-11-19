@@ -226,12 +226,12 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await expect(page.getByText('현재 위치: 현관·복도')).toBeVisible();
   await expect(page.getByText('가까이: 두꺼비집 — E·Enter로 조사')).toBeVisible();
 
-  // 관리실 출입구(12,4)로 → 관리실(1,1) → 관리인 옆(4,3)에서 말 걸기
+  // 관리실 출입구(11,4, 그림 속 문 칸)로 → 관리실(1,1) → 관리인 옆(4,3)에서 말 걸기
   // 진술과 함께 CCTV 기록이 수첩에 기록된다(단서 연쇄 D91)
   await page.getByRole('tab', { name: '단서' }).click();
   await expect(page.getByRole('tabpanel').getByText('입구 CCTV 기록')).toHaveCount(0);
   await map.click();
-  await walk(page, 'ArrowRight', 10);
+  await walk(page, 'ArrowRight', 9);
   await walk(page, 'ArrowDown', 3);
   await expect(page.getByText('현재 위치: 빌라 관리실')).toBeVisible();
   await walk(page, 'ArrowDown', 2);
