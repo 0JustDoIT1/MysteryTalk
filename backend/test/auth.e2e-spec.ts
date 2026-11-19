@@ -103,6 +103,7 @@ describe('5단계 로그인·기록 이전 (e2e, SPEC §3, PRD D29~D33·D82)', (
     expect(await me(jar)).toEqual({
       kind: 'USER',
       detectiveName: '탐정',
+      detectiveCharacter: null,
       ageConfirmed: false,
       loginAvailable: true,
     });

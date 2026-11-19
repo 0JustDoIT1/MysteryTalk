@@ -40,13 +40,17 @@ export class PlayerController {
     return { ...this.players.toMe(player), loginAvailable: this.provider.available };
   }
 
-  /** 탐정 이름 변경(PRD D40). 게스트도 바꿀 수 있다. */
+  /** 탐정 이름·캐릭터 변경(PRD D40·D103). 게스트도 바꿀 수 있다. */
   @Patch()
   async update(
     @CurrentPlayer() player: Player,
     @Body({ schema: updateMeRequestSchema }) body: UpdateMeRequest,
   ): Promise<MeResponse> {
-    const updated = await this.players.rename(player, body.detectiveName);
+    let updated = player;
+    if (body.detectiveName !== undefined)
+      updated = await this.players.rename(updated, body.detectiveName);
+    if (body.detectiveCharacter !== undefined)
+      updated = await this.players.setCharacter(updated, body.detectiveCharacter);
     return { ...this.players.toMe(updated), loginAvailable: this.provider.available };
   }
 

@@ -26,7 +26,9 @@ const COLORS = {
  * 기본은 자체 제작(frontend/scripts/make-detective-sprite.mjs), AI 생성 그림으로 같은 파일을 바꿔 끼운다.
  */
 const SPRITE_PX = 64;
-const SHEET = { key: 'detective', url: '/sprites/detective.png' };
+const SHEET = { key: 'detective' };
+/** 고른 탐정 캐릭터의 걷기 그림(D103) */
+const sheetUrl = (character: string) => `/sprites/detectives/${character}.png`;
 /** NPC 그림(앞모습 한 장, 64×64): frontend/public/sprites/npc/<이름>.png */
 const npcSpriteUrl = (name: string) => `/sprites/npc/${name}.png`;
 const ROW: Record<Dir, number> = { down: 0, left: 1, right: 2, up: 3 };
@@ -50,7 +52,7 @@ export type ExploreRenderer = {
  */
 export async function createRenderer(
   parent: HTMLElement,
-  opts: { backgroundUrl: (mapKey: string) => string },
+  opts: { backgroundUrl: (mapKey: string) => string; character: string },
 ): Promise<ExploreRenderer> {
   const Phaser: PhaserModule = await import('phaser');
   let pending: { map: ExploreMap; pos: Position; facing: Dir } | null = null;
@@ -231,7 +233,7 @@ export async function createRenderer(
       super('explore');
     }
     preload() {
-      this.load.spritesheet(SHEET.key, SHEET.url, {
+      this.load.spritesheet(SHEET.key, sheetUrl(opts.character), {
         frameWidth: SPRITE_PX,
         frameHeight: SPRITE_PX,
       });

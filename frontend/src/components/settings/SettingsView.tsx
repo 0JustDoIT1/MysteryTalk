@@ -1,11 +1,10 @@
 'use client';
 
-import { DETECTIVE_NAME_MAX } from '@mysterytalk/shared';
-import { useState } from 'react';
-import { useMe, useRename } from '@/lib/api/queries';
+import { useMe } from '@/lib/api/queries';
 import { useSfx } from '@/lib/audio/use-sfx';
 import { useDeviceHydrated, useDeviceStore } from '@/stores/device';
 import { AccountBar } from '../account/AccountBar';
+import { DetectivePicker } from '../account/DetectivePicker';
 import { DataSection } from './DataSection';
 import { t } from '@/i18n/ko';
 
@@ -13,7 +12,7 @@ import { t } from '@/i18n/ko';
 const BUG_FORM_URL = process.env.NEXT_PUBLIC_BUG_FORM_URL ?? '';
 
 /**
- * 설정(SPEC §12, PRD D39~D41·D64): 탐정 이름(서버), 배경음악·효과음 볼륨(기기), 계정, 버그 제보.
+ * 설정(SPEC §12, PRD D39~D41·D64·D103): 탐정 이름·캐릭터(서버), 배경음악·효과음 볼륨(기기), 계정, 버그 제보.
  * 언어 선택은 영어가 준비될 때까지 숨긴다(D64).
  */
 export function SettingsView() {
@@ -27,14 +26,17 @@ export function SettingsView() {
     <div className="flex flex-col gap-8">
       <section aria-labelledby="name-heading" className="flex flex-col gap-2">
         <h2 id="name-heading" className="font-semibold text-amber-100">
-          {t.settings.name}
+          {t.detective.heading}
         </h2>
         {me.data ? (
-          <NameForm current={me.data.detectiveName} />
+          <DetectivePicker
+            name={me.data.detectiveName}
+            character={me.data.detectiveCharacter}
+            submitLabel={t.settings.save}
+          />
         ) : (
           <p className="text-sm text-stone-400">{t.common.loading}</p>
         )}
-        <p className="text-xs text-stone-400">{t.settings.nameNote}</p>
       </section>
 
       <section aria-labelledby="sound-heading" className="flex flex-col gap-4">
@@ -103,41 +105,5 @@ export function SettingsView() {
         </section>
       )}
     </div>
-  );
-}
-
-function NameForm({ current }: { current: string }) {
-  const [name, setName] = useState(current);
-  const rename = useRename();
-  return (
-    <form
-      className="flex flex-wrap items-center gap-2"
-      onSubmit={(e) => {
-        e.preventDefault();
-        rename.mutate(name);
-      }}
-    >
-      <label htmlFor="detective-name" className="sr-only">
-        {t.settings.nameInput}
-      </label>
-      <input
-        id="detective-name"
-        value={name}
-        maxLength={DETECTIVE_NAME_MAX}
-        onChange={(e) => setName(e.target.value)}
-        className="rounded border border-stone-600 bg-stone-950 px-3 py-2"
-      />
-      <button
-        type="submit"
-        disabled={rename.isPending || !name.trim() || name.trim() === current}
-        className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 disabled:opacity-50"
-      >
-        {t.settings.save}
-      </button>
-      <span aria-live="polite" className="text-sm">
-        {rename.isSuccess && <span className="text-emerald-300">{t.settings.saved}</span>}
-        {rename.error && <span className="text-red-300">{rename.error.message}</span>}
-      </span>
-    </form>
   );
 }

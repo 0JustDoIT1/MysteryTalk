@@ -53,3 +53,58 @@ describe('6단계 설정: 탐정 이름 (e2e, PRD D40)', () => {
     expect((await http().get('/me').set('Cookie', b).expect(200)).body.detectiveName).toBe('탐정');
   });
 });
+
+describe('탐정 캐릭터 선택 (e2e, PRD D103)', () => {
+  let app: NestExpressApplication;
+  let prisma: PrismaService;
+  const http = () => request(app.getHttpServer());
+
+  async function guest(): Promise<string> {
+    const res = await http().get('/me').expect(200);
+    return cookiePair(findSetCookie(res, 'mt_guest'));
+  }
+  const patch = (cookie: string, body: object) =>
+    http().patch('/me').set('Cookie', cookie).send(body);
+
+  beforeAll(async () => {
+    ({ app, prisma } = await createTestApp());
+  });
+
+  beforeEach(async () => {
+    await resetDb(prisma);
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('처음에는 고르지 않은 상태(null)이고, 고른 캐릭터를 저장한다', async () => {
+    const cookie = await guest();
+    expect((await http().get('/me').set('Cookie', cookie).expect(200)).body).toMatchObject({
+      detectiveName: '탐정',
+      detectiveCharacter: null,
+    });
+    const res = await patch(cookie, { detectiveCharacter: 'granny' }).expect(200);
+    expect(res.body).toMatchObject({ detectiveName: '탐정', detectiveCharacter: 'granny' });
+    expect(
+      (await http().get('/me').set('Cookie', cookie).expect(200)).body.detectiveCharacter,
+    ).toBe('granny');
+  });
+
+  it('이름과 캐릭터를 한 번에 바꿀 수 있다', async () => {
+    const cookie = await guest();
+    const res = await patch(cookie, {
+      detectiveName: '순경 김',
+      detectiveCharacter: 'patrol',
+    }).expect(200);
+    expect(res.body).toMatchObject({ detectiveName: '순경 김', detectiveCharacter: 'patrol' });
+  });
+
+  it('8종에 없는 캐릭터나 빈 요청은 거부한다', async () => {
+    const cookie = await guest();
+    expect((await patch(cookie, { detectiveCharacter: 'conan' }).expect(422)).body.code).toBe(
+      'INVALID_INPUT',
+    );
+    expect((await patch(cookie, {}).expect(422)).body.code).toBe('INVALID_INPUT');
+  });
+});

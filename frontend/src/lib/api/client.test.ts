@@ -11,6 +11,7 @@ describe('apiGet', () => {
       json(200, {
         kind: 'GUEST',
         detectiveName: '탐정',
+        detectiveCharacter: 'noir',
         ageConfirmed: false,
         loginAvailable: true,
       }),
@@ -19,7 +20,13 @@ describe('apiGet', () => {
     expect(r).toEqual({
       ok: true,
       status: 200,
-      data: { kind: 'GUEST', detectiveName: '탐정', ageConfirmed: false, loginAvailable: true },
+      data: {
+        kind: 'GUEST',
+        detectiveName: '탐정',
+        detectiveCharacter: 'noir',
+        ageConfirmed: false,
+        loginAvailable: true,
+      },
     });
     expect(f).toHaveBeenCalledWith('/api/me', {
       method: 'GET',

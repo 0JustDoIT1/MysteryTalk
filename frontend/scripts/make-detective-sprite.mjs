@@ -2,10 +2,10 @@
 // 16×16 도안을 4배로 키워 64×64 프레임을 만들고, 쯔꾸르식 배치(가로 3프레임: 걸음1·서기·걸음2,
 // 세로 4방향: 아래·왼쪽·오른쪽·위)로 192×256 PNG를 쓴다. 의존성 없이 zlib만 쓴다.
 // 실행: node frontend/scripts/make-detective-sprite.mjs
-import { writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const PALETTE = {
+const BASE = {
   K: [43, 33, 24], // 모자·머리카락
   H: [139, 30, 30], // 모자 띠
   S: [241, 194, 125], // 피부
@@ -91,61 +91,112 @@ const SCALE = 4; // 64×64 프레임(캐릭터 그림 규격, PRD D102)
 const FW = 16 * SCALE;
 const W = FW * 3;
 const H = FW * 4;
-const rgba = Buffer.alloc(W * H * 4);
-DIRS.forEach((dir, row) =>
-  STEPS.forEach((step, col) => {
-    const f = frame(dir, step);
-    if (f.length !== 16 || f.some((r) => r.length !== 16)) throw new Error(`${dir}/${step} size`);
-    f.forEach((line, y) =>
-      [...line].forEach((ch, x) => {
-        const color = PALETTE[ch];
-        if (!color) return;
-        for (let dy = 0; dy < SCALE; dy++)
-          for (let dx = 0; dx < SCALE; dx++) {
-            const px = col * FW + x * SCALE + dx;
-            const py = row * FW + y * SCALE + dy;
-            const i = (py * W + px) * 4;
-            rgba.set([...color, 255], i);
-          }
-      }),
-    );
-  }),
-);
+function build(PALETTE) {
+  const rgba = Buffer.alloc(W * H * 4);
+  DIRS.forEach((dir, row) =>
+    STEPS.forEach((step, col) => {
+      const f = frame(dir, step);
+      if (f.length !== 16 || f.some((r) => r.length !== 16)) throw new Error(`${dir}/${step} size`);
+      f.forEach((line, y) =>
+        [...line].forEach((ch, x) => {
+          const color = PALETTE[ch];
+          if (!color) return;
+          for (let dy = 0; dy < SCALE; dy++)
+            for (let dx = 0; dx < SCALE; dx++) {
+              const px = col * FW + x * SCALE + dx;
+              const py = row * FW + y * SCALE + dy;
+              const i = (py * W + px) * 4;
+              rgba.set([...color, 255], i);
+            }
+        }),
+      );
+    }),
+  );
 
-const crcTable = Array.from({ length: 256 }, (_, n) => {
-  let c = n;
-  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
-  return c >>> 0;
-});
-const crc = (buf) => {
-  let c = 0xffffffff;
-  for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
-  return (c ^ 0xffffffff) >>> 0;
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    return c >>> 0;
+  });
+  const crc = (buf) => {
+    let c = 0xffffffff;
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8);
+    return (c ^ 0xffffffff) >>> 0;
+  };
+  const chunk = (type, data) => {
+    const len = Buffer.alloc(4);
+    len.writeUInt32BE(data.length);
+    const td = Buffer.concat([Buffer.from(type), data]);
+    const c = Buffer.alloc(4);
+    c.writeUInt32BE(crc(td));
+    return Buffer.concat([len, td, c]);
+  };
+  const ihdr = Buffer.alloc(13);
+  ihdr.writeUInt32BE(W, 0);
+  ihdr.writeUInt32BE(H, 4);
+  ihdr[8] = 8;
+  ihdr[9] = 6; // RGBA
+  const raw = Buffer.concat(
+    Array.from({ length: H }, (_, y) =>
+      Buffer.concat([Buffer.from([0]), rgba.subarray(y * W * 4, (y + 1) * W * 4)]),
+    ),
+  );
+  const png = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    chunk('IHDR', ihdr),
+    chunk('IDAT', deflateSync(raw, { level: 9 })),
+    chunk('IEND', Buffer.alloc(0)),
+  ]);
+  return png;
+}
+
+// 탐정 캐릭터 8종의 임시 그림(PRD D103): 같은 도안에 모자(K)·띠(H)·코트(C·c)·허리띠(B)·바지(P) 색만 바꾼다.
+// AI 생성 그림이 오면 같은 파일 이름으로 바꿔 끼운다.
+const VARIANTS = {
+  classic: { K: [92, 64, 40], H: [120, 90, 60], C: [120, 96, 66], c: [96, 74, 48] }, // 고전 명탐정(체크 사냥모자·케이프)
+  noir: { K: [30, 30, 34], H: [140, 30, 30], C: [138, 106, 60], c: [109, 82, 45] }, // 하드보일드 사설탐정
+  patrol: {
+    K: [28, 44, 96],
+    H: [230, 190, 40],
+    C: [40, 64, 130],
+    c: [30, 48, 100],
+    P: [30, 40, 80],
+  }, // 만화풍 순경
+  boy: {
+    K: [200, 40, 40],
+    H: [240, 240, 240],
+    C: [70, 120, 200],
+    c: [50, 90, 160],
+    P: [70, 90, 140],
+  }, // 소년 탐정
+  inspector: {
+    K: [24, 24, 24],
+    H: [24, 24, 24],
+    C: [70, 46, 30],
+    c: [50, 32, 20],
+    P: [40, 40, 48],
+  }, // 강력계 형사
+  forensic: {
+    K: [40, 40, 40],
+    H: [220, 220, 225],
+    C: [230, 232, 236],
+    c: [190, 194, 200],
+    P: [200, 204, 210],
+  }, // 과학수사관
+  reporter: { K: [60, 40, 26], H: [90, 120, 70], C: [100, 120, 80], c: [76, 94, 58] }, // 기자 탐정
+  granny: {
+    K: [200, 200, 205],
+    H: [150, 70, 110],
+    C: [130, 60, 100],
+    c: [100, 44, 76],
+    P: [90, 60, 80],
+  }, // 할머니 탐정
 };
-const chunk = (type, data) => {
-  const len = Buffer.alloc(4);
-  len.writeUInt32BE(data.length);
-  const td = Buffer.concat([Buffer.from(type), data]);
-  const c = Buffer.alloc(4);
-  c.writeUInt32BE(crc(td));
-  return Buffer.concat([len, td, c]);
-};
-const ihdr = Buffer.alloc(13);
-ihdr.writeUInt32BE(W, 0);
-ihdr.writeUInt32BE(H, 4);
-ihdr[8] = 8;
-ihdr[9] = 6; // RGBA
-const raw = Buffer.concat(
-  Array.from({ length: H }, (_, y) =>
-    Buffer.concat([Buffer.from([0]), rgba.subarray(y * W * 4, (y + 1) * W * 4)]),
-  ),
-);
-const png = Buffer.concat([
-  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
-  chunk('IHDR', ihdr),
-  chunk('IDAT', deflateSync(raw, { level: 9 })),
-  chunk('IEND', Buffer.alloc(0)),
-]);
-const out = new URL('../public/sprites/detective.png', import.meta.url);
-writeFileSync(out, png);
-console.log(out.pathname, `${W}x${H}`, png.length, 'bytes');
+
+writeFileSync(new URL('../public/sprites/detective.png', import.meta.url), build(BASE));
+for (const [id, colors] of Object.entries(VARIANTS)) {
+  const out = new URL(`../public/sprites/detectives/${id}.png`, import.meta.url);
+  mkdirSync(new URL('../public/sprites/detectives/', import.meta.url), { recursive: true });
+  writeFileSync(out, build({ ...BASE, ...colors }));
+}
+console.log('detective.png +', Object.keys(VARIANTS).length, 'variants', `${W}x${H}`);

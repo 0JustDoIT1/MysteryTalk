@@ -17,6 +17,7 @@ import {
   sessionStateSchema,
   submitAnswerResponseSchema,
   type QuestionLabel,
+  type UpdateMeRequest,
 } from '@mysterytalk/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -192,8 +193,13 @@ export function useInspect(id: string) {
   });
 }
 
-export function useMe() {
-  return useQuery({ queryKey: keys.me, queryFn: () => apiOrThrow('/me', meResponseSchema) });
+/** 현재 플레이어. enabled=false면 불러오지 않는다(이미 불러온 값은 그대로 보인다). */
+export function useMe(enabled = true) {
+  return useQuery({
+    queryKey: keys.me,
+    queryFn: () => apiOrThrow('/me', meResponseSchema),
+    enabled,
+  });
 }
 
 /** 로그아웃 후에는 모든 서버 상태를 비운다(이 브라우저는 빈 새 게스트가 된다). */
@@ -223,12 +229,12 @@ export function useConfirmAge() {
   });
 }
 
-/** 탐정 이름 변경(PRD D40) */
-export function useRename() {
+/** 탐정 이름·캐릭터 변경(PRD D40·D103). 바꿀 것만 보낸다. */
+export function useUpdateMe() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (detectiveName: string) =>
-      apiOrThrow('/me', meResponseSchema, { method: 'PATCH', body: { detectiveName } }),
+    mutationFn: (body: UpdateMeRequest) =>
+      apiOrThrow('/me', meResponseSchema, { method: 'PATCH', body }),
     onSuccess: (me) => qc.setQueryData(keys.me, me),
   });
 }

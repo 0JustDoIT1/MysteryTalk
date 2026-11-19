@@ -1,17 +1,23 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/** 18세 확인을 이미 한 기기로 시작한다(확인 팝업 자체는 별도 테스트). */
+/** 18세 확인과 '탐정 정하기' 창(D103)을 이미 거친 기기로 시작한다(두 창 자체는 별도 테스트). */
 const AGE_CONFIRMED = JSON.stringify({
+  state: { age: 'yes', ageAt: '2026-11-11T00:00:00.000Z', detectiveAsked: true },
+  version: 0,
+});
+/** 18세 확인만 한 기기('탐정 정하기' 창 테스트용) */
+const AGE_ONLY = JSON.stringify({
   state: { age: 'yes', ageAt: '2026-11-11T00:00:00.000Z' },
   version: 0,
 });
 
 test.beforeEach(async ({ page }, info) => {
   if (info.title.startsWith('18세 확인')) return;
+  const device = info.title.startsWith('탐정 정하기') ? AGE_ONLY : AGE_CONFIRMED;
   // 페이지를 열 때마다 실행되므로, 이미 저장된 기기 설정(볼륨 등)은 덮어쓰지 않는다.
   await page.addInitScript((v) => {
     if (!window.localStorage.getItem('mt-device')) window.localStorage.setItem('mt-device', v);
-  }, AGE_CONFIRMED);
+  }, device);
 });
 
 /**
@@ -252,9 +258,35 @@ test('18세 확인: 처음 방문하면 묻고, 예를 고르면 다시 묻지 �
   await expect(gate.getByRole('link', { name: '이용약관' })).toHaveAttribute('target', '_blank');
   await gate.getByRole('button', { name: '네, 18세 이상이에요' }).click();
   await expect(gate).toBeHidden();
+  // 이어서 '탐정 정하기' 창이 한 번 뜬다(D103). 나중에 해도 된다
+  const setup = page.getByRole('dialog', { name: '탐정 정하기' });
+  await expect(setup).toBeVisible();
+  await setup.getByRole('button', { name: '나중에 할게요' }).click();
+  await expect(setup).toBeHidden();
   await page.reload();
   await expect(page.getByRole('navigation', { name: '메인 메뉴' })).toBeVisible();
   await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toBeHidden();
+  await expect(page.getByRole('dialog', { name: '탐정 정하기' })).toBeHidden();
+});
+
+test('탐정 정하기: 처음 한 번 이름과 캐릭터를 고르고, 설정에서 그대로 보인다(D103)', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const setup = page.getByRole('dialog', { name: '탐정 정하기' });
+  await expect(setup).toBeVisible();
+  await expect(setup.getByRole('radio')).toHaveCount(8);
+  await setup.getByLabel('탐정 이름 입력').fill('순경 김');
+  await setup.getByRole('radio', { name: /만화풍 순경/ }).check({ force: true });
+  await setup.getByRole('button', { name: '이 탐정으로 시작' }).click();
+  await expect(setup).toBeHidden();
+
+  await page.getByRole('link', { name: '설정' }).click();
+  await expect(page.getByLabel('탐정 이름 입력')).toHaveValue('순경 김');
+  await expect(page.getByRole('radio', { name: /만화풍 순경/ })).toBeChecked();
+  // 다시 와도 창은 뜨지 않는다
+  await page.reload();
+  await expect(page.getByRole('dialog', { name: '탐정 정하기' })).toBeHidden();
 });
 
 test('18세 확인: 아니요를 고르면 이용할 수 없고, 다시 와도 차단된다', async ({ page }) => {

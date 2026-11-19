@@ -88,7 +88,7 @@
 ### 4.1 플레이어·계정
 | 테이블 | 주요 필드 |
 |---|---|
-| `player` | id, kind(GUEST/USER), guest_token_hash UNIQUE NULL, google_sub UNIQUE NULL, detective_name, settings_json(볼륨 등), age_confirmed_at NULL, created_at, last_active_at, merged_into NULL |
+| `player` | id, kind(GUEST/USER), guest_token_hash UNIQUE NULL, google_sub UNIQUE NULL, detective_name, detective_character NULL(탐정 캐릭터 8종 중 하나, 고르기 전 NULL, D103), settings_json(볼륨 등), age_confirmed_at NULL, created_at, last_active_at, merged_into NULL |
 
 ### 4.2 사건 콘텐츠 (사건 데이터 파일에서 적재, §11)
 | 테이블 | 주요 필드 |
@@ -126,7 +126,7 @@
 | Method | Path | 설명 |
 |---|---|---|
 | GET | `/me` | 플레이어 정보(게스트/로그인, 탐정 이름, 설정, 18세 확인 여부) |
-| PATCH | `/me` | 탐정 이름(1~12자·금칙어)·설정 변경 [D40, D39]. 구현(6단계): 이름만 서버에 저장(공백 정리 후 1~12자, 욕설이면 422 `NAME_NOT_ALLOWED`). 볼륨은 기기에만 저장 |
+| PATCH | `/me` | 탐정 이름(1~12자·금칙어)·설정 변경 [D40, D39]. 구현(6단계): 이름만 서버에 저장(공백 정리 후 1~12자, 욕설이면 422 `NAME_NOT_ALLOWED`). 볼륨은 기기에만 저장. 탐정 캐릭터(D103): `detectiveCharacter`(8종, 그 밖의 값·빈 요청은 422 `INVALID_INPUT`), 이름과 함께 보내도 된다. GET `/me`는 고르기 전 `detectiveCharacter: null` |
 | POST | `/me/age-confirmation` | 로그인 사용자의 18세 확인 기록 [D33] |
 | DELETE | `/me` | 계정 삭제(로그인) 또는 이 브라우저의 기록 지우기(게스트), 즉시 영구 삭제 [D95, D96]. 이 플레이어와 이 계정으로 옮겨진 게스트 기록을 지우고(세션·질문 원문·답안·메모·힌트·단서·구역·기록·로그인 세션은 연쇄 삭제, AI 호출 비용 기록은 세션 연결만 끊김) 게스트·로그인 쿠키를 지운다. 이 브라우저는 다음 요청부터 빈 새 게스트. 화면은 삭제 뒤 첫 화면을 새로 연다(`/?deleted=1`에서 한 번 알림). 이 기기의 연령 확인 다시 하기(D97)는 브라우저 저장값만 지운다 |
 | GET | `/auth/google` · `/auth/google/callback` · POST `/auth/logout` | 구글 로그인, 콜백에서 기록 이전 실행 [D31, D82] |
@@ -297,7 +297,8 @@ content/public/tutorial/
 | 현장 조사 | Phaser 맵, 맵 전환, 조사 모달, 해금 알림, 모바일 가상 방향키(6단계). **PC에서는 추리 화면 왼쪽에 맵, 오른쪽에 질문창**(D99), 좁은 화면에서는 위아래로 쌓음. 그림: 맵에 배경 그림이 있으면 배경을 깔고 벽·바닥 도형을 숨기며, 조사 대상은 그림 위의 투명한 조사 영역(조사 전에는 작은 점 표시), 출입구는 반투명 표시. 배경이 없으면 임시 도형. 캐릭터는 쯔꾸르식 스프라이트 시트(가로 3프레임 × 세로 4방향 아래·왼쪽·오른쪽·위, 32px), 기본은 자체 제작 탐정(`frontend/scripts/make-detective-sprite.mjs`), NPC는 같은 시트에 색조를 입힌다. 렌더러가 늦게 준비돼도 마지막 상태를 바로 그린다 [D94] |
 | 정답 제출 | 입력(10~300자), 확인 창, 결과(오답 개수·재작성 요청) |
 | 엔딩 | 결과·등급, 점수 내역, 요소별 충족, 해설, 미끼·놓친 단서, 다시 하기 [D61] |
-| 설정 | 탐정 이름, BGM·효과음 볼륨, 구글 로그인/로그아웃, 버그 제보(외부 폼), 언어 선택은 숨김 [D39~D41, D64]. 구현(6단계): `/settings`. 볼륨은 기기(Zustand persist)에만 저장해 로그인해도 기기마다 다르다. 버그 제보는 `NEXT_PUBLIC_BUG_FORM_URL`이 있을 때만 보인다 |
+| 탐정 정하기 | 연령 확인을 마친 기기에서 캐릭터를 아직 고르지 않은 플레이어에게 처음 한 번 띄우는 창. 이름 + 캐릭터 8종(라디오 그룹), '나중에 할게요'로 건너뜀. 띄운 적이 있는지는 기기(`detectiveAsked`)에 기억 [D103] |
+| 설정 | 탐정 이름·캐릭터(탐정 정하기와 같은 화면), BGM·효과음 볼륨, 구글 로그인/로그아웃, 버그 제보(외부 폼), 언어 선택은 숨김 [D39~D41, D64]. 구현(6단계): `/settings`. 볼륨은 기기(Zustand persist)에만 저장해 로그인해도 기기마다 다르다. 버그 제보는 `NEXT_PUBLIC_BUG_FORM_URL`이 있을 때만 보인다 |
 | 소리·마이크·모바일 | 구현(6단계): 효과음은 파일이 정해질 때까지 브라우저가 만드는 짧은 소리(판정·단서·해금·결과)로 대체, 배경음악은 파일만 넣으면 재생되는 구조(첫 입력 뒤 재생). 마이크는 브라우저 음성 인식(지원할 때만 버튼, 처음 쓸 때 제조사 처리 안내, 인식 문장은 입력창에만). 모바일은 맵 아래 가상 방향키(누르면 계속 이동)와 조사 버튼, 맵은 화면 폭에 맞게 축소 |
 | 공지 | 목록·본문 [D41] |
 

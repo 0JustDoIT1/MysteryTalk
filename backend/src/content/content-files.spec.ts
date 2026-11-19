@@ -387,7 +387,7 @@ describe('카드 대표 그림(D98)', () => {
       [2048, 1152],
     ] as const)
       expect(() => readCaseDirs([withCover(w, h)])).toThrow(
-        new RegExp(`cover cover\.png is ${w}x${h}, expected 16:9`),
+        new RegExp(`cover cover\\.png is ${w}x${h}, expected 16:9`),
       );
   });
 

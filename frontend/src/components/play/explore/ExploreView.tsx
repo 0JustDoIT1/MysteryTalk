@@ -1,6 +1,12 @@
 'use client';
 
-import type { ExploreMap, InspectResponse, Position, SessionState } from '@mysterytalk/shared';
+import {
+  DEFAULT_DETECTIVE_CHARACTER,
+  type ExploreMap,
+  type InspectResponse,
+  type Position,
+  type SessionState,
+} from '@mysterytalk/shared';
 import {
   useEffect,
   useRef,
@@ -10,7 +16,7 @@ import {
   type PointerEvent,
 } from 'react';
 import { ApiError } from '@/lib/api/client';
-import { useExploreState, useInspect, useMove } from '@/lib/api/queries';
+import { useExploreState, useInspect, useMe, useMove } from '@/lib/api/queries';
 import { useSfx } from '@/lib/audio/use-sfx';
 import {
   canStand,
@@ -56,6 +62,9 @@ export function ExploreView({ session }: { session: SessionState }) {
   const lastStep = useRef(0);
   const lastSaved = useRef<Position | null>(null);
   const active = session.status === 'ACTIVE';
+  // 고른 탐정 캐릭터(D103). 정보가 오기 전·고르기 전에는 기본 캐릭터
+  const me = useMe();
+  const character = me.data?.detectiveCharacter ?? DEFAULT_DETECTIVE_CHARACTER;
 
   // 서버 위치로 시작(새로고침·재접속 복원, D53)
   useEffect(() => {
@@ -76,6 +85,7 @@ export function ExploreView({ session }: { session: SessionState }) {
     let disposed = false;
     if (!canvasRef.current) return;
     void createRenderer(canvasRef.current, {
+      character,
       backgroundUrl: (mapKey) => `/api/sessions/${id}/maps/${mapKey}/background`,
     }).then((r) => {
       if (disposed) return r.destroy();
@@ -89,7 +99,7 @@ export function ExploreView({ session }: { session: SessionState }) {
       rendererRef.current?.destroy();
       rendererRef.current = null;
     };
-  }, [id]);
+  }, [id, character]);
   useEffect(() => {
     if (!map || !live) return;
     latestRef.current = { map, pos: live, facing };

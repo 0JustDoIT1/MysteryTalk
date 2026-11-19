@@ -3,6 +3,8 @@ import {
   DEFAULT_DETECTIVE_NAME,
   DETECTIVE_NAME_MAX,
   DETECTIVE_NAME_MIN,
+  detectiveCharacterSchema,
+  type DetectiveCharacter,
   type MeResponse,
 } from '@mysterytalk/shared';
 import type { Player } from '../generated/prisma/client.js';
@@ -55,10 +57,20 @@ export class PlayerService {
     return this.prisma.player.update({ where: { id: player.id }, data: { detectiveName: name } });
   }
 
+  /** 탐정 캐릭터 선택(PRD D103). 값은 요청 스키마에서 8종으로 검증된다. */
+  async setCharacter(player: Player, character: DetectiveCharacter): Promise<Player> {
+    return this.prisma.player.update({
+      where: { id: player.id },
+      data: { detectiveCharacter: character },
+    });
+  }
+
   toMe(player: Player): Omit<MeResponse, 'loginAvailable'> {
+    const parsed = detectiveCharacterSchema.safeParse(player.detectiveCharacter);
     return {
       kind: player.kind,
       detectiveName: player.detectiveName,
+      detectiveCharacter: parsed.success ? parsed.data : null,
       ageConfirmed: player.ageConfirmedAt !== null,
     };
   }

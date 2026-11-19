@@ -32,6 +32,7 @@ describe('1단계 기반 (e2e)', () => {
       expect(res.body).toEqual({
         kind: 'GUEST',
         detectiveName: '탐정',
+        detectiveCharacter: null,
         ageConfirmed: false,
         loginAvailable: true,
       });

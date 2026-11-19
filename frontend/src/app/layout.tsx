@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AgeGate } from '@/components/account/AgeGate';
+import { DetectiveSetup } from '@/components/account/DetectiveSetup';
 import { BgmPlayer } from '@/components/BgmPlayer';
 import { Toasts } from '@/components/Toasts';
 import { Providers } from './providers';
@@ -16,7 +17,10 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ko" className="h-full antialiased">
       <body className="flex min-h-full flex-col">
         <Providers>
-          <AgeGate>{children}</AgeGate>
+          <AgeGate>
+            {children}
+            <DetectiveSetup />
+          </AgeGate>
           <Toasts />
           <BgmPlayer />
         </Providers>

@@ -24,6 +24,8 @@ model Player {
   googleSub      String?    @unique @map("google_sub")
   /// 화면 고정 문구에만 쓰고 AI에 전달하지 않는다(PRD D40)
   detectiveName  String     @map("detective_name")
+  /// 고른 탐정 캐릭터(PRD D103). 고르기 전에는 null. 화면 표시에만 쓰고 AI에 전달하지 않는다
+  detectiveCharacter String? @map("detective_character")
   settings       Json       @default("{}") @map("settings_json")
   ageConfirmedAt DateTime?  @map("age_confirmed_at") @db.Timestamptz
   createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz
