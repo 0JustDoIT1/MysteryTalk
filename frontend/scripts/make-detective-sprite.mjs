@@ -150,26 +150,8 @@ function build(PALETTE) {
   return png;
 }
 
-// 탐정 캐릭터 2종의 임시 그림(PRD D103): 같은 도안에 모자(K)·띠(H)·코트(C·c)·허리띠(B)·바지(P) 색만 바꾼다.
-// AI 생성 그림이 오면 같은 파일 이름으로 바꿔 끼운다.
-const VARIANTS = {
-  // 사설탐정: 짙은 중절모 + 베이지 트렌치코트
-  noir: { K: [30, 30, 34], H: [140, 30, 30], C: [176, 140, 88], c: [140, 108, 62] },
-  // 강력계 형사: 모자 대신 짧은 검은 머리(모자 색 = 머리색) + 검은 가죽 재킷, 청바지
-  inspector: {
-    K: [22, 20, 20],
-    H: [22, 20, 20],
-    C: [40, 36, 34],
-    c: [24, 22, 20],
-    B: [120, 96, 40],
-    P: [52, 72, 110],
-  },
-};
-
+// 탐정 캐릭터 2종(sprites/detectives/noir.png·inspector.png)은 AI 생성 그림으로 바꿨다(PRD D102·D103,
+// 출처는 ASSETS.md). 이 스크립트는 자체 제작 기본 도안(detective.png)만 만든다.
+mkdirSync(new URL('../public/sprites/', import.meta.url), { recursive: true });
 writeFileSync(new URL('../public/sprites/detective.png', import.meta.url), build(BASE));
-for (const [id, colors] of Object.entries(VARIANTS)) {
-  const out = new URL(`../public/sprites/detectives/${id}.png`, import.meta.url);
-  mkdirSync(new URL('../public/sprites/detectives/', import.meta.url), { recursive: true });
-  writeFileSync(out, build({ ...BASE, ...colors }));
-}
-console.log('detective.png +', Object.keys(VARIANTS).length, 'variants', `${W}x${H}`);
+console.log('detective.png', `${W}x${H}`);

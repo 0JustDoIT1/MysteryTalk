@@ -18,9 +18,9 @@ fully transparent background, no shadow on the ground, no text, no logos, no wat
 ```
 
 ## 2. 탐정 캐릭터 2종(D103)
-플레이어가 '탐정 정하기' 창과 설정에서 고른다. 그림이 오기 전에는 자체 제작 도트(색만 다름)를 쓴다(`frontend/scripts/make-detective-sprite.mjs`).
+플레이어가 '탐정 정하기' 창과 설정에서 고른다. 2026-11-19 ChatGPT 생성 그림을 적용했다(출처 ASSETS.md).
 
-### [ ] 사설탐정 `detectives/noir.png`(192×256, 3열 × 4행)
+### [x] 사설탐정 `detectives/noir.png`(192×256, 3열 × 4행)
 ```
 Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
 clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
@@ -30,7 +30,7 @@ Columns: left foot forward, standing, right foot forward. Rows from top: facing 
 The same character in every cell: a private eye (civilian detective) in a gray fedora hat and a long beige trench coat with the collar up, a small notebook in hand, calm and observant. Gender-neutral look.
 ```
 
-### [ ] 강력계 형사 `detectives/inspector.png`(192×256, 3열 × 4행)
+### [x] 강력계 형사 `detectives/inspector.png`(192×256, 3열 × 4행)
 ```
 Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
 clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
@@ -41,7 +41,7 @@ The same character in every cell: a homicide police detective with short dark ha
 ```
 
 ## 3. 공개 사건 NPC
-### [ ] 튜토리얼 아르바이트생 → `npc/part-timer.png`(64×64)
+### [x] 튜토리얼 아르바이트생 → `npc/part-timer.png`(64×64)
 ```
 Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
 clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
@@ -51,7 +51,7 @@ The outfit and props must make the job (bakery part-timer) instantly recognizabl
 A young woman in her early 20s, ponytail, cream bakery apron over a striped shirt, holding a bread tray.
 ```
 
-### [ ] 샘플 제자 → `npc/student-girl.png`(64×64)
+### [x] 샘플 제자 → `npc/student-girl.png`(64×64)
 ```
 Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
 clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
@@ -61,7 +61,7 @@ The outfit and props must make the job (high school piano student) instantly rec
 A Korean high school girl in a navy school uniform, a music score folder under her arm, backpack.
 ```
 
-### [ ] 샘플 관리인 → `npc/building-manager.png`(64×64)
+### [x] 샘플 관리인 → `npc/building-manager.png`(64×64)
 ```
 Pixel art character for a top-down 16-bit JRPG (RPG Maker style), chibi proportions (about 2.5 heads tall),
 clean dark outline, limited palette, soft shading, matches warm pixel-art map backgrounds,
