@@ -280,14 +280,16 @@ test('탐정 정하기: 처음 한 번 이름과 캐릭터를 고르고, 설정�
   const setup = page.getByRole('dialog', { name: '탐정 정하기' });
   await expect(setup).toBeVisible();
   await expect(setup.getByRole('radio')).toHaveCount(2);
+  // 기본 이름은 입력칸에 채우지 않는다
+  await expect(setup.getByLabel('탐정 이름 입력')).toHaveValue('');
   await setup.getByLabel('탐정 이름 입력').fill('형사 김');
-  await setup.getByRole('radio', { name: /강력계 형사/ }).check({ force: true });
+  await setup.getByRole('radio', { name: '형사', exact: true }).check({ force: true });
   await setup.getByRole('button', { name: '이 탐정으로 시작' }).click();
   await expect(setup).toBeHidden();
 
   await page.getByRole('link', { name: '설정' }).click();
   await expect(page.getByLabel('탐정 이름 입력')).toHaveValue('형사 김');
-  await expect(page.getByRole('radio', { name: /강력계 형사/ })).toBeChecked();
+  await expect(page.getByRole('radio', { name: '형사', exact: true })).toBeChecked();
   // 다시 와도 창은 뜨지 않는다
   await page.reload();
   await expect(page.getByRole('dialog', { name: '탐정 정하기' })).toBeHidden();
@@ -480,4 +482,18 @@ test('약관: 설정에서 이용약관·개인정보처리방침을 새 탭으�
   await expect(page.getByRole('heading', { name: '개인정보처리방침', level: 1 })).toBeVisible();
   await expect(page.getByText(/이메일, 이름, 프로필 사진을 요청하지 않으며/)).toBeVisible();
   await expect(page.locator('mark', { hasText: '[시행일]' }).first()).toBeVisible();
+});
+
+test('18세 확인: 약관·처리방침은 확인 전에도, 차단된 기기에서도 확인 창 없이 읽을 수 있다', async ({
+  page,
+}) => {
+  await page.goto('/terms');
+  await expect(page.getByRole('heading', { name: '이용약관', level: 1 })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toHaveCount(0);
+
+  await page.goto('/');
+  await page.getByRole('button', { name: '아니요' }).click();
+  await expect(page.getByRole('heading', { name: '이용할 수 없어요' })).toBeVisible();
+  await page.getByRole('link', { name: '개인정보처리방침' }).click();
+  await expect(page.getByRole('heading', { name: '개인정보처리방침', level: 1 })).toBeVisible();
 });

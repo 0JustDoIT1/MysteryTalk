@@ -2,6 +2,7 @@
 
 import {
   DEFAULT_DETECTIVE_CHARACTER,
+  DEFAULT_DETECTIVE_NAME,
   DETECTIVE_CHARACTERS,
   DETECTIVE_NAME_MAX,
   type DetectiveCharacter,
@@ -42,12 +43,13 @@ export function DetectivePicker({
   submitLabel: string;
   onSaved?: () => void;
 }) {
-  const [name, setName] = useState(currentName);
+  // 기본 이름('탐정')은 입력칸에 채우지 않고 비워 둔다. 비운 채 저장하면 이름은 그대로 둔다.
+  const [name, setName] = useState(currentName === DEFAULT_DETECTIVE_NAME ? '' : currentName);
   const [character, setCharacter] = useState<DetectiveCharacter>(
     currentCharacter ?? DEFAULT_DETECTIVE_CHARACTER,
   );
   const update = useUpdateMe();
-  const nameChanged = name.trim() !== currentName;
+  const nameChanged = name.trim() !== '' && name.trim() !== currentName;
   const characterChanged = character !== currentCharacter;
 
   return (
@@ -70,6 +72,7 @@ export function DetectivePicker({
           aria-label={t.settings.nameInput}
           value={name}
           maxLength={DETECTIVE_NAME_MAX}
+          placeholder={t.settings.namePlaceholder}
           onChange={(e) => setName(e.target.value)}
           className="field w-full max-w-xs"
         />
@@ -102,9 +105,7 @@ export function DetectivePicker({
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
-          disabled={
-            update.isPending || !name.trim() || (!nameChanged && !characterChanged && !onSaved)
-          }
+          disabled={update.isPending || (!nameChanged && !characterChanged && !onSaved)}
           className="btn btn-primary"
         >
           {submitLabel}

@@ -46,8 +46,8 @@ export const ko = {
     heading: '탐정',
     characterLabel: '탐정 캐릭터',
     characters: {
-      noir: '사설탐정',
-      inspector: '강력계 형사',
+      noir: '탐정',
+      inspector: '형사',
     },
     setupTitle: '탐정 정하기',
     setupBody: '수사할 탐정의 이름과 모습을 골라 주세요. 나중에 설정에서 바꿀 수 있어요.',
@@ -57,6 +57,7 @@ export const ko = {
   settings: {
     name: '탐정 이름',
     nameInput: '탐정 이름 입력',
+    namePlaceholder: '이름을 입력해 주세요',
     nameNote: '화면에만 표시되고 AI에게는 전달되지 않아요. 1~12자.',
     save: '저장',
     saved: '저장했어요.',

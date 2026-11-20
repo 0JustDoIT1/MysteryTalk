@@ -7,7 +7,7 @@ export type PlayerKind = z.infer<typeof playerKindSchema>;
 export const DEFAULT_DETECTIVE_NAME = '탐정';
 
 /**
- * 탐정 캐릭터 2종(PRD D103): 사설탐정과 강력계 형사. 그림은 frontend/public/sprites/detectives/<id>.png(걷기 3프레임 × 4방향, 한 칸 64px).
+ * 탐정 캐릭터 2종(PRD D103): 사설탐정(noir)과 강력계 형사(inspector). 화면 표시 이름은 '탐정'·'형사'(2026-11-20). 그림은 frontend/public/sprites/detectives/<id>.png(걷기 3프레임 × 4방향, 한 칸 64px).
  * 화면 표시에만 쓰고 AI에 전달하지 않는다.
  */
 export const DETECTIVE_CHARACTERS = ['noir', 'inspector'] as const;

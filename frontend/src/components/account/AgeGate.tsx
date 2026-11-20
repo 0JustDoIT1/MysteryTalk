@@ -28,6 +28,15 @@ export function AgeGate({ children }: { children: ReactNode }) {
         <div className="paper flex flex-col gap-4 p-8">
           <h1 className="text-2xl font-bold text-ink">{t.age.blockedTitle}</h1>
           <p className="text-ink-2">{t.age.blockedBody}</p>
+          <p className="text-xs text-ink-3">
+            <Link href="/terms" className="link">
+              {t.age.terms}
+            </Link>{' '}
+            ·{' '}
+            <Link href="/privacy" className="link">
+              {t.age.privacy}
+            </Link>
+          </p>
         </div>
       </main>
     );

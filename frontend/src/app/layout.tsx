@@ -1,7 +1,5 @@
 import type { Metadata } from 'next';
 import { Noto_Serif_KR } from 'next/font/google';
-import { AgeGate } from '@/components/account/AgeGate';
-import { DetectiveSetup } from '@/components/account/DetectiveSetup';
 import { BgmPlayer } from '@/components/BgmPlayer';
 import { Toasts } from '@/components/Toasts';
 import { Providers } from './providers';
@@ -26,10 +24,8 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
     <html lang="ko" className={`h-full antialiased ${serif.variable}`}>
       <body className="flex min-h-full flex-col">
         <Providers>
-          <AgeGate>
-            {children}
-            <DetectiveSetup />
-          </AgeGate>
+          {/* 18세 확인·'탐정 정하기'는 app/(game)/layout.tsx */}
+          {children}
           <Toasts />
           <BgmPlayer />
         </Providers>
