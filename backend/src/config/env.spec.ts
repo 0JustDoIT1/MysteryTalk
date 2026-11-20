@@ -12,6 +12,7 @@ describe('validateEnv', () => {
       LLM_PROVIDER: 'mock',
       OLLAMA_BASE_URL: 'http://localhost:11434',
       OLLAMA_MODEL: 'gemma3:12b',
+      ANTHROPIC_MODEL: 'claude-haiku-5-5',
       LLM_TIMEOUT_MS: 12000,
       NODE_ENV: 'development',
       AUTH_PROVIDER: 'google',
@@ -37,6 +38,13 @@ describe('validateEnv', () => {
       validateEnv({ DATABASE_URL: url, LLM_PROVIDER: 'ollama', LLM_TIMEOUT_MS: '8000' }),
     ).toMatchObject({ LLM_PROVIDER: 'ollama', LLM_TIMEOUT_MS: 8000 });
     expect(() => validateEnv({ DATABASE_URL: url, LLM_PROVIDER: 'gpt' })).toThrow(/LLM_PROVIDER/);
+    // Claude 는 API 키가 있어야 한다(키 값은 오류 메시지에 넣지 않는다)
+    expect(() => validateEnv({ DATABASE_URL: url, LLM_PROVIDER: 'anthropic' })).toThrow(
+      /ANTHROPIC_API_KEY/,
+    );
+    expect(
+      validateEnv({ DATABASE_URL: url, LLM_PROVIDER: 'anthropic', ANTHROPIC_API_KEY: 'k' }),
+    ).toMatchObject({ LLM_PROVIDER: 'anthropic', ANTHROPIC_MODEL: 'claude-haiku-5-5' });
     expect(() => validateEnv({ DATABASE_URL: url, LLM_TIMEOUT_MS: '10' })).toThrow(
       /LLM_TIMEOUT_MS/,
     );

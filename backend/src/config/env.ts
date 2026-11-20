@@ -19,8 +19,11 @@ export const envSchema = z
     COOKIE_SECURE: booleanString,
     /** Express `trust proxy`. Next.js rewrites 뒤에서 실제 클라이언트 IP를 얻기 위해 필요하다. */
     TRUST_PROXY: z.string().min(1).default('loopback'),
-    /** 판정 AI. mock 은 모든 질문에 IRRELEVANT(개발·CI용), ollama 는 로컬 Ollama(PRD D45) */
-    LLM_PROVIDER: z.enum(['mock', 'ollama']).default('mock'),
+    /** 판정 AI. mock 은 모든 질문에 IRRELEVANT(개발·CI용), ollama 는 로컬 Ollama, anthropic 은 Claude API(PRD D45) */
+    LLM_PROVIDER: z.enum(['mock', 'ollama', 'anthropic']).default('mock'),
+    /** LLM_PROVIDER=anthropic 일 때 필요. 비밀값이라 로그·응답에 남기지 않는다 */
+    ANTHROPIC_API_KEY: z.string().min(1).optional(),
+    ANTHROPIC_MODEL: z.string().min(1).default('claude-haiku-5-5'),
     OLLAMA_BASE_URL: z.url().default('http://localhost:11434'),
     OLLAMA_MODEL: z.string().min(1).default('gemma3:12b'),
     /** AI 호출 1회 타임아웃. 재시도 1회 포함 최대 2배 + 여유가 처리 중 선점 시간이 된다. */
@@ -51,6 +54,10 @@ export const envSchema = z
   .refine((e) => !(e.AUTH_PROVIDER === 'fake' && e.NODE_ENV === 'production'), {
     message: 'AUTH_PROVIDER=fake is not allowed in production',
     path: ['AUTH_PROVIDER'],
+  })
+  .refine((e) => e.LLM_PROVIDER !== 'anthropic' || !!e.ANTHROPIC_API_KEY, {
+    message: 'LLM_PROVIDER=anthropic requires ANTHROPIC_API_KEY',
+    path: ['ANTHROPIC_API_KEY'],
   });
 
 export type Env = z.infer<typeof envSchema>;

@@ -28,6 +28,14 @@ describe('AI 단가 (SPEC §10)', () => {
     expect(estimateCostKrw('test-cloud', 1_000_000, 500_000)).toBe(3000);
     delete PRICES['test-cloud'];
   });
+
+  it('Claude Haiku 5.5 는 달러 단가를 원화로 바꿔 계산한다(입력 $0.10·출력 $0.50, 1달러 1,400원)', () => {
+    expect(estimateCostKrw('claude-haiku-5-5', 1_000_000, 1_000_000)).toBeCloseTo(840);
+  });
+
+  it('단가표에 없는 클라우드 모델은 0원으로 넘기지 않고 오류로 막는다(월 예산 D46)', () => {
+    expect(() => estimateCostKrw('some-cloud-model', 100, 10)).toThrow(/price unknown/);
+  });
 });
 
 describe('공지 파일 (PRD D41)', () => {

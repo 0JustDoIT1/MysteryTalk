@@ -3,7 +3,7 @@ import {
   JUDGE_SINGLE_OUTPUT_JSON_SCHEMA,
   parseJudgeOutput,
 } from './judge-output.js';
-import { ollamaChat, type OllamaOptions } from './ollama-client.js';
+import type { LlmChat } from './ollama-client.js';
 import { JUDGE_SYSTEM_PROMPT, SINGLE_QUESTION_NOTE, buildJudgeUserMessage } from './prompt.js';
 import type { Judge, JudgeCallMeta, JudgeInput, JudgeOutcome } from './judge.types.js';
 import type { PositiveCheck } from './negation.js';
@@ -14,17 +14,21 @@ import {
   parsePositiveCheck,
 } from './positive-check.js';
 
-export type OllamaJudgeOptions = OllamaOptions;
+/** model: 비용·기록용 모델 이름, chat: 공급자별 호출(ollamaChatFn·anthropicChat) */
+export type LlmJudgeOptions = { model: string; chat: LlmChat };
 
 /**
- * 로컬 Ollama 판정 어댑터(PRD D45). 구조화 출력(format=JSON 스키마), 생각 모드 끔, temperature 0.
+ * 판정 어댑터(PRD D45). 공급자(로컬 Ollama, 클라우드 Claude)는 chat 으로 주입하고,
+ * 프롬프트·구조화 출력 스키마·검증·재시도는 공급자와 무관하게 같다.
  * 타임아웃·형식 위반은 1회 재시도하고, 그래도 실패하면 실패를 돌려준다(SPEC §6-9·10).
  */
-export class OllamaJudge implements Judge {
+export class LlmJudge implements Judge {
   readonly model: string;
+  private readonly chat: LlmChat;
 
-  constructor(private readonly options: OllamaJudgeOptions) {
+  constructor(options: LlmJudgeOptions) {
     this.model = options.model;
+    this.chat = options.chat;
   }
 
   async judge(input: JudgeInput): Promise<JudgeOutcome> {
@@ -44,7 +48,7 @@ export class OllamaJudge implements Judge {
     const calls: JudgeCallMeta[] = [];
     let lastReason: 'timeout' | 'invalid_output' | 'unreachable' = 'unreachable';
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const reply = await ollamaChat(this.options, {
+      const reply = await this.chat({
         system: JUDGE_SYSTEM_PROMPT,
         user,
         format,
@@ -80,7 +84,7 @@ export class OllamaJudge implements Judge {
   async verifyPositive(input: JudgeInput): Promise<PositiveCheck> {
     const calls: JudgeCallMeta[] = [];
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const reply = await ollamaChat(this.options, {
+      const reply = await this.chat({
         system: POSITIVE_CHECK_SYSTEM_PROMPT,
         user: buildPositiveCheckMessage(input),
         format: POSITIVE_CHECK_JSON_SCHEMA,

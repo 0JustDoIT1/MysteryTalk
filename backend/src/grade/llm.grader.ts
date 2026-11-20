@@ -1,15 +1,17 @@
 import type { JudgeCallMeta } from '../judge/judge.types.js';
-import { ollamaChat, type OllamaOptions } from '../judge/ollama-client.js';
+import type { LlmChat } from '../judge/ollama-client.js';
 import { gradeOutputJsonSchema, parseGradeOutput } from './grade-output.js';
 import { GRADE_SYSTEM_PROMPT, buildGradeUserMessage } from './grade-prompt.js';
 import type { Grader, GraderInput, GraderOutcome } from './grader.types.js';
 
-/** 로컬 Ollama 채점 어댑터. 타임아웃·형식 위반은 1회 재시도(SPEC §7-7). */
-export class OllamaGrader implements Grader {
+/** 채점 어댑터. 공급자는 chat 으로 주입한다(판정기와 같은 방식). 타임아웃·형식 위반은 1회 재시도(SPEC §7-7). */
+export class LlmGrader implements Grader {
   readonly model: string;
+  private readonly chat: LlmChat;
 
-  constructor(private readonly options: OllamaOptions) {
+  constructor(options: { model: string; chat: LlmChat }) {
     this.model = options.model;
+    this.chat = options.chat;
   }
 
   async grade(input: GraderInput): Promise<GraderOutcome> {
@@ -17,7 +19,7 @@ export class OllamaGrader implements Grader {
     const calls: JudgeCallMeta[] = [];
     let lastReason: 'timeout' | 'invalid_output' | 'unreachable' = 'unreachable';
     for (let attempt = 0; attempt < 2; attempt += 1) {
-      const reply = await ollamaChat(this.options, {
+      const reply = await this.chat({
         system: GRADE_SYSTEM_PROMPT,
         user: buildGradeUserMessage(input),
         format: gradeOutputJsonSchema(ids, input.final),

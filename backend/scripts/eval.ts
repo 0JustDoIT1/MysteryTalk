@@ -16,7 +16,8 @@ import { applyCompoundGuard } from '../src/judge/compound-guard.js';
 import { applyNegationCheck } from '../src/judge/negation.js';
 import { applyPartialRule } from '../src/judge/partial-rule.js';
 import { normalizeQuestion } from '../src/judge/normalize.js';
-import { OllamaJudge } from '../src/judge/ollama.judge.js';
+import { LlmJudge } from '../src/judge/llm.judge.js';
+import { chatFromArgs } from './eval-provider.js';
 import { prefilterRetry } from '../src/judge/prefilter.js';
 import { PROMPT_VERSION } from '../src/judge/judge.types.js';
 
@@ -30,6 +31,8 @@ const { values } = parseArgs({
     case: { type: 'string', default: 'tutorial' },
     repeat: { type: 'string', default: '3' },
     model: { type: 'string' },
+    /** ollama(기본, 로컬) 또는 anthropic(Claude API, ANTHROPIC_API_KEY 필요) */
+    provider: { type: 'string', default: 'ollama' },
     'base-url': { type: 'string' },
     'timeout-ms': { type: 'string', default: '30000' },
     seed: { type: 'string', default: '1' },
@@ -48,12 +51,8 @@ const evalSet = evalSetSchema.parse(
   JSON.parse(readFileSync(join(loaded.dir, 'eval.json'), 'utf8')),
 );
 
-const model = values.model ?? process.env['OLLAMA_MODEL'] ?? 'gemma3:12b';
-const judge = new OllamaJudge({
-  baseUrl: values['base-url'] ?? process.env['OLLAMA_BASE_URL'] ?? 'http://localhost:11434',
-  model,
-  timeoutMs: Number(values['timeout-ms']),
-});
+const { model, chat } = chatFromArgs(values);
+const judge = new LlmJudge({ model, chat });
 const repeat = Number(values.repeat);
 
 async function runOnce(raw: string): Promise<EvalRun> {

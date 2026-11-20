@@ -25,9 +25,20 @@ type OllamaChatResponse = {
   eval_count?: number;
 };
 
+/** 공급자와 무관한 대화 호출 1회(판정·채점 공용). 시스템·사용자 메시지와 JSON 스키마를 받아 응답 문자열을 돌려준다. */
+export type ChatRequest = { system: string; user: string; format: object; numPredict: number };
+export type LlmReply = OllamaReply;
+export type LlmChat = (request: ChatRequest) => Promise<LlmReply>;
+
+/** Ollama 호출을 LlmChat 으로 감싼다 */
+export const ollamaChatFn =
+  (options: OllamaOptions): LlmChat =>
+  (request) =>
+    ollamaChat(options, request);
+
 export async function ollamaChat(
   options: OllamaOptions,
-  request: { system: string; user: string; format: object; numPredict: number },
+  request: ChatRequest,
 ): Promise<OllamaReply> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const started = Date.now();

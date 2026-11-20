@@ -1,5 +1,6 @@
 import type { Fact } from '@mysterytalk/shared';
-import { OllamaJudge } from './ollama.judge.js';
+import { LlmJudge } from './llm.judge.js';
+import { ollamaChatFn } from './ollama-client.js';
 
 const facts: Fact[] = [{ id: 'F01', kind: 'FACT', text: '열쇠는 세탁소에 있다.' }];
 const input = { intro: '도입', facts, question: '열쇠는 세탁소에 있나요?' };
@@ -15,15 +16,18 @@ function reply(content: string): Response {
 const good = JSON.stringify({ label: 'YES', retryReason: 'NONE', factIds: ['F01'] });
 
 function judgeWith(fetchImpl: typeof fetch) {
-  return new OllamaJudge({
-    baseUrl: 'http://ollama',
+  return new LlmJudge({
     model: 'test-model',
-    timeoutMs: 1000,
-    fetchImpl,
+    chat: ollamaChatFn({
+      baseUrl: 'http://ollama',
+      model: 'test-model',
+      timeoutMs: 1000,
+      fetchImpl,
+    }),
   });
 }
 
-describe('OllamaJudge', () => {
+describe('LlmJudge + Ollama', () => {
   it('구조화 출력·생각 모드 끔·temperature 0으로 요청하고 결과를 검증해 돌려준다', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(reply(good));
     const outcome = await judgeWith(fetchImpl).judge(input);

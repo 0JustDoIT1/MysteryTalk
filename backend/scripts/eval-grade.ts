@@ -9,7 +9,8 @@ import { checkGrade, criteriaLines } from '../src/eval/criteria.js';
 import { interleavedOrder } from '../src/eval/schedule.js';
 import { decide, type AiVerdict } from '../src/grade/decide.js';
 import { GRADE_PROMPT_VERSION } from '../src/grade/grader.types.js';
-import { OllamaGrader } from '../src/grade/ollama.grader.js';
+import { LlmGrader } from '../src/grade/llm.grader.js';
+import { chatFromArgs } from './eval-provider.js';
 import { normalizeAnswer } from '../src/judge/normalize.js';
 
 /**
@@ -22,6 +23,8 @@ const { values } = parseArgs({
     case: { type: 'string', default: 'sample' },
     repeat: { type: 'string', default: '3' },
     model: { type: 'string' },
+    /** ollama(기본, 로컬) 또는 anthropic(Claude API, ANTHROPIC_API_KEY 필요) */
+    provider: { type: 'string', default: 'ollama' },
     'base-url': { type: 'string' },
     'timeout-ms': { type: 'string', default: '60000' },
     /** 재작성 요청을 다 쓴 뒤의 마지막 판정(MATCH/NO_MATCH만)으로 평가 */
@@ -42,12 +45,8 @@ const evalSet = evalSetSchema.parse(
 );
 const content = loaded.content;
 
-const model = values.model ?? process.env['OLLAMA_MODEL'] ?? 'gemma3:12b';
-const grader = new OllamaGrader({
-  baseUrl: values['base-url'] ?? process.env['OLLAMA_BASE_URL'] ?? 'http://localhost:11434',
-  model,
-  timeoutMs: Number(values['timeout-ms']),
-});
+const { model, chat } = chatFromArgs(values);
+const grader = new LlmGrader({ model, chat });
 const repeat = Number(values.repeat);
 
 /** 가장 많이 나온 결과(동률이면 먼저 나온 것) */
