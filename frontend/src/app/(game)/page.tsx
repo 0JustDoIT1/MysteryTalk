@@ -9,9 +9,6 @@ export default function Home() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-8 px-4 py-12">
       <header className="flex flex-col items-center gap-2 text-center">
-        <p aria-hidden="true" className="text-xs tracking-[0.4em] text-cream-2">
-          {t.app.eyebrow}
-        </p>
         <h1 className="text-5xl font-bold tracking-tight text-cream drop-shadow-[0_2px_0_rgb(0_0_0/0.5)]">
           {t.app.title}
         </h1>

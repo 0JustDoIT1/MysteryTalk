@@ -8,11 +8,9 @@ export const ko = {
   app: {
     title: 'MysteryTalk',
     tagline: '질문으로 진실을 찾는 추리 게임',
-    eyebrow: 'CASE FILES',
     stamp: '수사 기밀',
   },
   age: {
-    eyebrow: 'BEFORE YOU BEGIN',
     title: '탐정님, 시작 전에 확인해 주세요',
     body: '살인 등 범죄를 다루는 이야기와 긴장감 있는 묘사가 나와서 만 18세 이상만 이용할 수 있어요. 확인 결과는 이 브라우저에 저장돼요.',
     check: '본인은 만 18세 이상입니다.',

@@ -36,10 +36,7 @@ export function AgeGate({ children }: { children: ReactNode }) {
         onCancel={(e) => e.preventDefault()}
         className="paper m-auto w-[min(28rem,92vw)] p-6 backdrop:cursor-not-allowed backdrop:bg-black/90"
       >
-        <p aria-hidden="true" className="font-mono text-xs tracking-[0.3em] text-stamp">
-          {t.age.eyebrow}
-        </p>
-        <h2 id="age-heading" className="mt-1 text-xl font-bold text-ink">
+        <h2 id="age-heading" className="text-xl font-bold text-ink">
           {t.age.title}
         </h2>
         <p id="age-body" className="mt-2 text-sm leading-relaxed text-ink-2">
