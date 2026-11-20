@@ -55,12 +55,14 @@ describe('약관 문안 변환', () => {
 
   it.each([
     ['terms.md', ['[시행일]']],
-    // 처리방침은 보호책임자 성명이 법정 기재 사항(개인정보 보호법 제30조 제1항 제6호)이라 출시 전에 채운다
-    ['privacy.md', ['[시행일]', '[운영자 성명]']],
+    ['privacy.md', ['[시행일]']],
   ])('실제 문안 %s 을 읽고, 채울 자리가 남아 있다', (file, expected) => {
     const doc = parseLegal(readFileSync(join(__dirname, '../../legal', file), 'utf8'));
+    const text = JSON.stringify(doc.blocks);
     expect(doc.blocks.filter((b) => b.type === 'h2').length).toBeGreaterThan(5);
     expect(placeholdersIn(doc)).toEqual(expect.arrayContaining(expected));
-    expect(doc.blocks.some((b) => JSON.stringify(b).includes('0justdoit1@gmail.com'))).toBe(true);
+    expect(text).toContain('0justdoit1@gmail.com');
+    // 처리방침의 보호책임자 성명은 법정 기재 사항(개인정보 보호법 제30조 제1항 제6호)
+    if (file === 'privacy.md') expect(text).toContain('성명: 허병철');
   });
 });
