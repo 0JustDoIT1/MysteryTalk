@@ -1,5 +1,4 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { describe, expect, it, vi } from 'vitest';
 import { anthropicChat, splitForCache } from './anthropic-client.js';
 
 const FORMAT = {
