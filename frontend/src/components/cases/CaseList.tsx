@@ -16,10 +16,10 @@ export function CaseList() {
     : 'ALL';
   const { data, error, isPending, refetch } = useCases();
 
-  if (isPending) return <p className="text-stone-400">{t.common.loading}</p>;
+  if (isPending) return <p className="text-ink-3">{t.common.loading}</p>;
   if (error)
     return (
-      <p role="alert" className="text-red-300">
+      <p role="alert" className="text-bad">
         {t.common.loadFailed}{' '}
         <button type="button" className="underline" onClick={() => void refetch()}>
           {t.common.retry}
@@ -32,8 +32,8 @@ export function CaseList() {
 
   return (
     <section aria-labelledby="cases-heading" className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 id="cases-heading" className="text-xl font-semibold">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b-2 border-ink/70 pb-2">
+        <h1 id="cases-heading" className="text-2xl font-bold">
           {t.cases.heading}
         </h1>
         <div role="group" aria-label="장르" className="flex gap-1">
@@ -45,21 +45,25 @@ export function CaseList() {
               onClick={() =>
                 router.replace(g === 'ALL' ? '/cases' : `/cases?genre=${g}`, { scroll: false })
               }
-              className={`rounded px-3 py-1 text-sm ${genre === g ? 'bg-amber-300 text-stone-900' : 'bg-stone-800 text-stone-300 hover:bg-stone-700'}`}
+              className={`rounded-sm px-3 py-1 font-serif text-sm font-bold ${genre === g ? 'bg-accent text-cream' : 'border border-line bg-paper-2 text-ink-2 hover:bg-paper-3'}`}
             >
               {t.genre[g]}
             </button>
           ))}
         </div>
       </div>
-      {firstVisit && <p className="text-sm text-amber-200/80">{t.cases.tutorialHint}</p>}
-      {cases.length === 0 && <p className="text-stone-400">{t.cases.empty}</p>}
-      <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      {firstVisit && (
+        <p className="paper-inset border-l-4 border-l-stamp px-3 py-2 text-sm text-ink-2">
+          {t.cases.tutorialHint}
+        </p>
+      )}
+      {cases.length === 0 && <p className="text-ink-3">{t.cases.empty}</p>}
+      <ul className="grid grid-cols-2 gap-4 md:grid-cols-3">
         {cases.map((c) => (
           <li key={c.slug}>
             <Link
               href={`/cases/${c.slug}`}
-              className="flex h-full flex-col gap-2 rounded-lg border border-stone-700 bg-stone-900 p-2 hover:border-amber-300/60"
+              className="photo flex h-full flex-col gap-2 transition-transform hover:-translate-y-0.5 hover:outline-2 hover:outline-gold"
             >
               <CaseArt
                 slug={c.slug}
@@ -69,27 +73,27 @@ export function CaseList() {
                 coverVersion={c.coverVersion}
               />
               <div className="flex flex-col gap-1 px-1 pb-1">
-                <p className="font-mono text-xs text-stone-400">
+                <p className="font-mono text-xs tracking-wider text-ink-3">
                   {c.isTutorial
                     ? t.cases.tutorialBadge
                     : c.caseNo > 0
                       ? t.cases.caseNo(c.caseNo)
                       : t.cases.sample}
                 </p>
-                <h2 className="font-semibold text-amber-100">{c.title}</h2>
-                <div className="flex flex-wrap items-center gap-1 text-[11px]">
-                  <span className="rounded bg-stone-800 px-1.5 py-0.5">
-                    {t.difficulty[c.difficulty]}
-                  </span>
-                  <span className="rounded bg-stone-800 px-1.5 py-0.5">{t.rating[c.rating]}</span>
+                <h2 className="font-bold text-ink">{c.title}</h2>
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="chip">{t.difficulty[c.difficulty]}</span>
+                  <span className="chip">{t.rating[c.rating]}</span>
                   {c.activeSessionId && (
-                    <span className="rounded bg-amber-900 px-1.5 py-0.5 text-amber-200">
+                    <span className="chip border-gold bg-warn-bg text-warn">
                       {t.cases.inProgress}
                     </span>
                   )}
                 </div>
                 {!c.isTutorial && (
-                  <p className="text-xs text-stone-400">
+                  <p
+                    className={`text-xs ${c.record?.solved ? 'font-bold text-stamp' : 'text-ink-3'}`}
+                  >
                     {c.record?.solved ? `✔ ${t.cases.solved}` : t.cases.unsolved}
                     {c.record && ` · ${t.cases.bestShort(c.record.bestGrade)}`}
                   </p>

@@ -37,7 +37,7 @@ export function CaseArt({
         alt=""
         aria-hidden="true"
         loading="lazy"
-        className="aspect-[16/9] w-full rounded-md object-cover [image-rendering:pixelated]"
+        className="aspect-[16/9] w-full object-cover sepia-[.15] [image-rendering:pixelated]"
       />
     );
   const label = isTutorial
@@ -48,11 +48,9 @@ export function CaseArt({
   return (
     <div
       aria-hidden="true"
-      className={`flex aspect-[16/9] items-center justify-center rounded-md bg-gradient-to-br ${GENRE_BG[genre ?? 'MYSTERY']}`}
+      className={`flex aspect-[16/9] items-center justify-center bg-gradient-to-br ${GENRE_BG[genre ?? 'MYSTERY']}`}
     >
-      <span className="font-mono text-2xl font-bold tracking-widest text-stone-300/70">
-        {label}
-      </span>
+      <span className="font-mono text-2xl font-bold tracking-widest text-cream/70">{label}</span>
     </div>
   );
 }

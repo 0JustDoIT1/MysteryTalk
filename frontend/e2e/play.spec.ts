@@ -65,7 +65,9 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(verdict.getByText('관계없음')).toBeVisible();
   // 해금(자동, 감점 없음)과 보기(직접, 감점)를 구분해 안내한다(PRD D15)
   await expect(
-    page.getByRole('status').getByText('힌트 1을 볼 수 있어요. 보기 전에는 점수가 깎이지 않아요.'),
+    page
+      .getByRole('region', { name: /^알림/ })
+      .getByText('힌트 1을 볼 수 있어요. 보기 전에는 점수가 깎이지 않아요.'),
   ).toBeVisible();
 
   await page.getByRole('button', { name: '힌트 1 보기 (−10점)' }).click();
@@ -224,7 +226,9 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await expect(
     page.getByRole('dialog', { name: '두꺼비집' }).getByText(/내려진 차단기/),
   ).toBeVisible();
-  await expect(page.getByRole('status').getByText('새 장소가 열렸어요: 빌라 관리실')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: /^알림/ }).getByText('새 장소가 열렸어요: 빌라 관리실'),
+  ).toBeVisible();
   await page.keyboard.press('Escape');
 
   // 새로고침해도 서버에 저장된 위치에서 이어진다(D53)
@@ -313,7 +317,7 @@ test('로그인: 게스트로 시작한 사건을 로그인 후 이어서에서 
   // 실행마다 다른 가짜 사용자로 로그인(가짜 제공자는 fakeSub 로 사용자를 고른다)
   await page.goto(`/api/auth/google?fakeSub=e2e-${Date.now()}`);
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole('status').getByText(/로그인했어요/)).toBeVisible();
+  await expect(page.getByRole('region', { name: /^알림/ }).getByText(/로그인했어요/)).toBeVisible();
   await expect(page.getByText('로그인했어요. 기록이 계정에 저장돼요.')).toBeVisible();
 
   await page.getByRole('link', { name: /이어서/ }).click();
@@ -361,7 +365,9 @@ test('기록 지우기: 게스트가 기록을 지우면 새 게스트로 시작
   const dialog = page.getByRole('dialog', { name: '이 브라우저의 기록을 지울까요?' });
   await expect(dialog.getByText(/지워지는 것: 플레이 기록/)).toBeVisible();
   await dialog.getByRole('button', { name: '삭제하기' }).click();
-  await expect(page.getByRole('status').getByText('지웠어요. 새 게스트로 시작해요.')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: /^알림/ }).getByText('지웠어요. 새 게스트로 시작해요.'),
+  ).toBeVisible();
   await expect(page.getByRole('navigation', { name: '메인 메뉴' })).toBeVisible();
   await page.getByRole('link', { name: '설정' }).click();
   await expect(page.getByLabel('탐정 이름 입력')).not.toHaveValue('지울 탐정');
@@ -473,5 +479,5 @@ test('약관: 설정에서 이용약관·개인정보처리방침을 새 탭으�
   await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: '개인정보처리방침', level: 1 })).toBeVisible();
   await expect(page.getByText(/이메일, 이름, 프로필 사진을 요청하지 않으며/)).toBeVisible();
-  await expect(page.locator('mark', { hasText: '[운영자 성명]' }).first()).toBeVisible();
+  await expect(page.locator('mark', { hasText: '[시행일]' }).first()).toBeVisible();
 });

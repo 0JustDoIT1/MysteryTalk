@@ -20,20 +20,20 @@ export function EndingView() {
   useDocumentTitle(ending.data ? `${ending.data.title} 결과` : undefined);
 
   if (session.isPending || (finished && ending.isPending))
-    return <p className="text-stone-400">{t.common.loading}</p>;
+    return <p className="text-cream-2">{t.common.loading}</p>;
   if (session.error || ending.error)
     return (
-      <p role="alert" className="text-red-300">
+      <p role="alert" className="paper p-4 text-bad">
         {(session.error ?? ending.error)?.message}{' '}
-        <Link href="/cases" className="underline">
+        <Link href="/cases" className="link">
           {t.common.back}
         </Link>
       </p>
     );
   if (!finished || !ending.data)
     return (
-      <p>
-        <Link href={`/play/${sessionId}`} className="underline">
+      <p className="paper p-4">
+        <Link href={`/play/${sessionId}`} className="link">
           {t.common.back}
         </Link>
       </p>
@@ -66,76 +66,73 @@ export function EndingView() {
   ];
 
   return (
-    <article className="flex flex-col gap-6">
-      <header className="flex flex-col gap-1">
-        <p className="text-sm text-stone-400">
+    <article className="paper flex min-w-0 flex-col gap-6 p-5 sm:p-8">
+      <header className="flex flex-col gap-1 border-b-2 border-ink/70 pb-3">
+        <p className="font-mono text-xs tracking-wider text-ink-3">
           {e.title} · {t.ending.playNo(e.playNo)}
         </p>
-        <h1 className="text-2xl font-bold text-amber-200">{t.ending.heading}</h1>
+        <h1 className="text-3xl font-bold text-ink">{t.ending.heading}</h1>
       </header>
 
-      <section
-        aria-live="polite"
-        className="flex items-center gap-6 rounded-lg border border-stone-700 bg-stone-900 p-5"
-      >
+      <section aria-live="polite" className="paper-inset flex items-center gap-6 p-5">
         <div className="text-center">
-          <p className="text-xs text-stone-400">{t.ending.grade}</p>
-          <p className="text-5xl font-black text-amber-200">{e.grade}</p>
+          <p className="mb-2 text-xs text-ink-3">{t.ending.grade}</p>
+          <p className="stamp px-4 text-5xl">{e.grade}</p>
         </div>
         <div>
-          <p className="text-lg font-semibold">{t.ending.status[e.status]}</p>
-          <p className="text-sm text-stone-300">
+          <p className="font-serif text-xl font-bold">{t.ending.status[e.status]}</p>
+          <p className="text-sm text-ink-2">
             {e.score !== null ? `${t.ending.score} ${e.score}` : t.ending.noScore}
           </p>
         </div>
       </section>
 
       {e.isTutorial && (
-        <p className="rounded border border-sky-500/50 bg-sky-950/60 p-3 text-sm text-sky-100">
+        <p className="border-l-4 border-info bg-info-bg p-3 text-sm text-info">
           {t.ending.tutorialNote}
         </p>
       )}
 
       <section aria-labelledby="breakdown-heading">
-        <h2 id="breakdown-heading" className="mb-2 font-semibold text-amber-100">
+        <h2 id="breakdown-heading" className="label mb-2">
           {t.ending.breakdown}
         </h2>
         <table className="w-full text-sm">
           <tbody>
             {rows.map((r) => (
-              <tr key={r.label} className="border-b border-stone-800">
+              <tr key={r.label} className="border-b border-line">
                 <th scope="row" className="py-2 text-left font-normal">
                   {r.label}
                   {showRules && r.rule && (
-                    <span className="block text-xs text-stone-400">{r.rule}</span>
+                    <span className="block text-xs text-ink-3">{r.rule}</span>
                   )}
                 </th>
-                <td className="py-2 text-right tabular-nums">{r.value}</td>
+                <td className="py-2 text-right font-mono tabular-nums">{r.value}</td>
               </tr>
             ))}
           </tbody>
         </table>
         {showRules && (
-          <p className="mt-2 text-xs text-stone-400">
+          <p className="mt-2 text-xs text-ink-3">
             {t.ending.rules.grades(b.gradeCuts.S, b.gradeCuts.A, b.gradeCuts.B)}
           </p>
         )}
       </section>
 
       <section aria-labelledby="elements-heading">
-        <h2 id="elements-heading" className="mb-2 font-semibold text-amber-100">
+        <h2 id="elements-heading" className="label mb-2">
           {t.ending.elements}
         </h2>
         <ul className="flex flex-col gap-1 text-sm">
           {e.elements.map((el) => (
             <li key={el.id} className="flex items-start gap-2">
               <span
-                className={`shrink-0 rounded px-2 py-0.5 text-xs ${el.matched ? 'bg-emerald-900 text-emerald-100' : 'bg-stone-700 text-stone-200'}`}
+                className={`shrink-0 rounded-sm px-2 py-0.5 text-xs ${el.matched ? 'bg-ok-bg text-ok' : 'bg-paper-3 text-ink-2'}`}
               >
                 {el.matched ? `○ ${t.ending.matched}` : `✕ ${t.ending.missed}`}
               </span>
               <span>
-                <span className="mr-1 text-xs text-stone-400">
+                <span className="mr-1 text-xs text-ink-3">
                   [{el.required ? t.ending.required : t.ending.optional}]
                 </span>
                 {el.description}
@@ -147,20 +144,20 @@ export function EndingView() {
 
       {e.clues.length > 0 && (
         <section aria-labelledby="clues-heading">
-          <h2 id="clues-heading" className="mb-2 font-semibold text-amber-100">
+          <h2 id="clues-heading" className="label mb-2">
             {t.ending.clues}
           </h2>
           <ul className="flex flex-col gap-1 text-sm">
             {e.clues.map((c) => (
               <li key={c.title} className="flex items-center gap-2">
                 <span
-                  className={`shrink-0 rounded px-2 py-0.5 text-xs ${c.found ? 'bg-emerald-900 text-emerald-100' : 'bg-stone-700 text-stone-200'}`}
+                  className={`shrink-0 rounded-sm px-2 py-0.5 text-xs ${c.found ? 'bg-ok-bg text-ok' : 'bg-paper-3 text-ink-2'}`}
                 >
                   {c.found ? `○ ${t.ending.clueFound}` : `✕ ${t.ending.clueMissed}`}
                 </span>
                 <span>{c.title}</span>
                 {c.decoy && (
-                  <span className="rounded bg-rose-900 px-2 py-0.5 text-xs text-rose-100">
+                  <span className="rounded bg-bad-bg px-2 py-0.5 text-xs text-bad">
                     {t.ending.decoy}
                   </span>
                 )}
@@ -171,13 +168,13 @@ export function EndingView() {
       )}
 
       <section aria-labelledby="explanation-heading">
-        <h2 id="explanation-heading" className="mb-2 font-semibold text-amber-100">
+        <h2 id="explanation-heading" className="label mb-2">
           {t.ending.explanation}
         </h2>
-        <p className="whitespace-pre-line leading-relaxed text-stone-200">{e.explanation}</p>
+        <p className="whitespace-pre-line leading-relaxed text-ink-2">{e.explanation}</p>
       </section>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 border-t border-dashed border-line pt-4">
         <button
           type="button"
           disabled={again.isPending}
@@ -186,16 +183,16 @@ export function EndingView() {
               onSuccess: ({ sessionId: next }) => router.push(`/play/${next}`),
             })
           }
-          className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 hover:bg-amber-200 disabled:opacity-50"
+          className="btn btn-primary"
         >
           {t.ending.playAgain}
         </button>
-        <Link href="/cases" className="rounded px-4 py-2 text-stone-300 hover:bg-stone-800">
+        <Link href="/cases" className="btn btn-ghost">
           {t.common.back}
         </Link>
       </div>
       {again.error && (
-        <p role="alert" className="text-sm text-red-300">
+        <p role="alert" className="text-sm text-bad">
           {again.error.message}
         </p>
       )}

@@ -5,7 +5,12 @@
 import { DEFAULT_DETECTIVE_NAME } from '@mysterytalk/shared';
 
 export const ko = {
-  app: { title: 'MysteryTalk', tagline: '질문으로 진실을 찾는 추리 게임' },
+  app: {
+    title: 'MysteryTalk',
+    tagline: '질문으로 진실을 찾는 추리 게임',
+    eyebrow: 'CASE FILES',
+    stamp: '수사 기밀',
+  },
   age: {
     title: '만 18세 이상인가요?',
     body: '이 게임에는 살인 등 범죄를 다루는 이야기와 긴장감 있는 묘사가 나와요. 만 18세 이상만 이용할 수 있어요.',
@@ -110,6 +115,7 @@ export const ko = {
     retry: '다시 시도',
     cancel: '취소',
     close: '닫기',
+    notifications: '알림',
     back: '목록으로',
     loadFailed: '불러오지 못했어요.',
   },
@@ -139,6 +145,8 @@ export const ko = {
   },
   intro: {
     heading: '사건 개요',
+    report: '사건 보고서',
+    overview: '사건 요약',
     start: '수사 시작',
     resume: '이어서 수사',
     starting: '시작하는 중…',

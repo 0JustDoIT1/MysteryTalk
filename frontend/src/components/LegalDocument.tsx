@@ -11,7 +11,7 @@ export function readLegal(name: 'terms' | 'privacy') {
 function Inline({ text }: { text: string }) {
   return splitPlaceholders(text).map((part, i) =>
     part.placeholder ? (
-      <mark key={i} className="rounded bg-amber-300/20 px-1 text-amber-200">
+      <mark key={i} className="rounded bg-paper-2 px-1 text-ink">
         {part.text}
       </mark>
     ) : (
@@ -24,16 +24,13 @@ function Inline({ text }: { text: string }) {
 export function LegalDocument({ name }: { name: 'terms' | 'privacy' }) {
   const { meta, blocks } = readLegal(name);
   return (
-    <article className="flex flex-col gap-4 text-sm leading-relaxed text-stone-200 [word-break:keep-all]">
+    <article className="flex flex-col gap-4 text-sm leading-relaxed text-ink-2 [word-break:keep-all]">
       <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold text-stone-100">{meta.title}</h1>
-        <p
-          role="note"
-          className="rounded border border-amber-400/50 bg-amber-400/10 px-3 py-2 text-amber-100"
-        >
+        <h1 className="text-xl font-semibold text-ink">{meta.title}</h1>
+        <p role="note" className="rounded border border-gold bg-warn-bg px-3 py-2 text-ink">
           {t.legal.draftNotice}
         </p>
-        <p className="text-xs text-stone-400">
+        <p className="text-xs text-ink-3">
           {meta.version} · {t.legal.updated} {meta.updated} · {t.legal.effective}{' '}
           <Inline text={meta.effective} />
         </p>
@@ -41,13 +38,13 @@ export function LegalDocument({ name }: { name: 'terms' | 'privacy' }) {
       {blocks.map((b, i) => {
         if (b.type === 'h2')
           return (
-            <h2 key={i} className="mt-4 text-base font-semibold text-amber-100">
+            <h2 key={i} className="mt-4 text-base font-semibold text-ink">
               {b.text}
             </h2>
           );
         if (b.type === 'h3')
           return (
-            <h3 key={i} className="mt-2 font-semibold text-stone-100">
+            <h3 key={i} className="mt-2 font-semibold text-ink">
               {b.text}
             </h3>
           );

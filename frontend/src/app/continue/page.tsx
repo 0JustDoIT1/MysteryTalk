@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { ContinueList } from '@/components/cases/ContinueList';
+import { PageSheet } from '@/components/PageSheet';
 import type { Metadata } from 'next';
 import { t } from '@/i18n/ko';
 
@@ -7,12 +7,8 @@ export const metadata: Metadata = { title: t.menu.continue };
 
 export default function ContinuePage() {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-10">
-      <Link href="/" className="text-sm text-stone-400 hover:text-stone-200">
-        ← {t.menu.home}
-      </Link>
-      <h1 className="text-xl font-semibold">{t.menu.continue}</h1>
+    <PageSheet back={{ href: '/', label: t.menu.home }} title={t.menu.continue}>
       <ContinueList />
-    </main>
+    </PageSheet>
   );
 }

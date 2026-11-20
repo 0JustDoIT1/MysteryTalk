@@ -26,7 +26,7 @@ export function SettingsView() {
   return (
     <div className="flex flex-col gap-8">
       <section aria-labelledby="name-heading" className="flex flex-col gap-2">
-        <h2 id="name-heading" className="font-semibold text-amber-100">
+        <h2 id="name-heading" className="label">
           {t.detective.heading}
         </h2>
         {me.data ? (
@@ -36,19 +36,19 @@ export function SettingsView() {
             submitLabel={t.settings.save}
           />
         ) : (
-          <p className="text-sm text-stone-400">{t.common.loading}</p>
+          <p className="text-sm text-ink-3">{t.common.loading}</p>
         )}
       </section>
 
       <section aria-labelledby="sound-heading" className="flex flex-col gap-4">
-        <h2 id="sound-heading" className="font-semibold text-amber-100">
+        <h2 id="sound-heading" className="label">
           {t.settings.sound}
         </h2>
         {hydrated ? (
           <>
             <label className="flex flex-col gap-1 text-sm">
               <span>
-                {t.settings.bgm} <span className="text-stone-400">{bgm}</span>
+                {t.settings.bgm} <span className="text-ink-3">{bgm}</span>
               </span>
               <input
                 type="range"
@@ -61,7 +61,7 @@ export function SettingsView() {
             </label>
             <label className="flex flex-col gap-1 text-sm">
               <span>
-                {t.settings.sfx} <span className="text-stone-400">{sfx}</span>
+                {t.settings.sfx} <span className="text-ink-3">{sfx}</span>
               </span>
               <input
                 type="range"
@@ -76,13 +76,13 @@ export function SettingsView() {
             </label>
           </>
         ) : (
-          <p className="text-sm text-stone-400">{t.common.loading}</p>
+          <p className="text-sm text-ink-3">{t.common.loading}</p>
         )}
-        <p className="text-xs text-stone-400">{t.settings.soundNote}</p>
+        <p className="text-xs text-ink-3">{t.settings.soundNote}</p>
       </section>
 
       <section aria-labelledby="account-heading" className="flex flex-col gap-2">
-        <h2 id="account-heading" className="font-semibold text-amber-100">
+        <h2 id="account-heading" className="label">
           {t.settings.account}
         </h2>
         <AccountBar />
@@ -92,14 +92,14 @@ export function SettingsView() {
 
       {BUG_FORM_URL && (
         <section aria-labelledby="bug-heading" className="flex flex-col gap-2">
-          <h2 id="bug-heading" className="font-semibold text-amber-100">
+          <h2 id="bug-heading" className="label">
             {t.settings.bug}
           </h2>
           <a
             href={BUG_FORM_URL}
             target="_blank"
             rel="noreferrer noopener"
-            className="w-fit rounded bg-stone-700 px-4 py-2 text-sm hover:bg-stone-600"
+            className="btn btn-secondary w-fit text-sm"
           >
             {t.settings.bugOpen}
           </a>
@@ -107,14 +107,14 @@ export function SettingsView() {
       )}
 
       <section aria-labelledby="legal-heading" className="flex flex-col gap-2">
-        <h2 id="legal-heading" className="font-semibold text-amber-100">
+        <h2 id="legal-heading" className="label">
           {t.legal.heading}
         </h2>
         <p className="flex flex-wrap gap-4 text-sm">
-          <Link href="/terms" target="_blank" className="underline hover:text-stone-200">
+          <Link href="/terms" target="_blank" className="link">
             {t.legal.terms}
           </Link>
-          <Link href="/privacy" target="_blank" className="underline hover:text-stone-200">
+          <Link href="/privacy" target="_blank" className="link">
             {t.legal.privacy}
           </Link>
         </p>

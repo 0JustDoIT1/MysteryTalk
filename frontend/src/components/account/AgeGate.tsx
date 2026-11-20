@@ -24,9 +24,11 @@ export function AgeGate({ children }: { children: ReactNode }) {
 
   if (hydrated && age === 'no') {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
-        <h1 className="text-2xl font-bold text-amber-200">{t.age.blockedTitle}</h1>
-        <p className="text-stone-300">{t.age.blockedBody}</p>
+      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-4 text-center">
+        <div className="paper flex flex-col gap-4 p-8">
+          <h1 className="text-2xl font-bold text-ink">{t.age.blockedTitle}</h1>
+          <p className="text-ink-2">{t.age.blockedBody}</p>
+        </div>
       </main>
     );
   }
@@ -38,35 +40,26 @@ export function AgeGate({ children }: { children: ReactNode }) {
         ref={ref}
         aria-labelledby="age-heading"
         onCancel={(e) => e.preventDefault()}
-        className="m-auto w-[min(28rem,92vw)] rounded-lg border border-stone-600 bg-stone-900 p-6 text-stone-100 backdrop:bg-black/90"
+        className="paper m-auto w-[min(28rem,92vw)] p-6 backdrop:bg-black/90"
       >
-        <h2 id="age-heading" className="text-xl font-bold text-amber-200">
+        <h2 id="age-heading" className="border-b-2 border-ink/70 pb-2 text-xl font-bold text-ink">
           {t.age.title}
         </h2>
-        <p className="mt-3 text-sm text-stone-300">{t.age.body}</p>
-        <p className="mt-3 text-xs text-stone-400">
-          <Link href="/terms" target="_blank" className="underline">
+        <p className="mt-3 text-sm text-ink-2">{t.age.body}</p>
+        <p className="mt-3 text-xs text-ink-3">
+          <Link href="/terms" target="_blank" className="link">
             {t.age.terms}
           </Link>{' '}
           ·{' '}
-          <Link href="/privacy" target="_blank" className="underline">
+          <Link href="/privacy" target="_blank" className="link">
             {t.age.privacy}
           </Link>
         </p>
         <div className="mt-5 flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setAge('no')}
-            className="rounded px-4 py-2 text-stone-300 hover:bg-stone-800"
-          >
+          <button type="button" onClick={() => setAge('no')} className="btn btn-ghost">
             {t.age.no}
           </button>
-          <button
-            type="button"
-            autoFocus
-            onClick={() => setAge('yes')}
-            className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 hover:bg-amber-200"
-          >
+          <button type="button" autoFocus onClick={() => setAge('yes')} className="btn btn-primary">
             {t.age.yes}
           </button>
         </div>

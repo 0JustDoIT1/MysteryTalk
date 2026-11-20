@@ -42,8 +42,8 @@ export function AccountBar() {
   const user = me.data.kind === 'USER';
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-stone-700 bg-stone-900 px-4 py-3 text-sm">
-      <p className="text-stone-300">{user ? t.account.signedIn : t.account.guest}</p>
+    <div className="paper-inset flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm">
+      <p className="text-ink-2">{user ? t.account.signedIn : t.account.guest}</p>
       {user ? (
         <button
           type="button"
@@ -56,20 +56,17 @@ export function AccountBar() {
               },
             })
           }
-          className="rounded px-3 py-1.5 text-stone-300 hover:bg-stone-800"
+          className="btn btn-ghost px-3 py-1.5 text-sm"
         >
           {t.account.logout}
         </button>
       ) : me.data.loginAvailable ? (
         // 전체 페이지 이동(구글 로그인 화면으로 갔다가 돌아온다)
-        <a
-          href="/api/auth/google"
-          className="rounded bg-stone-100 px-3 py-1.5 font-semibold text-stone-900 hover:bg-white"
-        >
+        <a href="/api/auth/google" className="btn btn-primary px-3 py-1.5 text-sm">
           {t.account.login}
         </a>
       ) : (
-        <span className="text-xs text-stone-500">{t.account.loginUnavailable}</span>
+        <span className="text-xs text-ink-3">{t.account.loginUnavailable}</span>
       )}
     </div>
   );

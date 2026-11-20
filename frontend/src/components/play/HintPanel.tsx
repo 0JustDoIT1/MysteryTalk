@@ -14,20 +14,17 @@ export function HintPanel({ session }: { session: SessionState }) {
 
   return (
     <section aria-labelledby="hints-heading" className="flex flex-col gap-2">
-      <h2 id="hints-heading" className="font-semibold text-amber-100">
+      <h2 id="hints-heading" className="tag">
         {t.hints.heading}
       </h2>
-      <p className="text-xs text-stone-400">{t.hints.penaltyNote}</p>
+      <p className="text-xs text-ink-3">{t.hints.penaltyNote}</p>
       <ul className="flex flex-col gap-2">
         {session.hints.map((h, i) => {
           const previousViewed = session.hints.slice(0, i).every((p) => p.viewed);
           if (h.viewed)
             return (
-              <li
-                key={h.no}
-                className="rounded border border-amber-400/30 bg-stone-900 p-3 text-sm"
-              >
-                <span className="mr-2 font-semibold text-amber-200">#{h.no}</span>
+              <li key={h.no} className="border border-gold bg-warn-bg/60 p-3 text-sm">
+                <span className="mr-2 font-serif font-bold text-warn">#{h.no}</span>
                 {h.image ? (
                   <CaseImage
                     src={hintImageUrl(session.sessionId, h.no)}
@@ -41,13 +38,13 @@ export function HintPanel({ session }: { session: SessionState }) {
             );
           if (!h.unlocked)
             return (
-              <li key={h.no} className="text-sm text-stone-500">
+              <li key={h.no} className="paper-inset px-3 py-1.5 text-sm text-ink-3">
                 🔒 {t.hints.locked(h.no, h.unlockAt - session.questionsUsed)}
               </li>
             );
           if (!previousViewed)
             return (
-              <li key={h.no} className="text-sm text-stone-500">
+              <li key={h.no} className="text-sm text-ink-3">
                 {t.hints.waiting(h.no)}
               </li>
             );
@@ -63,7 +60,7 @@ export function HintPanel({ session }: { session: SessionState }) {
                     },
                   })
                 }
-                className="rounded border border-amber-300 px-3 py-1 text-sm text-amber-200 hover:bg-amber-300/10 disabled:opacity-50"
+                className="btn btn-secondary w-full justify-between px-3 py-1.5 text-sm"
               >
                 {t.hints.open(h.no, h.penalty)}
               </button>
@@ -72,7 +69,7 @@ export function HintPanel({ session }: { session: SessionState }) {
         })}
       </ul>
       {view.error && (
-        <p role="alert" className="text-sm text-red-300">
+        <p role="alert" className="text-sm text-bad">
           {view.error.message}
         </p>
       )}

@@ -71,17 +71,17 @@ export function DetectivePicker({
           value={name}
           maxLength={DETECTIVE_NAME_MAX}
           onChange={(e) => setName(e.target.value)}
-          className="w-full max-w-xs rounded border border-stone-600 bg-stone-950 px-3 py-2"
+          className="field w-full max-w-xs"
         />
       </label>
       <fieldset className="flex flex-col gap-2">
-        <legend className="mb-1 text-sm">{t.detective.characterLabel}</legend>
+        <legend className="mb-1 text-sm font-semibold">{t.detective.characterLabel}</legend>
         <div className="grid max-w-sm grid-cols-2 gap-2">
           {DETECTIVE_CHARACTERS.map((id) => {
             return (
               <label
                 key={id}
-                className={`flex cursor-pointer flex-col items-center gap-1 rounded-lg border p-2 text-center text-xs ${character === id ? 'border-amber-300 bg-stone-800' : 'border-stone-700 hover:border-stone-500'}`}
+                className={`photo flex cursor-pointer flex-col items-center gap-1 text-center text-xs has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-gold ${character === id ? 'outline-2 outline-offset-2 outline-stamp' : 'opacity-80 hover:opacity-100'}`}
               >
                 <input
                   type="radio"
@@ -92,28 +92,26 @@ export function DetectivePicker({
                   className="sr-only"
                 />
                 <DetectiveSprite id={id} />
-                <span className="font-semibold text-amber-100">{t.detective.characters[id]}</span>
+                <span className="font-serif font-bold text-ink">{t.detective.characters[id]}</span>
               </label>
             );
           })}
         </div>
       </fieldset>
-      <p className="text-xs text-stone-400">{t.settings.nameNote}</p>
+      <p className="text-xs text-ink-3">{t.settings.nameNote}</p>
       <div className="flex flex-wrap items-center gap-2">
         <button
           type="submit"
           disabled={
             update.isPending || !name.trim() || (!nameChanged && !characterChanged && !onSaved)
           }
-          className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 disabled:opacity-50"
+          className="btn btn-primary"
         >
           {submitLabel}
         </button>
         <span aria-live="polite" className="text-sm">
-          {update.isSuccess && !onSaved && (
-            <span className="text-emerald-300">{t.settings.saved}</span>
-          )}
-          {update.error && <span className="text-red-300">{update.error.message}</span>}
+          {update.isSuccess && !onSaved && <span className="text-ok">{t.settings.saved}</span>}
+          {update.error && <span className="text-bad">{update.error.message}</span>}
         </span>
       </div>
     </form>

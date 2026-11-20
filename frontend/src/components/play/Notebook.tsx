@@ -62,14 +62,14 @@ export function Notebook({ session }: { session: SessionState }) {
 
   return (
     <section aria-labelledby="notebook-heading" className="flex flex-col gap-3">
-      <h2 id="notebook-heading" className="font-semibold text-amber-100">
+      <h2 id="notebook-heading" className="tag">
         {t.notebook.heading}
       </h2>
       {/* Tab으로는 선택된 탭에만 멈춘다 */}
       <div
         role="tablist"
         aria-label={t.notebook.heading}
-        className="flex gap-1"
+        className="-mb-[13px] flex gap-1 pl-2"
         onKeyDown={onTabKey}
       >
         {TABS.map((k) => (
@@ -82,7 +82,7 @@ export function Notebook({ session }: { session: SessionState }) {
             aria-controls={`panel-${k}`}
             tabIndex={tab === k ? 0 : -1}
             onClick={() => selectTab(k)}
-            className={`rounded-t px-3 py-1 text-sm ${tab === k ? 'bg-stone-800 text-amber-200' : 'text-stone-400 hover:text-stone-200'}`}
+            className={`rounded-t-md border border-b-0 px-3 py-1 font-serif text-sm font-bold ${tab === k ? 'relative z-10 border-line-strong bg-paper-input text-ink' : 'border-line bg-paper-3 text-ink-3 hover:text-ink-2'}`}
           >
             {t.notebook.tabs[k]}
           </button>
@@ -92,7 +92,7 @@ export function Notebook({ session }: { session: SessionState }) {
         role="tabpanel"
         id={`panel-${tab}`}
         aria-labelledby={`tab-${tab}`}
-        className="rounded-b rounded-tr bg-stone-800/60 p-3"
+        className="border border-line-strong bg-paper-input p-3"
       >
         {tab === 'clues' && <ClueList session={session} />}
         {tab === 'questions' && (
@@ -127,30 +127,30 @@ function QuestionLog({
             type="button"
             aria-pressed={filter === l}
             onClick={() => onFilter(l)}
-            className={`rounded px-2 py-0.5 text-xs ${filter === l ? 'bg-amber-300 text-stone-900' : 'bg-stone-700 text-stone-200'}`}
+            className={`rounded-sm px-2 py-0.5 text-xs ${filter === l ? 'bg-accent text-cream' : 'border border-line bg-paper-2 text-ink-2'}`}
           >
             {l ? LABEL_TEXT[l] : t.notebook.filterAll}
           </button>
         ))}
       </div>
       {log.isPending ? (
-        <p className="text-sm text-stone-400">{t.common.loading}</p>
+        <p className="text-sm text-ink-3">{t.common.loading}</p>
       ) : log.error ? (
-        <p role="alert" className="text-sm text-red-300">
+        <p role="alert" className="text-sm text-bad">
           {log.error.message}
         </p>
       ) : log.data.length === 0 ? (
-        <p className="text-sm text-stone-400">{t.notebook.noQuestions}</p>
+        <p className="text-sm text-ink-3">{t.notebook.noQuestions}</p>
       ) : (
         <ol className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
           {log.data.map((q) => (
             <li key={q.createdAt + q.question} className="flex items-start gap-2">
-              <span className="w-8 shrink-0 text-right text-stone-500">{q.turnNo ?? '–'}</span>
+              <span className="w-8 shrink-0 text-right text-ink-3">{q.turnNo ?? '–'}</span>
               <VerdictBadge label={q.label} />
               <span className="flex-1">
                 {q.question}
                 {q.retryReason && (
-                  <span className="block text-xs text-sky-300">
+                  <span className="block text-xs text-info">
                     {RETRY_REASON_TEXT[q.retryReason]}
                   </span>
                 )}
@@ -174,7 +174,7 @@ function Memo({ session }: { session: SessionState }) {
         save.mutate(memo);
       }}
     >
-      <label htmlFor="memo" className="text-sm text-stone-300">
+      <label htmlFor="memo" className="text-sm text-ink-2">
         {t.notebook.memoLabel}
       </label>
       <textarea
@@ -183,23 +183,23 @@ function Memo({ session }: { session: SessionState }) {
         maxLength={MEMO_MAX_LENGTH}
         onChange={(e) => setMemo(e.target.value)}
         rows={8}
-        className="rounded border border-stone-600 bg-stone-950 p-2 text-sm"
+        className="field text-sm"
       />
-      <div className="flex items-center justify-between text-xs text-stone-400">
+      <div className="flex items-center justify-between text-xs text-ink-3">
         <span>{t.notebook.memoPrivacy}</span>
         <span>
           {save.isSuccess && memo === save.variables && t.notebook.memoSaved}{' '}
           <button
             type="submit"
             disabled={save.isPending}
-            className="ml-2 rounded bg-stone-700 px-3 py-1 text-stone-100 hover:bg-stone-600"
+            className="btn btn-secondary ml-2 px-3 py-1"
           >
             {t.notebook.memoSave}
           </button>
         </span>
       </div>
       {save.error && (
-        <p role="alert" className="text-sm text-red-300">
+        <p role="alert" className="text-sm text-bad">
           {save.error.message}
         </p>
       )}
@@ -212,17 +212,17 @@ function Memo({ session }: { session: SessionState }) {
 function ClueList({ session }: { session: SessionState }) {
   const sessionId = session.sessionId;
   const explore = useExploreState(sessionId);
-  if (explore.isPending) return <p className="text-sm text-stone-400">{t.common.loading}</p>;
+  if (explore.isPending) return <p className="text-sm text-ink-3">{t.common.loading}</p>;
   const clues = explore.data?.clues ?? [];
   const hints = session.hints.filter((h) => h.viewed);
   if (!clues.length && !hints.length)
-    return <p className="text-sm text-stone-400">{t.notebook.noClues}</p>;
+    return <p className="text-sm text-ink-3">{t.notebook.noClues}</p>;
   return (
     <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
       {hints.map((h) => (
-        <li key={`hint-${h.no}`} className="rounded bg-stone-900 p-2">
-          <p className="font-semibold text-amber-100">
-            <span className="mr-2 rounded bg-amber-900/60 px-1.5 py-0.5 text-xs text-amber-100">
+        <li key={`hint-${h.no}`} className="border-b border-dashed border-line pb-2">
+          <p className="font-semibold text-ink">
+            <span className="mr-2 rounded bg-warn-bg px-1.5 py-0.5 text-xs text-ink">
               {t.notebook.hintTag}
             </span>
             {t.hints.label(h.no)}
@@ -235,20 +235,20 @@ function ClueList({ session }: { session: SessionState }) {
                 label={t.hints.label(h.no)}
               />
             ) : (
-              <p className="text-stone-300">{h.text}</p>
+              <p className="text-ink-2">{h.text}</p>
             )}
           </div>
         </li>
       ))}
       {clues.map((c) => (
-        <li key={c.key} className="rounded bg-stone-900 p-2">
-          <p className="font-semibold text-amber-100">
-            <span className="mr-2 rounded bg-stone-700 px-1.5 py-0.5 text-xs text-stone-200">
+        <li key={c.key} className="border-b border-dashed border-line pb-2">
+          <p className="font-semibold text-ink">
+            <span className="mr-2 rounded bg-paper-3 px-1.5 py-0.5 text-xs text-ink-2">
               {t.notebook.clueKind[c.kind]}
             </span>
             {c.title}
           </p>
-          <p className="mt-1 text-stone-300">{c.content}</p>
+          <p className="mt-1 text-ink-2">{c.content}</p>
           {c.image && (
             <div className="mt-2">
               <CaseImage src={clueImageUrl(sessionId, c.key)} alt={c.alt ?? ''} label={c.title} />

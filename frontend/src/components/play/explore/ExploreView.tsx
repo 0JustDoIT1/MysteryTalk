@@ -236,7 +236,7 @@ export function ExploreView({ session }: { session: SessionState }) {
 
   if (explore.error)
     return (
-      <p className="text-sm text-stone-400">
+      <p className="text-sm text-ink-3">
         {explore.error instanceof ApiError && explore.error.code === 'NOT_FOUND'
           ? t.explore.unavailable
           : explore.error.message}
@@ -247,7 +247,7 @@ export function ExploreView({ session }: { session: SessionState }) {
 
   return (
     <section aria-labelledby="explore-heading" className="flex flex-col gap-2">
-      <h2 id="explore-heading" className="font-semibold text-amber-100">
+      <h2 id="explore-heading" className="tag">
         {t.explore.heading}
       </h2>
       <div
@@ -259,16 +259,16 @@ export function ExploreView({ session }: { session: SessionState }) {
         onKeyDown={onKeyDown}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className={`relative w-full max-w-3xl overflow-hidden rounded border-2 ${focused ? 'border-amber-300' : 'border-stone-700'}`}
+        className={`photo relative w-full max-w-3xl ${focused ? 'outline-2 outline-offset-2 outline-gold' : ''}`}
       >
         <div
           ref={canvasRef}
           data-testid="explore-canvas"
           // 고정 16:9 캔버스를 칸 너비에 맞춰 늘린다(맵을 옮겨도 화면 크기가 그대로)
-          className="aspect-[16/9] [&_canvas]:!h-full [&_canvas]:!w-full"
+          className="aspect-[16/9] overflow-hidden bg-desk [&_canvas]:!h-full [&_canvas]:!w-full"
         />
         {!focused && (
-          <p className="pointer-events-none absolute inset-x-0 bottom-1 text-center text-xs text-stone-200/80">
+          <p className="pointer-events-none absolute inset-x-0 bottom-3 mx-auto w-fit rounded-sm bg-black/60 px-2 py-0.5 text-center text-xs text-cream">
             {t.explore.focusHint}
           </p>
         )}
@@ -293,7 +293,7 @@ export function ExploreView({ session }: { session: SessionState }) {
                 type="button"
                 aria-label={t.explore[dir]}
                 {...holdProps(dir)}
-                className={`${pos} h-12 w-12 touch-none rounded bg-stone-700 text-lg text-stone-100 active:bg-stone-500`}
+                className={`${pos} h-12 w-12 touch-none rounded-sm border border-line-strong bg-paper-2 text-lg text-ink active:bg-paper-3`}
               >
                 {icon}
               </button>
@@ -302,19 +302,19 @@ export function ExploreView({ session }: { session: SessionState }) {
           <button
             type="button"
             onClick={interact}
-            className="h-14 w-20 rounded-full bg-amber-300 font-semibold text-stone-900 active:bg-amber-200"
+            className="h-14 w-20 rounded-full bg-accent font-semibold text-cream active:bg-accent-hover"
           >
             {t.explore.interact}
           </button>
         </div>
       )}
-      <p id="explore-help" className="text-xs text-stone-400">
+      <p id="explore-help" className="text-xs text-ink-3">
         {t.explore.help}
       </p>
-      <p aria-live="polite" className="text-sm text-stone-300">
+      <p aria-live="polite" className="text-sm text-ink-2">
         {map && <span>{t.explore.here(map.name)}</span>}
         {target && (
-          <span className="ml-3 text-amber-200">
+          <span className="ml-3 text-ink">
             {target.kind === 'NPC' ? t.explore.talk(target.name) : t.explore.near(target.name)}
           </span>
         )}
@@ -331,21 +331,24 @@ export function ExploreView({ session }: { session: SessionState }) {
       >
         {result && (
           <div className="flex flex-col gap-3">
-            <h2 id="inspect-heading" className="text-lg font-semibold text-amber-200">
+            <h2
+              id="inspect-heading"
+              className="border-b-2 border-ink/70 pb-2 text-xl font-bold text-ink"
+            >
               {result.name}
             </h2>
-            {result.description && <p className="text-stone-200">{result.description}</p>}
+            {result.description && <p className="text-ink-2">{result.description}</p>}
             {result.lines?.map((line) => (
-              <p key={line} className="text-stone-200">
+              <p key={line} className="text-ink-2">
                 “{line}”
               </p>
             ))}
             {result.clue && result.newClue && (
-              <div className="rounded border border-emerald-500/50 bg-emerald-950/50 p-3 text-sm">
-                <p className="font-semibold text-emerald-200">
+              <div className="rounded-sm border border-ok/40 bg-ok-bg p-3 text-sm">
+                <p className="font-semibold text-ok">
                   {t.explore.clueFound}: {result.clue.title}
                 </p>
-                <p className="text-emerald-50">{result.clue.content}</p>
+                <p className="text-ok">{result.clue.content}</p>
                 {result.clue.image && (
                   <div className="mt-2">
                     <CaseImage
@@ -358,28 +361,21 @@ export function ExploreView({ session }: { session: SessionState }) {
               </div>
             )}
             {result.chainedClues.map((c) => (
-              <div
-                key={c.key}
-                className="rounded border border-emerald-500/30 bg-emerald-950/30 p-3 text-sm"
-              >
-                <p className="font-semibold text-emerald-200">
+              <div key={c.key} className="rounded-sm border border-ok/40 bg-ok-bg p-3 text-sm">
+                <p className="font-semibold text-ok">
                   {t.explore.chainedClue}: {c.title}
                 </p>
-                <p className="text-emerald-50">{c.content}</p>
+                <p className="text-ok">{c.content}</p>
               </div>
             ))}
             {result.clue && !result.newClue && (
-              <p className="text-sm text-stone-400">{t.explore.alreadyInspected}</p>
+              <p className="text-sm text-ink-3">{t.explore.alreadyInspected}</p>
             )}
             {!result.clue && result.kind === 'OBJECT' && (
-              <p className="text-sm text-stone-400">{t.explore.noClue}</p>
+              <p className="text-sm text-ink-3">{t.explore.noClue}</p>
             )}
             <form method="dialog" className="flex justify-end">
-              <button
-                type="submit"
-                autoFocus
-                className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900"
-              >
+              <button type="submit" autoFocus className="btn btn-primary">
                 {t.common.close}
               </button>
             </form>

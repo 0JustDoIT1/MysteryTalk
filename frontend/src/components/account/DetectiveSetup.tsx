@@ -39,12 +39,15 @@ export function DetectiveSetup() {
         e.preventDefault();
         setDetectiveAsked();
       }}
-      className="m-auto w-[min(40rem,94vw)] rounded-lg border border-stone-600 bg-stone-900 p-6 text-stone-100 backdrop:bg-black/80"
+      className="paper m-auto w-[min(40rem,94vw)] p-6 backdrop:bg-black/80"
     >
-      <h2 id="detective-setup-heading" className="text-xl font-bold text-amber-200">
+      <h2
+        id="detective-setup-heading"
+        className="border-b-2 border-ink/70 pb-2 text-xl font-bold text-ink"
+      >
         {t.detective.setupTitle}
       </h2>
-      <p className="mt-2 text-sm text-stone-300">{t.detective.setupBody}</p>
+      <p className="mt-2 text-sm text-ink-2">{t.detective.setupBody}</p>
       <div className="mt-4">
         {show && me.data && (
           <DetectivePicker
@@ -55,11 +58,7 @@ export function DetectiveSetup() {
           />
         )}
       </div>
-      <button
-        type="button"
-        onClick={setDetectiveAsked}
-        className="mt-3 text-sm text-stone-400 underline hover:text-stone-200"
-      >
+      <button type="button" onClick={setDetectiveAsked} className="link mt-3 text-sm">
         {t.detective.skip}
       </button>
     </dialog>

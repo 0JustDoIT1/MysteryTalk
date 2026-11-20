@@ -24,7 +24,7 @@ export function CaseMeta({
   return (
     <ul aria-label={t.caseMeta.label} className="flex flex-wrap gap-1.5 text-xs">
       {items.map((item) => (
-        <li key={item} className="rounded bg-stone-800 px-2 py-0.5 text-stone-200">
+        <li key={item} className="chip">
           {item}
         </li>
       ))}

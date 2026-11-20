@@ -67,7 +67,7 @@ export function MicButton({
         disabled={disabled}
         aria-pressed={listening}
         aria-label={listening ? t.mic.stop : t.mic.start}
-        className={`h-full rounded px-3 py-2 ${listening ? 'animate-pulse bg-rose-400 text-stone-900' : 'bg-stone-700 text-stone-100 hover:bg-stone-600'} disabled:opacity-50`}
+        className={`h-full rounded px-3 py-2 ${listening ? 'animate-pulse bg-stamp text-cream' : 'border border-line-strong bg-paper-2 text-ink hover:bg-paper-3'} disabled:opacity-50`}
       >
         🎤
       </button>
@@ -75,15 +75,15 @@ export function MicButton({
         <div
           role="dialog"
           aria-label={t.mic.noticeTitle}
-          className="absolute right-0 bottom-full z-10 mb-2 w-72 rounded-lg border border-stone-600 bg-stone-900 p-3 text-sm shadow-lg"
+          className="paper absolute right-0 bottom-full z-10 mb-2 w-72 p-3 text-sm"
         >
-          <p className="font-semibold text-amber-200">{t.mic.noticeTitle}</p>
-          <p className="mt-1 text-stone-300">{t.mic.noticeBody}</p>
+          <p className="font-semibold text-ink">{t.mic.noticeTitle}</p>
+          <p className="mt-1 text-ink-2">{t.mic.noticeBody}</p>
           <div className="mt-3 flex justify-end gap-2">
             <button
               type="button"
               onClick={() => setNotice(false)}
-              className="rounded px-3 py-1 text-stone-300 hover:bg-stone-800"
+              className="btn btn-ghost px-3 py-1"
             >
               {t.common.cancel}
             </button>
@@ -94,7 +94,7 @@ export function MicButton({
                 setNotice(false);
                 listen();
               }}
-              className="rounded bg-amber-300 px-3 py-1 font-semibold text-stone-900"
+              className="btn btn-primary px-3 py-1"
             >
               {t.mic.noticeOk}
             </button>
@@ -102,7 +102,7 @@ export function MicButton({
         </div>
       )}
       {error && (
-        <p role="alert" className="absolute right-0 top-full mt-1 w-56 text-xs text-red-300">
+        <p role="alert" className="absolute right-0 top-full mt-1 w-56 text-xs text-bad">
           {error}
         </p>
       )}

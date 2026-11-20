@@ -69,38 +69,36 @@ export function QuestionPanel({ session }: { session: SessionState }) {
     <section aria-label={t.play.questionSection} className="flex flex-col gap-3">
       <div
         aria-live="polite"
-        className="min-h-16 rounded-lg border border-stone-700 bg-stone-900 p-4"
+        className="min-h-20 border border-line bg-paper-input bg-[repeating-linear-gradient(transparent_0_27px,rgb(156_131_92/0.18)_27px_28px)] p-4 shadow-inner"
       >
         {ask.isPending ? (
-          <p className="animate-pulse text-stone-300">{t.play.judging}</p>
+          <p className="animate-pulse text-ink-2">{t.play.judging}</p>
         ) : shown ? (
           <div className="flex flex-col gap-2">
-            <p className="text-sm text-stone-400">Q. {shown.question}</p>
+            <p className="font-serif text-ink">Q. {shown.question}</p>
             <div className="flex flex-wrap items-center gap-2">
               <VerdictBadge label={shown.response.label} size="lg" />
               {shown.response.retryReason && (
-                <span className="text-sm text-sky-200">
+                <span className="text-sm text-info">
                   {RETRY_REASON_TEXT[shown.response.retryReason]}
                 </span>
               )}
             </div>
             {shown.response.duplicate ? (
-              <p className="text-xs text-stone-400">{t.play.duplicate}</p>
+              <p className="text-xs text-ink-3">{t.play.duplicate}</p>
             ) : (
-              !shown.response.counted && (
-                <p className="text-xs text-stone-400">{t.play.notCounted}</p>
-              )
+              !shown.response.counted && <p className="text-xs text-ink-3">{t.play.notCounted}</p>
             )}
           </div>
         ) : null}
         {ask.error && !ask.isPending && (
-          <p role="alert" className="mt-2 text-sm text-red-300">
+          <p role="alert" className="mt-2 text-sm text-bad">
             {ask.error.message} {retryable && t.play.retryAvailable}
             {ask.error instanceof ApiError &&
               ask.error.code === 'DAILY_LIMIT_REACHED' &&
               me.data?.kind === 'GUEST' &&
               me.data.loginAvailable && (
-                <a href="/api/auth/google" className="ml-1 text-amber-200 underline">
+                <a href="/api/auth/google" className="link ml-1">
                   {t.play.limitLogin}
                 </a>
               )}
@@ -109,7 +107,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
       </div>
 
       {capReached ? (
-        <p className="text-sm text-amber-200">{t.play.capReached}</p>
+        <p className="paper-inset px-3 py-2 text-sm text-ink">{t.play.capReached}</p>
       ) : (
         <form
           className="flex flex-col gap-2"
@@ -118,7 +116,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
             send();
           }}
         >
-          <label htmlFor="question" className="text-sm text-stone-300">
+          <label htmlFor="question" className="text-sm font-semibold text-ink-2">
             {t.play.questionLabel}
           </label>
           <div className="flex gap-2">
@@ -134,7 +132,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
               disabled={disabled}
               placeholder={t.play.questionPlaceholder}
               autoComplete="off"
-              className="min-w-0 flex-1 rounded border border-stone-600 bg-stone-950 px-3 py-2 text-stone-100 disabled:opacity-60"
+              className="field min-w-0 flex-1 disabled:opacity-60"
             />
             <MicButton
               disabled={disabled}
@@ -143,12 +141,12 @@ export function QuestionPanel({ session }: { session: SessionState }) {
             <button
               type="submit"
               disabled={disabled || !text.trim()}
-              className="whitespace-nowrap rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 hover:bg-amber-200 disabled:opacity-50"
+              className="btn btn-primary whitespace-nowrap"
             >
               {retryable ? t.common.retry : t.play.ask}
             </button>
           </div>
-          <p className="flex justify-between gap-2 text-xs text-stone-500">
+          <p className="flex justify-between gap-2 text-xs text-ink-3">
             <span>{t.play.negationTip}</span>
             <span>{t.play.lengthHint(text.trim().length, QUESTION_MAX_LENGTH)}</span>
           </p>

@@ -38,7 +38,7 @@ export function Modal({
       ref={ref}
       aria-labelledby={labelledBy}
       onClose={onClose}
-      className="m-auto w-[min(36rem,92vw)] rounded-lg border border-stone-600 bg-stone-900 p-5 text-stone-100 backdrop:bg-black/70"
+      className="paper m-auto w-[min(36rem,92vw)] p-5 backdrop:bg-black/70 sm:p-6"
     >
       {children}
     </dialog>
@@ -96,10 +96,13 @@ export function SubmitDialog({
           send();
         }}
       >
-        <h2 id="submit-heading" className="text-lg font-semibold text-amber-200">
+        <h2
+          id="submit-heading"
+          className="border-b-2 border-ink/70 pb-2 text-xl font-bold text-ink"
+        >
           {t.submit.heading}
         </h2>
-        <label htmlFor="answer" className="text-sm text-stone-300">
+        <label htmlFor="answer" className="text-sm text-ink-2">
           {t.submit.label}
         </label>
         <textarea
@@ -110,45 +113,37 @@ export function SubmitDialog({
           rows={6}
           disabled={submit.isPending}
           placeholder={t.submit.placeholder}
-          className="rounded border border-stone-600 bg-stone-950 p-2"
+          className="field"
         />
-        <p className="flex justify-between text-xs text-stone-400">
+        <p className="flex justify-between text-xs text-ink-3">
           <span>{t.submit.confirmNote(session.submissionsLeft)}</span>
           <span>{t.play.lengthHint(length, ANSWER_MAX_LENGTH)}</span>
         </p>
         <div aria-live="polite" className="text-sm">
-          {submit.isPending && <p className="animate-pulse text-stone-300">{t.submit.grading}</p>}
+          {submit.isPending && <p className="animate-pulse text-ink-2">{t.submit.grading}</p>}
           {result?.result === 'WRONG' && result.totalCount !== null && (
-            <p className="text-rose-200">
+            <p className="text-bad">
               {t.submit.wrong(result.matchedCount ?? 0, result.totalCount)}{' '}
               {t.play.submissionsLeft(result.submissionsLeft)}
             </p>
           )}
           {result?.result === 'NEEDS_DETAIL' && (
-            <p className="text-sky-200">
+            <p className="text-info">
               {result.detailReason === 'FORM' ? t.submit.needsForm : t.submit.needsDetail}
             </p>
           )}
-          {result?.result === 'SOLVED' && <p className="text-emerald-200">{t.submit.solved}</p>}
+          {result?.result === 'SOLVED' && <p className="text-ok">{t.submit.solved}</p>}
           {submit.error && (
-            <p role="alert" className="text-red-300">
+            <p role="alert" className="text-bad">
               {submit.error.message}
             </p>
           )}
         </div>
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded px-4 py-2 text-stone-300 hover:bg-stone-800"
-          >
+          <button type="button" onClick={onClose} className="btn btn-ghost">
             {t.common.cancel}
           </button>
-          <button
-            type="submit"
-            disabled={!valid || submit.isPending}
-            className="rounded bg-amber-300 px-4 py-2 font-semibold text-stone-900 hover:bg-amber-200 disabled:opacity-50"
-          >
+          <button type="submit" disabled={!valid || submit.isPending} className="btn btn-primary">
             {submit.error && isRetryable(submit.error) ? t.common.retry : t.submit.confirm}
           </button>
         </div>
@@ -172,21 +167,20 @@ export function AbandonDialog({
   return (
     <Modal open={open} onClose={onClose} labelledBy="abandon-heading">
       <div className="flex flex-col gap-3">
-        <h2 id="abandon-heading" className="text-lg font-semibold text-rose-200">
+        <h2
+          id="abandon-heading"
+          className="border-b-2 border-bad/70 pb-2 text-xl font-bold text-bad"
+        >
           {t.abandon.heading}
         </h2>
-        <p className="text-sm text-stone-300">{t.abandon.body}</p>
+        <p className="text-sm text-ink-2">{t.abandon.body}</p>
         {abandon.error && (
-          <p role="alert" className="text-sm text-red-300">
+          <p role="alert" className="text-sm text-bad">
             {abandon.error.message}
           </p>
         )}
         <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded px-4 py-2 text-stone-300 hover:bg-stone-800"
-          >
+          <button type="button" onClick={onClose} className="btn btn-ghost">
             {t.common.cancel}
           </button>
           <button
@@ -197,7 +191,7 @@ export function AbandonDialog({
                 onSuccess: () => router.push(`/play/${sessionId}/ending`),
               })
             }
-            className="rounded bg-rose-400 px-4 py-2 font-semibold text-stone-900 hover:bg-rose-300 disabled:opacity-50"
+            className="btn btn-danger"
           >
             {t.abandon.confirm}
           </button>
