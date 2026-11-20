@@ -81,22 +81,18 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
     await app.close();
   });
 
-  describe('힌트 (SPEC §9.1, PRD D15·D17)', () => {
-    it('질문 수가 해금 시점(⌈B/3⌉)에 닿기 전에는 열 수 없다', async () => {
+  describe('힌트 (SPEC §9.1, PRD D15, 2026-11-20 언제든 열람)', () => {
+    it('질문을 하지 않아도 첫 힌트를 바로 열 수 있다', async () => {
       const cookie = await newPlayer();
       const id = await start(cookie);
-      await askMany(cookie, id, 6);
-      expect((await hint(cookie, id, 1).expect(409)).body.code).toBe('HINT_LOCKED');
-      await askMany(cookie, id, 1, 6);
       const res = await hint(cookie, id, 1).expect(200);
-      expect(res.body).toMatchObject({ no: 1, unlockAt: 7, unlocked: true, viewed: true });
+      expect(res.body).toMatchObject({ no: 1, unlocked: true, viewed: true });
       expect(res.body.text).toContain('정전');
     });
 
     it('순서대로만 열 수 있고, 같은 힌트를 다시 열어도 감점은 1회', async () => {
       const cookie = await newPlayer();
       const id = await start(cookie);
-      await askMany(cookie, id, 14);
       expect((await hint(cookie, id, 2).expect(409)).body.code).toBe('HINT_LOCKED');
       await hint(cookie, id, 1).expect(200);
       await Promise.all([hint(cookie, id, 1), hint(cookie, id, 1)]);
@@ -105,7 +101,7 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
       const s = await state(cookie, id);
       expect(s.hints.map((h: { viewed: boolean }) => h.viewed)).toEqual([true, true, false]);
       // 열지 않은 힌트 본문은 응답에 없다
-      expect(s.hints[2]).toMatchObject({ unlocked: false, text: null });
+      expect(s.hints[2]).toMatchObject({ viewed: false, text: null });
     });
 
     it('없는 힌트 번호는 422, 남의 세션은 404', async () => {

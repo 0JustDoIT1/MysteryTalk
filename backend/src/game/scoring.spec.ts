@@ -1,4 +1,4 @@
-import { computeScore, hintUnlockAt, isBetter, solvedGrade } from './scoring.js';
+import { computeScore, isBetter, solvedGrade } from './scoring.js';
 
 const base = { baseQuestions: 20, questionsUsed: 20, hintsViewed: 0, wrongSubmissions: 0 };
 
@@ -64,16 +64,5 @@ describe('등급 (PRD §8.1)', () => {
     expect(isBetter({ grade: 'S', score: 92 }, { grade: 'S', score: 92 })).toBe(false);
     expect(isBetter({ grade: 'D', score: null }, { grade: 'F', score: null })).toBe(true);
     expect(isBetter({ grade: 'F', score: null }, { grade: 'C', score: 10 })).toBe(false);
-  });
-});
-
-describe('힌트 해금 시점 (SPEC §9.1)', () => {
-  it.each([
-    [15, [5, 10, 15]],
-    [20, [7, 14, 20]],
-    [30, [10, 20, 30]],
-    [40, [14, 27, 40]],
-  ])('B=%i → ⌈B/3⌉, ⌈2B/3⌉, B = %j', (b, expected) => {
-    expect(hintUnlockAt(b)).toEqual(expected);
   });
 });

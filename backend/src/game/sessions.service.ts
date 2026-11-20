@@ -16,7 +16,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { loadAsset, loadVersion, questionCap, type CaseVersionData } from './case-data.js';
 import { finishSession } from './finish.js';
 import { unlockZones } from './zones.js';
-import { computeScore, hintUnlockAt, SCORE_RULES } from './scoring.js';
+import { computeScore, SCORE_RULES } from './scoring.js';
 
 const uuid = z.uuid();
 const matchedSchema = z.array(z.object({ id: z.string(), agreement: z.string() }));
@@ -74,7 +74,7 @@ export class SessionsService {
       questionCap: questionCap(s.case.baseQuestions),
       wrongSubmissions: s.wrongSubmissions,
       submissionsLeft: MAX_SUBMISSIONS - s.wrongSubmissions,
-      hints: this.hintStates(data, s.case.baseQuestions, s.questionsUsed, viewed),
+      hints: this.hintStates(data, viewed),
       memo: s.memo,
     };
   }
@@ -104,7 +104,7 @@ export class SessionsService {
   }
 
   /**
-   * 힌트 열람(SPEC §9.1, PRD D15). 해금된 힌트만, 순서대로만 열 수 있다.
+   * 힌트 열람(SPEC §9.1, PRD D15). 질문 수와 상관없이 언제든 열 수 있지만 순서대로만 연다(2026-11-20, D17 변경).
    * 이미 연 힌트를 다시 요청하면 같은 내용을 돌려준다(PK로 이중 감점 없음 → 자연 멱등).
    */
   async viewHint(player: Player, sessionId: string, no: number): Promise<ViewHintResponse> {
@@ -112,12 +112,12 @@ export class SessionsService {
     if (s.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
     const data = await loadVersion(this.prisma, s.case.id, s.case.currentVersion);
     const viewed = await this.viewedHints(s.id);
-    const hints = this.hintStates(data, s.case.baseQuestions, s.questionsUsed, viewed);
+    const hints = this.hintStates(data, viewed);
     const target = hints.find((h) => h.no === no);
     if (!target) throw new AppException(404, 'NOT_FOUND');
     if (target.viewed) return { ...target, unlockedMaps: [] };
     const previousViewed = hints.filter((h) => h.no < no).every((h) => h.viewed);
-    if (!target.unlocked || !previousViewed) throw new AppException(409, 'HINT_LOCKED');
+    if (!previousViewed) throw new AppException(409, 'HINT_LOCKED');
     const unlockedMaps = await this.prisma.$transaction(async (tx) => {
       const inserted = await tx.hintView.createMany({
         data: [{ sessionId: s.id, hintNo: no }],
@@ -243,20 +243,15 @@ export class SessionsService {
     return new Set(rows.map((r) => r.hintNo));
   }
 
-  private hintStates(
-    data: CaseVersionData,
-    baseQuestions: number,
-    questionsUsed: number,
-    viewed: Set<number>,
-  ): HintState[] {
-    const unlockAt = hintUnlockAt(baseQuestions);
+  private hintStates(data: CaseVersionData, viewed: Set<number>): HintState[] {
+    // 힌트는 언제든 열 수 있다(2026-11-20). unlockAt·unlocked 는 응답 형식 호환을 위해 0·true 로 둔다
     return [...data.hints]
       .sort((a, b) => a.no - b.no)
       .map((h) => ({
         no: h.no,
-        unlockAt: unlockAt[h.no - 1]!,
+        unlockAt: 0,
         penalty: SCORE_RULES.hintPenaltySteps[h.no - 1] ?? 0,
-        unlocked: questionsUsed >= unlockAt[h.no - 1]!,
+        unlocked: true,
         viewed: viewed.has(h.no),
         ...(viewed.has(h.no) ? hintContent(h) : { text: null, image: 'image' in h, alt: null }),
       }));

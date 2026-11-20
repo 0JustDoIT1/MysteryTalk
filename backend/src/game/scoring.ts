@@ -13,11 +13,6 @@ export const SCORE_RULES = {
   gradeCuts: { S: 90, A: 80, B: 70 },
 } as const;
 
-/** 힌트 해금 시점: ⌈B/3⌉, ⌈2B/3⌉, B (SPEC §9.1, PRD D17) */
-export function hintUnlockAt(baseQuestions: number): [number, number, number] {
-  return [Math.ceil(baseQuestions / 3), Math.ceil((2 * baseQuestions) / 3), baseQuestions];
-}
-
 export type ScoreInput = {
   baseQuestions: number;
   questionsUsed: number;
