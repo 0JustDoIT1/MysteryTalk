@@ -82,7 +82,7 @@ export class SubmissionsService {
     });
     const final = detailRequestsUsed >= MAX_DETAIL_REQUESTS;
     const outcome = await this.grader.grade({
-      intro: session.case.intro,
+      intro: data.background ?? session.case.intro,
       facts: data.facts,
       elements: data.elements.map((e) => ({
         id: e.id,

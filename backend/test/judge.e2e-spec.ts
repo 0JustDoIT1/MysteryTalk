@@ -67,7 +67,17 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       expect(detail.body).toMatchObject({ caseNo: 0, maxQuestions: 45, elementCount: 2 });
       expect(detail.body).not.toHaveProperty('caseFile');
       const text = JSON.stringify([list.body, detail.body]);
-      for (const secret of ['facts', 'elements', 'hints', 'explanation', 'F01', '앞치마', '세탁']) {
+      for (const secret of [
+        'facts',
+        'elements',
+        'hints',
+        'explanation',
+        'F01',
+        '카드빚',
+        '띠지',
+        'background',
+        '빵 반죽을 시작한',
+      ]) {
         expect(text).not.toContain(secret);
       }
     });
@@ -94,7 +104,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const sessionId = await startSession(owner);
       const stranger = await newPlayer();
       await http().get(`/sessions/${sessionId}`).set('Cookie', stranger).expect(404);
-      expect((await ask(stranger, sessionId, '열쇠를 도둑맞았나요?')).status).toBe(404);
+      expect((await ask(stranger, sessionId, '외부인이 침입했나요?')).status).toBe(404);
       await http().get('/sessions/not-a-uuid').set('Cookie', owner).expect(404);
     });
   });
@@ -103,9 +113,9 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
     it('부정 사실이 근거인 재확인과 어긋나면 판정을 바꾸고, 재확인 호출도 기록한다', async () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);
-      const q = '열쇠는 도난당하지 않았나요?';
+      const q = '외부인은 침입하지 않았나요?';
       judge.set(q, { label: 'NO', retryReason: null, factIds: ['F01'] });
-      judge.setPositive(q, 'FALSE', ['F01']); // F01(NEGATIVE): 열쇠는 도난당하지 않았다
+      judge.setPositive(q, 'FALSE', ['F01']); // F01(NEGATIVE): 외부에서 가게에 침입한 사람은 없다
       const res = await ask(cookie, id, q).expect(200);
       expect(res.body).toMatchObject({ label: 'YES', counted: true });
       expect(await prisma.aiCall.count({ where: { purpose: 'JUDGE' } })).toBe(2);
@@ -115,21 +125,27 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
     it('재확인 근거가 일반 사실뿐이면 첫 판정을 유지하고, 부정형이 아니면 재확인하지 않는다', async () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);
-      judge.set('열쇠는 세탁소에 없나요?', { label: 'NO', retryReason: null, factIds: ['F13'] });
-      judge.setPositive('열쇠는 세탁소에 없나요?', 'FALSE', ['F13']); // F13 은 FACT
-      expect((await ask(cookie, id, '열쇠는 세탁소에 없나요?').expect(200)).body.label).toBe('NO');
-      judge.set('열쇠는 세탁소에 있나요?', { label: 'YES', retryReason: null, factIds: ['F13'] });
-      await ask(cookie, id, '열쇠는 세탁소에 있나요?').expect(200);
-      expect(judge.positiveChecked).toEqual(['열쇠는 세탁소에 없나요?']);
+      judge.set('제빵사가 금고를 열지 않았나요?', {
+        label: 'NO',
+        retryReason: null,
+        factIds: ['F13'],
+      });
+      judge.setPositive('제빵사가 금고를 열지 않았나요?', 'FALSE', ['F13']); // F13 은 FACT
+      expect((await ask(cookie, id, '제빵사가 금고를 열지 않았나요?').expect(200)).body.label).toBe(
+        'NO',
+      );
+      judge.set('제빵사가 금고를 열었나요?', { label: 'YES', retryReason: null, factIds: ['F13'] });
+      await ask(cookie, id, '제빵사가 금고를 열었나요?').expect(200);
+      expect(judge.positiveChecked).toEqual(['제빵사가 금고를 열지 않았나요?']);
     });
   });
 
   describe('판정과 차감 (PRD D1, D5, D68)', () => {
     it('예·아니오·그럴 수도·관계없음은 차감하고 순번을 매긴다', async () => {
       judge
-        .set('열쇠는 세탁소에 있나요?', { label: 'YES', retryReason: null, factIds: ['F13'] })
-        .set('열쇠를 도둑맞았나요?', { label: 'NO', retryReason: null, factIds: ['F01'] })
-        .set('배달 기사가 열쇠를 가져갔나요?', {
+        .set('제빵사가 금고를 열었나요?', { label: 'YES', retryReason: null, factIds: ['F13'] })
+        .set('외부인이 침입했나요?', { label: 'NO', retryReason: null, factIds: ['F01'] })
+        .set('뒷문으로 누구나 들어올 수 있었나요?', {
           label: 'MAYBE',
           retryReason: null,
           factIds: ['F14'],
@@ -137,7 +153,13 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);
 
-      const r1 = await ask(cookie, id, '열쇠는 세탁소에 있나요?').expect(200);
+      const r1 = await ask(cookie, id, '제빵사가 금고를 열었나요?').expect(200);
+      // AI에는 화면용 짧은 개요가 아니라 상세 개요(background)를 준다(2026-11-20)
+      const sent = judge.received.at(-1)!;
+      expect(sent.intro).toContain('빵 반죽을 시작한');
+      expect(sent.intro).not.toBe(
+        '개점 30분 전, 동네 빵집 사장이 금고를 열자 어제 매출이 든 봉투가 텅 비어 있었다. 뒷문은 열려 있었지만 금고 열쇠는 카운터 서랍 제자리에 그대로였다. 사건의 전말은?',
+      );
       expect(r1.body).toEqual({
         label: 'YES',
         retryReason: null,
@@ -149,11 +171,11 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
         questionCap: 45,
         unlockedMaps: [],
       });
-      expect((await ask(cookie, id, '열쇠를 도둑맞았나요?')).body).toMatchObject({
+      expect((await ask(cookie, id, '외부인이 침입했나요?')).body).toMatchObject({
         label: 'NO',
         turnNo: 2,
       });
-      expect((await ask(cookie, id, '배달 기사가 열쇠를 가져갔나요?')).body).toMatchObject({
+      expect((await ask(cookie, id, '뒷문으로 누구나 들어올 수 있었나요?')).body).toMatchObject({
         label: 'MAYBE',
         turnNo: 3,
       });
@@ -167,10 +189,10 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
     });
 
     it("'다시 질문'은 미차감·순번 없음으로 기록되고, 기록 탭에 함께 보인다", async () => {
-      judge.set('열쇠는 어디에 있나요?', { label: 'RETRY', retryReason: 'OPEN', factIds: [] });
+      judge.set('돈은 어디에 있나요?', { label: 'RETRY', retryReason: 'OPEN', factIds: [] });
       const cookie = await newPlayer();
       const id = await startSession(cookie);
-      const r = await ask(cookie, id, '열쇠는 어디에 있나요?').expect(200);
+      const r = await ask(cookie, id, '돈은 어디에 있나요?').expect(200);
       expect(r.body).toMatchObject({
         label: 'RETRY',
         retryReason: 'OPEN',
@@ -208,11 +230,11 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
     });
 
     it('같은 문장(공백·문장부호만 다름)은 이전 판정을 재표시하고 미차감, AI 재호출 없음', async () => {
-      judge.set('열쇠는 세탁소에 있나요?', { label: 'YES', retryReason: null, factIds: ['F13'] });
+      judge.set('제빵사가 금고를 열었나요?', { label: 'YES', retryReason: null, factIds: ['F13'] });
       const cookie = await newPlayer();
       const id = await startSession(cookie);
-      await ask(cookie, id, '열쇠는 세탁소에 있나요?').expect(200);
-      const again = await ask(cookie, id, ' 열쇠는  세탁소에 있나요!! ').expect(200);
+      await ask(cookie, id, '제빵사가 금고를 열었나요?').expect(200);
+      const again = await ask(cookie, id, ' 제빵사가  금고를 열었나요!! ').expect(200);
       expect(again.body).toMatchObject({
         label: 'YES',
         duplicate: true,
@@ -243,10 +265,10 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const noKey = await http()
         .post(`/sessions/${id}/questions`)
         .set('Cookie', cookie)
-        .send({ question: '열쇠를 도둑맞았나요?' })
+        .send({ question: '외부인이 침입했나요?' })
         .expect(400);
       expect(noKey.body.code).toBe('IDEMPOTENCY_KEY_REQUIRED');
-      expect((await ask(cookie, id, '열쇠를 도둑맞았나요?', 'abc')).status).toBe(422);
+      expect((await ask(cookie, id, '외부인이 침입했나요?', 'abc')).status).toBe(422);
     });
 
     it('길이 경계(1·2·100·101자)와 형식 오류는 422, 미차감', async () => {
@@ -283,19 +305,19 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
 
   describe('실패·동시성 (SPEC §6-8·10·11)', () => {
     it('AI 실패는 503·미차감·기록 없음, 같은 키로 재시도하면 한 번만 처리된다', async () => {
-      judge.set('열쇠를 도둑맞았나요?', 'fail');
+      judge.set('외부인이 침입했나요?', 'fail');
       const cookie = await newPlayer();
       const id = await startSession(cookie);
       const key = randomUUID();
-      const failed = await ask(cookie, id, '열쇠를 도둑맞았나요?', key).expect(503);
+      const failed = await ask(cookie, id, '외부인이 침입했나요?', key).expect(503);
       expect(failed.body.code).toBe('AI_UNAVAILABLE');
       expect(await prisma.questionLog.count()).toBe(0);
       const session = await prisma.playSession.findUniqueOrThrow({ where: { id } });
       expect(session).toMatchObject({ questionsUsed: 0, inFlightKey: null });
       expect(await prisma.aiCall.count()).toBe(1);
 
-      judge.set('열쇠를 도둑맞았나요?', { label: 'NO', retryReason: null, factIds: ['F01'] });
-      const ok = await ask(cookie, id, '열쇠를 도둑맞았나요?', key).expect(200);
+      judge.set('외부인이 침입했나요?', { label: 'NO', retryReason: null, factIds: ['F01'] });
+      const ok = await ask(cookie, id, '외부인이 침입했나요?', key).expect(200);
       expect(ok.body).toMatchObject({ label: 'NO', questionsUsed: 1 });
     });
 
@@ -339,7 +361,7 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);
       await prisma.playSession.update({ where: { id }, data: { status: 'SOLVED' } });
-      expect((await ask(cookie, id, '열쇠를 도둑맞았나요?')).body.code).toBe('SESSION_FINISHED');
+      expect((await ask(cookie, id, '외부인이 침입했나요?')).body.code).toBe('SESSION_FINISHED');
     });
   });
 

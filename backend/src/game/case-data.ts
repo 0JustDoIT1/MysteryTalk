@@ -14,6 +14,8 @@ const versionSchema = z.object({
   facts: z.array(factSchema),
   elements: z.array(answerElementSchema),
   hints: z.array(hintSchema),
+  // AI용 상세 개요(없던 이전 버전은 null)
+  background: z.string().nullable(),
   // 현장 조사 데이터가 없던 이전 버전은 빈 객체 → null
   explore: z.union([
     exploreContentSchema,
@@ -33,7 +35,7 @@ export async function loadVersion(
 ): Promise<CaseVersionData> {
   const row = await prisma.caseVersion.findUnique({
     where: { caseId_version: { caseId, version } },
-    select: { facts: true, elements: true, hints: true, explore: true },
+    select: { facts: true, elements: true, hints: true, explore: true, background: true },
   });
   const parsed = versionSchema.safeParse(row);
   if (!parsed.success) throw new AppException(500, 'INTERNAL_ERROR');

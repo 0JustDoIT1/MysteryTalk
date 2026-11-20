@@ -73,7 +73,7 @@ async function runOnce(raw: string): Promise<Run> {
   if (answer === null)
     return { result: 'INVALID_INPUT', verdicts: null, latencyMs: 0, invalidCalls: 0, calls: 0 };
   const outcome = await grader.grade({
-    intro: content.intro,
+    intro: content.background ?? content.intro,
     facts: content.facts,
     elements: content.elements.map((e) => ({
       id: e.id,

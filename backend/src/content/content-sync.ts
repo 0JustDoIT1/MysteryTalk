@@ -35,6 +35,7 @@ export async function syncCase(prisma: PrismaClient, loaded: LoadedCase): Promis
     facts: c.facts,
     elements: c.elements,
     hints: c.hints,
+    background: c.background ?? null,
     explore: { maps: c.maps, spawn: c.spawn, objects: c.objects, npcs: c.npcs, clues: c.clues },
     contentHash: loaded.hash,
   };

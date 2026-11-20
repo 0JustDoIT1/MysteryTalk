@@ -89,8 +89,13 @@ export const caseContentSchema = z
     title: z.string().min(1).max(40),
     /** 사건 카드의 한 줄 요약 */
     summary: z.string().min(1).max(80),
-    /** 첫 진입 시 보여 주는 짧은 도입 이야기 */
+    /** 화면에 보여 주는 짧은 사건 개요(2~4문장, docs/cases/README.md §6) */
     intro: z.string().min(1).max(800),
+    /**
+     * AI 판정·채점에만 넣는 상세 개요(2026-11-20). 플레이어에게 보이지 않고 공개 API로 내보내지 않는다.
+     * 일시·발견 경위·처음 등장하는 인물 등 판정 맥락을 담는다. 없으면 intro를 쓴다.
+     */
+    background: z.string().min(1).max(1500).optional(),
     /** 사건 번호(PRD D98). 카드에 'CASE 01'로 표시한다. 튜토리얼은 0 */
     caseNo: z.number().int().min(0).max(999),
     /** 카드 대표 그림(PRD D98, 선택). images/의 파일 이름, 16:9. 없으면 화면이 장르 색 임시 그림을 그린다 */

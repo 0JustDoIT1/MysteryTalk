@@ -154,6 +154,8 @@ model CaseVersion {
   hints       Json     @map("hints_json")
   /// 현장 조사 데이터(맵·조사 대상·NPC·단서·시작 위치). 기존 버전은 빈 객체
   explore     Json     @default("{}") @map("explore_json")
+  /// AI 판정·채점에만 쓰는 상세 개요. 플레이어에게 보이지 않는다(없으면 화면용 intro를 쓴다)
+  background  String?
   contentHash String   @map("content_hash")
   publishedAt DateTime @default(now()) @map("published_at") @db.Timestamptz
 

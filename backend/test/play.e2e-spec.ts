@@ -340,7 +340,8 @@ describe('3단계 제출·채점·점수·힌트·엔딩 (e2e, SPEC §7·§8·§
     it('튜토리얼은 점수·등급을 보여 주되 개인 기록에는 남기지 않는다(PRD v1.3)', async () => {
       const cookie = await newPlayer();
       const id = await start(cookie, TUTORIAL);
-      const answer = '제빵사가 앞치마 주머니에 열쇠를 넣고 세탁 자루에 넣었다. 도난이 아니다.';
+      const answer =
+        '카드빚에 쫓긴 제빵사가 금고 돈을 훔치고 외부 침입처럼 보이려고 뒷문을 열어 두었다.';
       grader.set(answer, { A1: 'MATCH', A2: 'MATCH' });
       await submit(cookie, id, answer).expect(200);
       const ending = (await http().get(`/sessions/${id}/ending`).set('Cookie', cookie).expect(200))

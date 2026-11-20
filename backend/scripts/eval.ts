@@ -81,7 +81,11 @@ async function runOnce(raw: string): Promise<EvalRun> {
       tokensOut: null,
     };
   }
-  const input = { intro: loaded!.content.intro, facts: loaded!.content.facts, question };
+  const input = {
+    intro: loaded!.content.background ?? loaded!.content.intro,
+    facts: loaded!.content.facts,
+    question,
+  };
   const outcome = await judge.judge(input);
   // 서비스와 같은 순서: 복합 질문 오판 보정 → 부정형 질문 재확인(옵션 --no-negation 으로 끌 수 있음)
   const guard = outcome.ok ? await applyCompoundGuard(judge, input, outcome.result) : null;

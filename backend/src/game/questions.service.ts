@@ -117,7 +117,12 @@ export class QuestionsService {
     if (prefiltered !== null) {
       result = { label: 'RETRY', retryReason: prefiltered, factIds: [] };
     } else {
-      const judgeInput = { intro: session.case.intro, facts: data.facts, question };
+      // AI에는 상세 개요(없으면 화면용 개요)를 준다
+      const judgeInput = {
+        intro: data.background ?? session.case.intro,
+        facts: data.facts,
+        question,
+      };
       const outcome = await this.judge.judge(judgeInput);
       const costs = await this.limits.spend('JUDGE', outcome.calls);
       await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls, costs);
