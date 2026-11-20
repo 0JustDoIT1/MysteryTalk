@@ -468,10 +468,10 @@ test('약관: 설정에서 이용약관·개인정보처리방침을 새 탭으�
   await expect(terms.getByRole('heading', { name: '이용약관', level: 1 })).toBeVisible();
   await expect(terms.getByRole('note')).toContainText('법률 검토 전 초안');
   await expect(terms.getByRole('heading', { name: '제4조 이용 조건' })).toBeVisible();
-  await expect(terms.locator('mark', { hasText: '[운영자 성명]' }).first()).toBeVisible();
+  await expect(terms.locator('mark', { hasText: '[시행일]' }).first()).toBeVisible();
 
   await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: '개인정보처리방침', level: 1 })).toBeVisible();
   await expect(page.getByText(/이메일, 이름, 프로필 사진을 요청하지 않으며/)).toBeVisible();
-  await expect(page.locator('mark', { hasText: '[문의 이메일]' }).first()).toBeVisible();
+  await expect(page.locator('mark', { hasText: '[운영자 성명]' }).first()).toBeVisible();
 });
