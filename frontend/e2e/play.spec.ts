@@ -1,7 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
 
-/** 18세 확인과 '탐정 정하기' 창(D103)을 이미 거친 기기로 시작한다(두 창 자체는 별도 테스트). */
+/** 18세 확인·'탐정 정하기' 창(D103)·수사 안내 팝업을 이미 거친 기기로 시작한다(각 창은 별도 테스트). */
 const AGE_CONFIRMED = JSON.stringify({
+  state: { age: 'yes', ageAt: '2026-11-11T00:00:00.000Z', detectiveAsked: true, guideSeen: true },
+  version: 0,
+});
+/** 수사 안내 팝업을 아직 보지 않은 기기(안내 팝업 테스트용) */
+const GUIDE_UNSEEN = JSON.stringify({
   state: { age: 'yes', ageAt: '2026-11-11T00:00:00.000Z', detectiveAsked: true },
   version: 0,
 });
@@ -13,7 +18,11 @@ const AGE_ONLY = JSON.stringify({
 
 test.beforeEach(async ({ page }, info) => {
   if (info.title.startsWith('18세 확인')) return;
-  const device = info.title.startsWith('탐정 정하기') ? AGE_ONLY : AGE_CONFIRMED;
+  const device = info.title.startsWith('탐정 정하기')
+    ? AGE_ONLY
+    : info.title.startsWith('수사 안내')
+      ? GUIDE_UNSEEN
+      : AGE_CONFIRMED;
   // 페이지를 열 때마다 실행되므로, 이미 저장된 기기 설정(볼륨 등)은 덮어쓰지 않는다.
   await page.addInitScript((v) => {
     if (!window.localStorage.getItem('mt-device')) window.localStorage.setItem('mt-device', v);
@@ -30,8 +39,9 @@ async function ask(page: Page, question: string, expectedUsed: number) {
   const input = page.getByLabel('예/아니오로 답할 수 있는 질문');
   await input.fill(question);
   await input.press('Enter'); // 키보드만으로 질문(D66)
-  await expect(page.getByText(`Q. ${question}`)).toBeVisible();
-  await expect(page.getByText(new RegExp(`질문 ${expectedUsed} / 기준`))).toBeVisible();
+  // 판정 상자에 질문과 판정 도장이 나오고, 진행 막대의 사용한 질문 수가 늘어난다
+  await expect(page.locator('[aria-live="polite"]').filter({ hasText: question })).toBeVisible();
+  await expect(page.getByTestId('questions-used')).toHaveText(String(expectedUsed));
 }
 
 async function openCase(page: Page, title: string) {
@@ -59,21 +69,19 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(meta.getByText('정답 요소 3개')).toBeVisible();
   await expect(page.getByRole('heading', { name: '사건 개요' })).toBeVisible();
 
-  // 기준 질문 20개 → 힌트 1은 질문 7개째에 열린다(⌈20/3⌉).
   for (let i = 1; i <= 7; i += 1) await ask(page, `연습 질문 ${i}번인가요?`, i);
-  const verdict = page.locator('[aria-live="polite"]').filter({ hasText: 'Q. 연습 질문 7번' });
+  const verdict = page.locator('[aria-live="polite"]').filter({ hasText: '연습 질문 7번' });
   await expect(verdict.getByText('관계없음')).toBeVisible();
-  // 해금(자동, 감점 없음)과 보기(직접, 감점)를 구분해 안내한다(PRD D15)
-  await expect(
-    page
-      .getByRole('region', { name: /^알림/ })
-      .getByText('힌트 1을 볼 수 있어요. 보기 전에는 점수가 깎이지 않아요.'),
-  ).toBeVisible();
+  await expect(verdict.getByText('사건과 관계없습니다.')).toBeVisible();
 
+  // 힌트는 질문 수와 상관없이 언제든 열 수 있고(2026-11-20), 연 내용은 수첩 단서 탭에 쌓인다
   await page.getByRole('button', { name: '힌트 1 보기 (−10점)' }).click();
-  // 힌트 패널과 수첩 단서 탭(기본 탭) 양쪽에 보인다
-  await expect(page.getByText(/정전은 정말 건물 전체에/)).toHaveCount(2);
-  await expect(page.getByText('열람한 힌트 1개')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: /^알림/ }).getByText('힌트 1을 수첩에 적었어요.'),
+  ).toBeVisible();
+  await expect(page.getByText(/정전은 정말 건물 전체에/)).toHaveCount(1);
+  await expect(page.getByText('힌트 1/3')).toBeVisible();
+  await expect(page.getByRole('button', { name: '힌트 2 보기 (−15점)' })).toBeEnabled();
 
   // 수첩 탭·필터는 URL 상태. 탭은 방향키로도 바꾼다(D66)
   await page.getByRole('tab', { name: '단서' }).focus();
@@ -116,14 +124,11 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(page.getByText(/해결 · 최고 A · 1회차 달성 · 총 1회/)).toBeVisible();
 });
 
-test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수를 보여 준다(감점이 없으면 감점 줄 없음)', async ({
-  page,
-}) => {
+test('튜토리얼: 해결하면 엔딩에 점수를 보여 준다(감점이 없으면 감점 줄 없음)', async ({ page }) => {
   await openCase(page, '새벽 빵집의 빈 금고');
-  const guide = page.getByRole('complementary', { name: '튜토리얼 안내' });
-  await expect(guide.getByText(/1\/5/)).toBeVisible();
+  // 화면 위 안내 띠는 없다(안내는 처음 사건을 열 때 팝업으로)
+  await expect(page.getByRole('complementary', { name: '튜토리얼 안내' })).toHaveCount(0);
   await ask(page, '금고의 돈을 도둑맞았나요?', 1);
-  await expect(guide.getByText(/2\/5/)).toBeVisible();
 
   await submitAnswer(
     page,
@@ -158,7 +163,7 @@ test('질문 입력 경계: 같은 문장 재질문은 차감되지 않는다', 
   await input.fill('정전이 있었나요');
   await input.press('Enter');
   await expect(page.getByText('이미 한 질문이에요. 질문 수는 차감되지 않았어요.')).toBeVisible();
-  await expect(page.getByText(/질문 1 \/ 기준 20/)).toBeVisible();
+  await expect(page.getByTestId('questions-used')).toHaveText('1');
 });
 
 /** 맵에 포커스를 두고 같은 방향으로 n칸 걷는다(한 칸 간격 0.11초보다 길게 기다림). */
@@ -257,6 +262,29 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await expect(page.getByRole('tab', { name: '수사 자료' })).toHaveCount(0);
 });
 
+test('수사 안내: 처음 사건을 열면 단계 안내 팝업이 뜨고, 다시 열지 않으며 도움말로 다시 볼 수 있다', async ({
+  page,
+}) => {
+  await openCase(page, '302호의 정전');
+  const guide = page.getByRole('dialog', { name: /수사 안내/ });
+  await expect(guide).toBeVisible();
+  await expect(guide.getByRole('heading', { name: '수사 안내 · 질문하기' })).toBeVisible();
+  await expect(guide.getByRole('img', { name: '질문 입력창과 질문하기 버튼' })).toBeVisible();
+  for (let i = 0; i < 4; i += 1) await guide.getByRole('button', { name: '다음' }).click();
+  await expect(guide.getByRole('heading', { name: '수사 안내 · 정답 제출' })).toBeVisible();
+  await guide.getByRole('button', { name: '수사 시작하기' }).click();
+  await expect(guide).toBeHidden();
+
+  // 다시 들어와도 자동으로는 뜨지 않고, 도움말로 연다
+  await page.reload();
+  await expect(page.getByLabel('예/아니오로 답할 수 있는 질문')).toBeVisible();
+  await expect(guide).toBeHidden();
+  await page.getByRole('button', { name: '도움말' }).click();
+  await expect(guide).toBeVisible();
+  await guide.getByRole('button', { name: '건너뛰기' }).click();
+  await expect(guide).toBeHidden();
+});
+
 test('18세 확인: 처음 방문하면 묻고, 체크해야만 확인할 수 있으며, 확인하면 다시 묻지 않는다', async ({
   page,
 }) => {
@@ -338,7 +366,7 @@ test('로그인: 게스트로 시작한 사건을 로그인 후 이어서에서 
 
   await page.getByRole('link', { name: /이어서/ }).click();
   await page.getByRole('link', { name: /302호의 정전/ }).click();
-  await expect(page.getByText(/질문 1 \/ 기준 20/)).toBeVisible();
+  await expect(page.getByTestId('questions-used')).toHaveText('1');
 
   await page.goto('/');
   await page.getByRole('button', { name: '로그아웃' }).click();
@@ -425,7 +453,7 @@ test('마이크: 인식한 문장은 입력창에만 넣고 자동으로 보내�
   await expect(notice.getByText(/MysteryTalk 서버로 보내지 않아요/)).toBeVisible();
   await notice.getByRole('button', { name: '알겠어요' }).click();
   await expect(page.getByLabel('예/아니오로 답할 수 있는 질문')).toHaveValue('정전이 있었나요');
-  await expect(page.getByText(/질문 0 \/ 기준 20/)).toBeVisible();
+  await expect(page.getByTestId('questions-used')).toHaveText('0');
 });
 
 test('마이크: 음성 인식을 지원하지 않는 브라우저에서는 버튼을 숨긴다', async ({ page }) => {
@@ -473,7 +501,7 @@ test('공지: 메인 메뉴에서 공지 목록을 열고 최신 공지 본문�
   await page.getByRole('link', { name: '공지' }).click();
   await expect(page).toHaveURL(/\/notices$/);
   await expect(page.getByText('MysteryTalk 개발 중 안내')).toBeVisible();
-  await expect(page.getByText(/튜토리얼과 샘플 사건으로/)).toBeVisible();
+  await expect(page.getByText(/튜토리얼부터 시작해/)).toBeVisible();
 });
 
 test('약관: 설정에서 이용약관·개인정보처리방침을 새 탭으로 열고, 초안 안내와 채울 자리를 보여 준다', async ({

@@ -52,7 +52,7 @@ export function EndingView() {
   return (
     <article className="paper flex min-w-0 flex-col gap-6 p-5 sm:p-8">
       <header className="flex flex-col gap-1 border-b-2 border-ink/70 pb-3">
-        <p className="font-mono text-xs tracking-wider text-ink-3">
+        <p className="text-xs font-semibold text-ink-3">
           {e.title} · {t.ending.playNo(e.playNo)}
         </p>
         <h1 className="text-3xl font-bold text-ink">{t.ending.heading}</h1>

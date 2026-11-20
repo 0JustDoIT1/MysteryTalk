@@ -121,7 +121,14 @@ export const ko = {
     back: '목록으로',
     loadFailed: '불러오지 못했어요.',
   },
-  difficulty: { EASY: '쉬움', NORMAL: '보통', HARD: '어려움' },
+  difficulty: { EASY: '쉬움', NORMAL: '보통', HARD: '어려움', label: '난이도' },
+  verdict: {
+    YES: '네, 그렇습니다.',
+    NO: '아니요, 그렇지 않습니다.',
+    MAYBE: '그럴 수도 있습니다.',
+    IRRELEVANT: '사건과 관계없습니다.',
+    RETRY: '다시 질문해 주세요.',
+  },
   rating: { NORMAL: '수위 보통', STRONG: '수위 강함' },
   genre: { ALL: '전체', MYSTERY: '미스터리', HORROR: '공포', CRIME: '범죄' },
   cases: {
@@ -136,8 +143,7 @@ export const ko = {
     bestShort: (grade: string) => `최고 ${grade}`,
     open: '사건 보기',
     empty: '공개된 사건이 없어요.',
-    caseNo: (no: number) => `CASE ${String(no).padStart(2, '0')}`,
-    sample: '샘플',
+    caseNo: (no: number) => `사건 ${String(no).padStart(2, '0')}`,
   },
   /** 사건 정보 한 줄(PRD D99): 장르·난이도·기준/최대 질문 수·정답 요소 개수(D100) */
   caseMeta: {
@@ -156,7 +162,23 @@ export const ko = {
   play: {
     questionSection: '질문',
     questionLabel: '예/아니오로 답할 수 있는 질문',
-    questionPlaceholder: '예: 범인은 피해자와 아는 사이인가요?',
+    questionHeading: '질문하기',
+    starterTitle: '처음이라면 · 눌러서 바로 물어보세요',
+    // 첫 질문 전에 보여 주는 바로 묻기 버튼. 어느 사건에도 답을 흘리지 않는 일반 질문만 쓴다
+    starterQuestions: [
+      '사고가 아니라 누군가 일부러 한 일인가요?',
+      '누군가 거짓말을 하고 있나요?',
+      '돈과 관련이 있나요?',
+    ],
+    // 입력창 예시 질문. 질문할 때마다 다음 것으로 바뀐다. 어느 사건에도 답을 흘리지 않는 일반 질문만 쓴다
+    questionPlaceholders: [
+      '예: 범인은 피해자와 아는 사이인가요?',
+      '예: 사건은 밤에 일어났나요?',
+      '예: 피해자는 혼자 있었나요?',
+      '예: 사라진 물건이 있나요?',
+      '예: 누군가 거짓말을 하고 있나요?',
+      '예: 사고가 아니라 누군가 일부러 한 일인가요?',
+    ],
     ask: '질문하기',
     judging: '수사 중…',
     questions: (used: number, base: number) => `질문 ${used} / 기준 ${base}`,
@@ -166,7 +188,11 @@ export const ko = {
     retryAvailable: '같은 질문을 그대로 다시 보낼 수 있어요.',
     limitLogin: '로그인하면 하루에 더 많이 질문할 수 있어요.',
     negationTip: "부정형 질문('~아닌가요?')은 그 문장이 맞는지로 답해요.",
-    hintsViewed: (n: number) => `열람한 힌트 ${n}개`,
+    hintsViewed: (n: number, total: number) => `힌트 ${n}/${total}`,
+    toBase: (left: number, base: number) => `기준 ${base}문까지 ${left}문`,
+    overBase: (over: number, base: number) => `기준 ${base}문을 ${over}문 넘었어요`,
+    usedLabel: '사용한 질문',
+    statusLabel: '진행 상황',
     submissionsLeft: (n: number) => `남은 제출 기회 ${n}회`,
     lengthHint: (n: number, max: number) => `${n} / ${max}`,
     openNotebook: '수첩',
@@ -203,12 +229,10 @@ export const ko = {
   hints: {
     heading: '힌트',
     open: (no: number, penalty: number) => `힌트 ${no} 보기 (−${penalty}점)`,
-    locked: (no: number, left: number) => `힌트 ${no} · 질문 ${left}개 더 하면 볼 수 있어요`,
-    waiting: (no: number) => `힌트 ${no} · 앞 힌트를 먼저 봐 주세요`,
-    penaltyNote: '힌트는 질문을 하면 자동으로 볼 수 있게 되고, 직접 볼 때만 점수가 깎여요.',
+    allViewed: '힌트를 모두 봤어요',
     // 숫자 읽기에 맞춘 조사(일·삼 → 을, 이 → 를)
-    unlockedToast: (no: number) =>
-      `힌트 ${no}${[2, 4, 5, 9].includes(no % 10) ? '를' : '을'} 볼 수 있어요. 보기 전에는 점수가 깎이지 않아요.`,
+    viewedToast: (no: number) =>
+      `힌트 ${no}${[2, 4, 5, 9].includes(no % 10) ? '를' : '을'} 수첩에 적었어요.`,
     label: (no: number) => `힌트 ${no}`,
   },
   image: {
@@ -246,16 +270,41 @@ export const ko = {
     body: '포기하면 F가 기록되고 진상 해설이 공개돼요.',
     confirm: '포기하기',
   },
-  tutorial: {
+  guide: {
+    title: '수사 안내',
+    help: '도움말',
+    prev: '이전',
+    next: '다음',
+    start: '수사 시작하기',
+    skip: '건너뛰기',
+    stepOf: (i: number, n: number) => `${i} / ${n}`,
     steps: [
-      '아래 입력창에 예/아니오로 답할 수 있는 질문을 써 보세요.',
-      "판정을 읽어 보세요. 예·아니오·그럴 수도·관계없음이 있고, 답할 수 없는 질문은 다시 물어보라고 해요. 부정형 질문('~아닌가요?')은 그 문장이 맞는지로 답해요.",
-      '현장 조사 맵을 클릭하고 방향키로 걸어가, 물건 옆에서 E를 눌러 단서를 찾아보세요. 찾은 단서는 수첩에 쌓여요.',
-      '막히면 힌트를 열어 보세요. 질문을 일정 수 하면 열리고, 열면 점수가 조금 깎여요.',
-      '진상을 알 것 같으면 정답 제출을 눌러 한 번에 써 보세요. 질문을 기준보다 많이 하거나 힌트를 열거나 틀리면 점수가 깎여요.',
+      {
+        title: '질문하기',
+        body: '예/아니오로 답할 수 있는 질문을 입력창에 써 보세요. 질문은 기준 수 안에서 아껴 쓸수록 점수가 좋아요.',
+        alt: '질문 입력창과 질문하기 버튼',
+      },
+      {
+        title: '판정 읽기',
+        body: "판정은 예·아니오·그럴 수도·관계없음 중 하나예요. 답할 수 없는 질문은 다시 물어보라고 해요. 부정형 질문('~아닌가요?')은 그 문장이 맞는지로 답해요.",
+        alt: '질문 아래에 찍힌 판정 도장',
+      },
+      {
+        title: '현장 조사',
+        body: '맵을 클릭하고 방향키로 걸어가 보세요. 수상한 물건 앞에서 E를 누르면 조사해요. 찾은 단서는 수첩에 쌓여요.',
+        alt: '현장 조사 맵과 탐정 캐릭터',
+      },
+      {
+        title: '힌트',
+        body: '막히면 위쪽의 힌트 보기를 눌러 보세요. 언제든 열 수 있지만 열 때마다 점수가 조금 깎여요.',
+        alt: '진행 막대와 힌트 보기 버튼',
+      },
+      {
+        title: '정답 제출',
+        body: '진상을 알 것 같으면 정답 제출을 눌러 한 번에 써 보세요. 기회는 세 번이고, 틀리면 점수가 깎여요.',
+        alt: '정답 제출 창',
+      },
     ],
-    dismiss: '안내 닫기',
-    label: '튜토리얼 안내',
   },
   ending: {
     heading: '사건 결과',

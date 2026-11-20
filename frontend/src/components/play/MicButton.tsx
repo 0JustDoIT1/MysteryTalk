@@ -15,9 +15,12 @@ const noop = () => () => undefined;
 export function MicButton({
   disabled,
   onText,
+  large = false,
 }: {
   disabled: boolean;
   onText: (text: string) => void;
+  /** 입력 상자 옆의 큰 상자 모양(아이콘 + 글자) */
+  large?: boolean;
 }) {
   const supported = useSyncExternalStore(noop, speechSupported, () => false);
   const { micNoticeSeen, setMicNoticeSeen } = useDeviceStore();
@@ -60,16 +63,19 @@ export function MicButton({
   }
 
   return (
-    <div className="relative">
+    <div className="relative h-full">
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
         aria-pressed={listening}
-        aria-label={listening ? t.mic.stop : t.mic.start}
-        className={`h-full rounded px-3 py-2 ${listening ? 'animate-pulse bg-stamp text-cream' : 'border border-line-strong bg-paper-2 text-ink hover:bg-paper-3'} disabled:opacity-50`}
+        aria-label={large ? undefined : listening ? t.mic.stop : t.mic.start}
+        className={`h-full rounded ${large ? 'flex w-24 flex-col items-center justify-center gap-1 px-2 py-2 text-xs font-semibold' : 'px-3 py-2'} ${listening ? 'animate-pulse bg-stamp text-cream' : 'border border-line-strong bg-paper-2 text-ink hover:bg-paper-3'} disabled:opacity-50`}
       >
-        🎤
+        <span aria-hidden={large || undefined} className={large ? 'text-lg' : undefined}>
+          🎤
+        </span>
+        {large && <span>{listening ? t.mic.stop : t.mic.start}</span>}
       </button>
       {notice && (
         <div

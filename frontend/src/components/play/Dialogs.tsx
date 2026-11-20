@@ -22,22 +22,37 @@ export function Modal({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // 코드가 닫은 경우(화면 정리·개발 모드의 효과 재실행)는 사용자가 닫은 것으로 보지 않는다.
+  // 그렇지 않으면 처음부터 열린 모달이 개발 모드에서 곧바로 onClose 를 부른다.
+  const closingByCode = useRef(false);
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (open && !d.open) d.showModal();
-    if (!open && d.open) d.close();
+    if (!open && d.open) {
+      closingByCode.current = true;
+      d.close();
+    }
     // 화면을 떠나거나(이전 화면이 숨겨진 채 보존될 때 포함) 사라지면 닫는다.
     // 열린 모달이 최상위 레이어에 남으면 다음 화면의 클릭을 막는다.
     return () => {
-      if (d.open) d.close();
+      if (d.open) {
+        closingByCode.current = true;
+        d.close();
+      }
     };
   }, [open]);
   return (
     <dialog
       ref={ref}
       aria-labelledby={labelledBy}
-      onClose={onClose}
+      onClose={() => {
+        if (closingByCode.current) {
+          closingByCode.current = false;
+          return;
+        }
+        onClose();
+      }}
       className="paper m-auto w-[min(36rem,92vw)] p-5 backdrop:bg-black/70 sm:p-6"
     >
       {children}

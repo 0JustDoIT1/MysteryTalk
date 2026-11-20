@@ -166,11 +166,8 @@ export async function createRenderer(
           .setOrigin(0.5);
       }
       for (const o of map.objects) {
-        if (map.background) {
-          // 그림 속 물건이 조사 대상이다. 아직 조사하지 않은 곳만 작은 표시를 둔다
-          if (!o.inspected) s.add.circle(center(o.x), center(o.y), 4, COLORS.object).setAlpha(0.7);
-          continue;
-        }
+        // 그림 속 물건이 조사 대상이다. 찾는 재미를 위해 표시하지 않는다(가까이 가면 안내 문구가 뜬다, 2026-11-20)
+        if (map.background) continue;
         s.add.rectangle(
           center(o.x),
           center(o.y),

@@ -39,6 +39,38 @@
   --color-neutral-bg: #e2d6c1;
 
   --font-serif: var(--font-serif-kr), 'Nanum Myeongjo', 'AppleMyungjo', serif;
+
+  /* 답변이 온 순간 화면 가장자리가 판정 색으로 한 번 빛났다 사라진다(번쩍임은 1회, 광과민 배려) */
+  --animate-edge-flash: edge-flash 1.3s ease-out both;
+  @keyframes edge-flash {
+    0% {
+      opacity: 0;
+    }
+    10%,
+    35% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+    }
+  }
+
+  /* 판정 도장이 찍히는 효과(크게 떠 있다가 내려앉으며 살짝 기운다) */
+  --animate-stamp: stamp-in 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+  @keyframes stamp-in {
+    0% {
+      opacity: 0;
+      transform: scale(1.9) rotate(-10deg);
+    }
+    60% {
+      opacity: 1;
+      transform: scale(0.94) rotate(-2deg);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) rotate(-3deg);
+    }
+  }
 }
 
 body {

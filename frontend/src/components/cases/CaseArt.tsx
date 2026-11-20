@@ -1,5 +1,5 @@
 import type { Genre } from '@mysterytalk/shared';
-import { t } from '@/i18n/ko';
+import { caseLabel } from '@/lib/play/cases';
 
 /** 장르별 임시 그림 색(대표 그림이 없는 사건, PRD D98) */
 const GENRE_BG: Record<Genre, string> = {
@@ -40,17 +40,13 @@ export function CaseArt({
         className="aspect-[16/9] w-full object-cover sepia-[.15] [image-rendering:pixelated]"
       />
     );
-  const label = isTutorial
-    ? t.cases.tutorialBadge
-    : caseNo > 0
-      ? t.cases.caseNo(caseNo)
-      : t.cases.sample;
+  const label = caseLabel({ isTutorial, caseNo });
   return (
     <div
       aria-hidden="true"
       className={`flex aspect-[16/9] items-center justify-center bg-gradient-to-br ${GENRE_BG[genre ?? 'MYSTERY']}`}
     >
-      <span className="font-mono text-2xl font-bold tracking-widest text-cream/70">{label}</span>
+      <span className="font-serif text-2xl font-bold text-cream/70">{label}</span>
     </div>
   );
 }

@@ -96,7 +96,7 @@ export const caseContentSchema = z
      * 일시·발견 경위·처음 등장하는 인물 등 판정 맥락을 담는다. 없으면 intro를 쓴다.
      */
     background: z.string().min(1).max(1500).optional(),
-    /** 사건 번호(PRD D98). 카드에 'CASE 01'로 표시한다. 튜토리얼은 0 */
+    /** 사건 번호(PRD D98). 카드에 '사건 01'로 표시한다. 튜토리얼은 0 */
     caseNo: z.number().int().min(0).max(999),
     /** 카드 대표 그림(PRD D98, 선택). images/의 파일 이름, 16:9. 없으면 화면이 장르 색 임시 그림을 그린다 */
     cover: imageNameSchema.optional(),

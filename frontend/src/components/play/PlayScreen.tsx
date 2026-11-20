@@ -3,36 +3,33 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
-import {
-  useCaseDetail,
-  useExploreState,
-  useMe,
-  useQuestionLog,
-  useSessionState,
-} from '@/lib/api/queries';
-import { tutorialStep } from '@/lib/play/tutorial';
+import { useCaseDetail, useMe, useSessionState } from '@/lib/api/queries';
+import { useDeviceHydrated, useDeviceStore } from '@/stores/device';
 import { t } from '@/i18n/ko';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { CaseMeta } from '@/components/cases/CaseMeta';
 import { AbandonDialog, SubmitDialog } from './Dialogs';
 import { ExploreView } from './explore/ExploreView';
-import { HintPanel } from './HintPanel';
 import { Notebook } from './Notebook';
+import { PlayGuide } from './PlayGuide';
+import { PlayStatus } from './PlayStatus';
 import { QuestionPanel } from './QuestionPanel';
+import { caseLabel } from '@/lib/play/cases';
 
 /**
  * 추리 화면(SPEC §12, PRD D99). 왼쪽: 사건 정보 한 줄 → 현장 조사 맵 → 사건 도입.
- * 오른쪽: 진행 수치 → 질문 → 힌트 → 정답 제출·포기 → 수첩. 좁은 화면에서는 왼쪽 → 오른쪽 순으로 쌓인다.
+ * 오른쪽: 진행 막대·힌트 보기 → 수첩 → 질문·정답 제출·포기(2026-11-20). 좁은 화면에서는 왼쪽 → 오른쪽 순으로 쌓인다.
  */
 export function PlayScreen() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const session = useSessionState(sessionId);
   const detail = useCaseDetail(session.data?.caseSlug ?? '');
-  const log = useQuestionLog(sessionId);
-  const explore = useExploreState(sessionId);
   const me = useMe();
   const [dialog, setDialog] = useState<'submit' | 'abandon' | null>(null);
-  const [guideClosed, setGuideClosed] = useState(false);
+  // 수사 안내 팝업: 이 기기에서 처음 사건을 열 때 한 번, 이후에는 '도움말'로 연다
+  const hydrated = useDeviceHydrated();
+  const { guideSeen, setGuideSeen } = useDeviceStore();
+  const [helpOpen, setHelpOpen] = useState(false);
   useDocumentTitle(detail.data?.title);
 
   if (session.isPending || (session.data && detail.isPending))
@@ -49,43 +46,32 @@ export function PlayScreen() {
   const s = session.data!;
   const c = detail.data!;
   const active = s.status === 'ACTIVE';
-  const viewed = s.hints.filter((h) => h.viewed).length;
-  const step = tutorialStep(s, (log.data?.length ?? 0) > 0, explore.data?.clues.length ?? 0);
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-end justify-between gap-3 border-b border-cream/20 pb-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <Link href={`/cases/${s.caseSlug}`} className="back-link w-fit">
-            ← {c.title}
+    <div className="flex flex-col gap-4">
+      {/* 머리: 로고(메인으로) · 목록으로·탐정·도움말을 한 줄에. 사건명은 왼쪽 서류 맨 위 */}
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-cream/20 pb-2">
+        <Link href="/" className="font-serif text-xl font-bold text-cream hover:text-cream-2">
+          {t.app.title}
+        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/cases" className="back-link">
+            ← {t.common.back}
           </Link>
-          <h1 className="text-3xl font-bold text-cream drop-shadow-[0_2px_0_rgb(0_0_0/0.5)]">
-            {c.title}
-          </h1>
-        </div>
-        {me.data && (
-          <p className="paper-inset px-3 py-1 font-serif text-sm font-bold text-ink">
-            {t.play.detective(me.data.detectiveName)}
-          </p>
-        )}
-      </header>
-
-      {s.isTutorial && active && !guideClosed && (
-        <aside
-          aria-label={t.tutorial.label}
-          className="paper flex items-start justify-between gap-3 border-l-4 border-l-info p-3 text-sm"
-        >
-          <p>
-            <span className="mr-2 font-serif font-bold text-info">
-              {step + 1}/{t.tutorial.steps.length}
-            </span>
-            {t.tutorial.steps[step]}
-          </p>
-          <button type="button" onClick={() => setGuideClosed(true)} className="link shrink-0">
-            {t.tutorial.dismiss}
+          {me.data && (
+            <p className="paper-inset px-2.5 py-0.5 font-serif text-xs font-bold text-ink">
+              {t.play.detective(me.data.detectiveName)}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={() => setHelpOpen(true)}
+            className="btn btn-secondary px-2.5 py-0.5 text-xs"
+          >
+            {t.guide.help}
           </button>
-        </aside>
-      )}
+        </div>
+      </header>
 
       {!active && (
         <p className="paper p-3">
@@ -96,8 +82,12 @@ export function PlayScreen() {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(24rem,28rem)]">
         <div className="paper flex min-w-0 flex-col gap-4 self-start p-4 sm:p-5">
+          <div className="flex flex-col gap-0.5 border-b-2 border-ink/70 pb-2">
+            {caseLabel(c) && <p className="text-xs font-semibold text-ink-3">{caseLabel(c)}</p>}
+            <h1 className="text-2xl font-bold text-ink">{c.title}</h1>
+          </div>
           <CaseMeta
             genres={c.genres}
             difficulty={c.difficulty}
@@ -123,21 +113,16 @@ export function PlayScreen() {
             <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-ink-2">{c.intro}</p>
           </details>
         </div>
+        {/* 오른쪽: 진행 막대·힌트 → 수첩 → 질문·정답 제출·포기(2026-11-20 배치) */}
         <div className="flex min-w-0 flex-col gap-5">
-          <div className="paper flex flex-col gap-4 p-4 sm:p-5">
-            {/* 진행 수치만 보여 주고 점수·등급은 엔딩에서 공개한다(D76). */}
-            <ul
-              aria-label="진행 상황"
-              className="grid grid-cols-3 divide-x divide-line border border-line bg-paper-2 text-center text-xs text-ink-2 sm:text-sm"
-            >
-              <li className="px-2 py-1.5">{t.play.questions(s.questionsUsed, s.baseQuestions)}</li>
-              <li className="px-2 py-1.5">{t.play.hintsViewed(viewed)}</li>
-              <li className="px-2 py-1.5">{t.play.submissionsLeft(s.submissionsLeft)}</li>
-            </ul>
-            <QuestionPanel session={s} />
+          <div className="paper p-4 sm:p-5">
+            <PlayStatus session={s} />
+          </div>
+          <div className="paper p-4 sm:p-5">
+            <Notebook session={s} />
           </div>
           <div className="paper flex flex-col gap-4 p-4 sm:p-5">
-            <HintPanel session={s} />
+            <QuestionPanel session={s} />
             {active && (
               <div className="flex flex-wrap items-center gap-2 border-t border-dashed border-line pt-4">
                 <button
@@ -157,12 +142,16 @@ export function PlayScreen() {
               </div>
             )}
           </div>
-          <div className="paper p-4 sm:p-5">
-            <Notebook session={s} />
-          </div>
         </div>
       </div>
 
+      <PlayGuide
+        open={helpOpen || (hydrated && !guideSeen)}
+        onClose={() => {
+          setGuideSeen();
+          setHelpOpen(false);
+        }}
+      />
       {/* 확인 창은 항상 렌더링한다. 종료 직후 상태가 바뀌어도 사라지지 않아야 엔딩으로 이동할 수 있다. */}
       <SubmitDialog session={s} open={dialog === 'submit'} onClose={() => setDialog(null)} />
       <AbandonDialog

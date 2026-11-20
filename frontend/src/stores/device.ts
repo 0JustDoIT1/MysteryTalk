@@ -8,6 +8,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
  * - bgm·sfx: 배경음악·효과음 볼륨 0~100(PRD D39). 기기마다 따로 둔다.
  * - micNoticeSeen: 음성 입력 안내(브라우저 제조사가 음성을 처리할 수 있음, D38)를 본 적이 있는지
  * - detectiveAsked: '탐정 정하기' 창(PRD D103)을 이 기기에서 이미 띄웠는지(처음 한 번만)
+ * - guideSeen: 수사 안내 팝업(처음 사건을 열 때 한 번)을 이 기기에서 이미 봤는지
  * 저장소를 못 쓰는 환경(사생활 보호 모드 등)에서도 화면은 동작해야 하므로 실패를 삼킨다.
  */
 type DeviceState = {
@@ -18,6 +19,8 @@ type DeviceState = {
   micNoticeSeen: boolean;
   detectiveAsked: boolean;
   setDetectiveAsked: () => void;
+  guideSeen: boolean;
+  setGuideSeen: () => void;
   setAge: (v: 'yes') => void;
   setBgm: (v: number) => void;
   setSfx: (v: number) => void;
@@ -62,6 +65,8 @@ export const useDeviceStore = create<DeviceState>()(
       micNoticeSeen: false,
       detectiveAsked: false,
       setDetectiveAsked: () => set({ detectiveAsked: true }),
+      guideSeen: false,
+      setGuideSeen: () => set({ guideSeen: true }),
       setAge: (v) => set({ age: v, ageAt: new Date().toISOString() }),
       setBgm: (v) => set({ bgm: clampVolume(v) }),
       setSfx: (v) => set({ sfx: clampVolume(v) }),
@@ -78,6 +83,7 @@ export const useDeviceStore = create<DeviceState>()(
         sfx: s.sfx,
         micNoticeSeen: s.micNoticeSeen,
         detectiveAsked: s.detectiveAsked,
+        guideSeen: s.guideSeen,
       }),
     },
   ),

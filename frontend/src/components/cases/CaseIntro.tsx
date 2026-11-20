@@ -7,6 +7,7 @@ import { t } from '@/i18n/ko';
 import { useDocumentTitle } from '@/lib/useDocumentTitle';
 import { CaseArt } from './CaseArt';
 import { CaseMeta } from './CaseMeta';
+import { caseLabel } from '@/lib/play/cases';
 
 /** 사건 소개(PRD D98·D99): 그림·번호·제목, 사건 정보, 수위·태그·기록, 한 줄 요약, 도입, 시작/이어서(D54) */
 export function CaseIntro() {
@@ -39,13 +40,9 @@ export function CaseIntro() {
       </Link>
       <article className="paper relative flex min-w-0 flex-col gap-6 p-5 sm:p-8">
         <header className="flex flex-col gap-1 border-b-2 border-ink/70 pb-3">
-          <p className="font-mono text-xs tracking-wider text-ink-3">
-            {t.intro.report} ·{' '}
-            {c.isTutorial
-              ? t.cases.tutorialBadge
-              : c.caseNo > 0
-                ? t.cases.caseNo(c.caseNo)
-                : t.cases.sample}
+          <p className="text-xs font-semibold text-ink-3">
+            {t.intro.report}
+            {caseLabel(c) && ` · ${caseLabel(c)}`}
           </p>
           <h1 className="text-3xl font-bold text-ink">{c.title}</h1>
         </header>
@@ -78,8 +75,13 @@ export function CaseIntro() {
               maxQuestions={c.maxQuestions}
               elementCount={c.elementCount}
             />
-            <p className="text-xs text-ink-3">
-              {t.rating[c.rating]} · {c.tags.map((tag) => `#${tag}`).join(' ')}
+            <p className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
+              {c.rating === 'STRONG' && (
+                <span className="chip border-stamp bg-bad-bg font-semibold text-stamp">
+                  {t.rating.STRONG}
+                </span>
+              )}
+              {c.tags.map((tag) => `#${tag}`).join(' ')}
             </p>
             {record && (
               <p className="text-xs text-ink-2">
