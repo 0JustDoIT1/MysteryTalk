@@ -51,4 +51,10 @@
 - 2026-11-20 | 비용이 드는 작업(클라우드 AI 실측, 유료 호스팅)은 사용자가 꺼낼 때까지 미룸 | 사용자 요청 | CLAUDE.md 프로젝트 구역
 - 2026-11-20 | 클라우드 AI 연결: Claude(`LLM_PROVIDER=anthropic`), 단가표에 없는 클라우드 모델은 시작 단계에서 거부 | 월 예산(D46)이 0원으로 계산되던 문제 방지 | backend/src/judge, backend/src/ops/pricing.ts, .env.example
 - 2026-11-20 | AI용 상세 개요(`background`)를 화면용 짧은 개요와 분리 | 짧은 개요만 주면 판정·채점 정확도 하락(PRD D106) | docs/SPEC.md, docs/cases/README.md
+- 2026-11-20 | 사건 번호 표기 'CASE 01' → '사건 01', 장식용 영어 문구 삭제 | 화면은 한국어로 통일 | frontend/src/i18n/ko.ts, docs/PRD.md(D98, v1.12)
+- 2026-11-20 | 사건 카드: 난이도는 점 세 개(●○○), 사진 위에 장르 배지·해결/미해결 스티커, 수위는 '강함'일 때만 표시 | 카드 정보 정리, 색 배지가 어색함 | CaseList, CaseIntro, DifficultyDots. PRD D98 반영(v1.12)
+- 2026-11-20 | 힌트는 질문 수와 상관없이 언제든 순서대로 열고, 감점(−10/−15/−20)은 그대로 | 사용자 요청 | backend sessions.service·scoring, PlayStatus. PRD D15·D17·D81 반영(v1.12)
+- 2026-11-20 | 추리 화면 오른쪽 배치: 진행 막대·힌트 보기·정답 제출 → 수첩 → 질문, 판정은 도장 문구가 찍히는 효과 | 사용자 요청 | PlayScreen, PlayStatus, QuestionPanel, globals.css. PRD D99 반영(v1.12)
+- 2026-11-20 | 튜토리얼 안내 띠 → 처음 사건을 열 때 '수사 안내' 팝업(실제 화면 캡처 5장, 도움말로 다시 보기), 조사 지점 점 표시 삭제, 알림 2.5초, 답변 순간 화면 가장자리 빛 | 불필요한 스크롤, 찾는 재미 | PlayGuide, PlayScreen, renderer, Toasts, frontend/public/guide/. PRD D78 반영(v1.12)
+- 2026-11-20 | 화면에서 '샘플' 표시 삭제, 지하주차장의 경비원 '사건 11'·302호의 정전 '사건 12' 번호 부여, 추리 화면 머리는 로고 + 목록으로·탐정·도움말(사건명은 왼쪽 서류 위) | 내부 구분이 이용자에게 보이지 않게 | lib/play/cases.ts, PlayScreen, case.json(버전 올림), 공지
 - 2026-11-20 | 알림을 sonner로 교체, 화면 테마 '책상 위의 수사 서류' | 알림이 저절로 닫히지 않던 문제, 디자인 정리 | frontend, docs/SPEC.md
