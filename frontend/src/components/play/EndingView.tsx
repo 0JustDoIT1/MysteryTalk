@@ -41,29 +41,13 @@ export function EndingView() {
 
   const e = ending.data;
   const b = e.breakdown;
-  const showRules = e.isTutorial;
-  const rows = [
-    { label: t.ending.base, value: `${b.base}`, rule: null },
-    {
-      label: t.ending.questionPenalty,
-      value: `-${b.questionPenalty}`,
-      rule: t.ending.rules.question(
-        b.baseQuestions,
-        b.questionPenaltyPerExtra,
-        b.questionPenaltyMax,
-      ),
-    },
-    {
-      label: t.ending.hintPenalty,
-      value: `-${b.hintPenalty}`,
-      rule: t.ending.rules.hint(b.hintPenaltySteps),
-    },
-    {
-      label: t.ending.wrongPenalty,
-      value: `-${b.wrongPenalty}`,
-      rule: t.ending.rules.wrong(b.wrongPenaltyEach),
-    },
-  ];
+  const deductions = [
+    [t.ending.deduction.question, b.questionPenalty],
+    [t.ending.deduction.hint, b.hintPenalty],
+    [t.ending.deduction.wrong, b.wrongPenalty],
+  ]
+    .filter(([, v]) => Number(v) > 0)
+    .map(([label, v]) => `${label} −${v}`);
 
   return (
     <article className="paper flex min-w-0 flex-col gap-6 p-5 sm:p-8">
@@ -84,6 +68,9 @@ export function EndingView() {
           <p className="text-sm text-ink-2">
             {e.score !== null ? `${t.ending.score} ${e.score}` : t.ending.noScore}
           </p>
+          {e.score !== null && deductions.length > 0 && (
+            <p className="mt-1 text-xs text-ink-3">{t.ending.deductions(deductions)}</p>
+          )}
         </div>
       </section>
 
@@ -92,32 +79,6 @@ export function EndingView() {
           {t.ending.tutorialNote}
         </p>
       )}
-
-      <section aria-labelledby="breakdown-heading">
-        <h2 id="breakdown-heading" className="label mb-2">
-          {t.ending.breakdown}
-        </h2>
-        <table className="w-full text-sm">
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.label} className="border-b border-line">
-                <th scope="row" className="py-2 text-left font-normal">
-                  {r.label}
-                  {showRules && r.rule && (
-                    <span className="block text-xs text-ink-3">{r.rule}</span>
-                  )}
-                </th>
-                <td className="py-2 text-right font-mono tabular-nums">{r.value}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {showRules && (
-          <p className="mt-2 text-xs text-ink-3">
-            {t.ending.rules.grades(b.gradeCuts.S, b.gradeCuts.A, b.gradeCuts.B)}
-          </p>
-        )}
-      </section>
 
       <section aria-labelledby="elements-heading">
         <h2 id="elements-heading" className="label mb-2">

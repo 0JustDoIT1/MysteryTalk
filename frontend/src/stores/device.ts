@@ -4,7 +4,7 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 /**
  * 기기 단위 정보(SPEC §12.1-4): 브라우저에 오래 남길 것만 둔다. 진행 기록은 서버에 있다.
- * - age: 18세 확인 결과와 시각(PRD D33·D60). 'no'면 차단 화면만 보여 준다.
+ * - age: 18세 확인 결과와 시각(PRD D33). 'yes'가 아니면 확인 창을 띄운다('no'는 예전 '아니요' 저장값, 2026-11-20부터 쓰지 않음).
  * - bgm·sfx: 배경음악·효과음 볼륨 0~100(PRD D39). 기기마다 따로 둔다.
  * - micNoticeSeen: 음성 입력 안내(브라우저 제조사가 음성을 처리할 수 있음, D38)를 본 적이 있는지
  * - detectiveAsked: '탐정 정하기' 창(PRD D103)을 이 기기에서 이미 띄웠는지(처음 한 번만)
@@ -18,7 +18,7 @@ type DeviceState = {
   micNoticeSeen: boolean;
   detectiveAsked: boolean;
   setDetectiveAsked: () => void;
-  setAge: (v: 'yes' | 'no') => void;
+  setAge: (v: 'yes') => void;
   setBgm: (v: number) => void;
   setSfx: (v: number) => void;
   setMicNoticeSeen: () => void;

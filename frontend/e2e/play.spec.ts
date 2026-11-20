@@ -100,6 +100,8 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(page).toHaveURL(/\/ending$/);
   await expect(page.getByRole('heading', { name: '사건 결과' })).toBeVisible();
   await expect(page.getByText('점수 80')).toBeVisible();
+  // 점수 내역은 감점이 있을 때만 한 줄로 보여 준다
+  await expect(page.getByText('감점: 힌트 −10 · 오답 −10')).toBeVisible();
   await expect(page.getByText('A', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: '진상 해설' })).toBeVisible();
   await expect(page.getByText(/차단기를 내려 집을 캄캄하게/)).toBeVisible();
@@ -114,26 +116,26 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(page.getByText(/해결 · 최고 A · 1회차 달성 · 총 1회/)).toBeVisible();
 });
 
-test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수와 감점 규칙 설명을 보여 준다', async ({
+test('튜토리얼: 단계 안내를 따라 해결하고, 엔딩에 점수를 보여 준다(감점이 없으면 감점 줄 없음)', async ({
   page,
 }) => {
-  await openCase(page, '사라진 금고 열쇠');
+  await openCase(page, '새벽 빵집의 빈 금고');
   const guide = page.getByRole('complementary', { name: '튜토리얼 안내' });
   await expect(guide.getByText(/1\/5/)).toBeVisible();
-  await ask(page, '열쇠를 도둑맞았나요?', 1);
+  await ask(page, '금고의 돈을 도둑맞았나요?', 1);
   await expect(guide.getByText(/2\/5/)).toBeVisible();
 
   await submitAnswer(
     page,
-    '제빵사가 앞치마 주머니에 열쇠를 넣은 채 세탁 자루에 넣었다. 도난이 아니다.',
+    '카드빚에 쫓긴 제빵사가 금고 돈을 훔치고 외부 침입처럼 보이려고 뒷문을 열어 두었다.',
   );
   await expect(page).toHaveURL(/\/ending$/);
   await expect(page.getByText('점수 100')).toBeVisible();
   await expect(page.getByText(/튜토리얼은 연습이라 기록에 남지 않아요/)).toBeVisible();
-  await expect(page.getByText(/질문이 기준\(15개\)을 넘으면 1개당 2점/)).toBeVisible();
+  await expect(page.getByText(/^감점:/)).toHaveCount(0);
 
   await page.getByRole('link', { name: '목록으로' }).click();
-  const card = page.getByRole('link', { name: /사라진 금고 열쇠/ });
+  const card = page.getByRole('link', { name: /새벽 빵집의 빈 금고/ });
   await expect(card.getByText(/최고/)).toHaveCount(0);
 });
 
@@ -255,12 +257,22 @@ test('현장 조사: 걸어가 조사 → 단서 획득 → 수첩 단서 → �
   await expect(page.getByRole('tab', { name: '수사 자료' })).toHaveCount(0);
 });
 
-test('18세 확인: 처음 방문하면 묻고, 예를 고르면 다시 묻지 않는다', async ({ page }) => {
+test('18세 확인: 처음 방문하면 묻고, 체크해야만 확인할 수 있으며, 확인하면 다시 묻지 않는다', async ({
+  page,
+}) => {
   await page.goto('/');
-  const gate = page.getByRole('dialog', { name: '만 18세 이상인가요?' });
+  const gate = page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' });
   await expect(gate).toBeVisible();
   await expect(gate.getByRole('link', { name: '이용약관' })).toHaveAttribute('target', '_blank');
-  await gate.getByRole('button', { name: '네, 18세 이상이에요' }).click();
+  // '아니요' 버튼은 없고(D60 변경), 체크 전에는 확인 버튼이 꺼져 있으며 Esc로도 닫히지 않는다
+  await expect(gate.getByRole('button', { name: '아니요' })).toHaveCount(0);
+  const confirm = gate.getByRole('button', { name: '확인', exact: true });
+  await expect(confirm).toBeDisabled();
+  await page.keyboard.press('Escape');
+  await expect(gate).toBeVisible();
+  await gate.getByRole('checkbox', { name: '본인은 만 18세 이상입니다.' }).check();
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
   await expect(gate).toBeHidden();
   // 이어서 '탐정 정하기' 창이 한 번 뜬다(D103). 나중에 해도 된다
   const setup = page.getByRole('dialog', { name: '탐정 정하기' });
@@ -269,7 +281,7 @@ test('18세 확인: 처음 방문하면 묻고, 예를 고르면 다시 묻지 �
   await expect(setup).toBeHidden();
   await page.reload();
   await expect(page.getByRole('navigation', { name: '메인 메뉴' })).toBeVisible();
-  await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toBeHidden();
+  await expect(page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' })).toBeHidden();
   await expect(page.getByRole('dialog', { name: '탐정 정하기' })).toBeHidden();
 });
 
@@ -295,13 +307,15 @@ test('탐정 정하기: 처음 한 번 이름과 캐릭터를 고르고, 설정�
   await expect(page.getByRole('dialog', { name: '탐정 정하기' })).toBeHidden();
 });
 
-test('18세 확인: 아니요를 고르면 이용할 수 없고, 다시 와도 차단된다', async ({ page }) => {
+test('18세 확인: 예전에 아니요를 저장한 기기도 차단하지 않고 다시 묻는다', async ({ page }) => {
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'mt-device',
+      JSON.stringify({ state: { age: 'no', ageAt: '2026-11-11T00:00:00.000Z' }, version: 0 }),
+    ),
+  );
   await page.goto('/');
-  await page.getByRole('button', { name: '아니요' }).click();
-  await expect(page.getByRole('heading', { name: '이용할 수 없어요' })).toBeVisible();
-  await page.goto('/cases');
-  await expect(page.getByRole('heading', { name: '이용할 수 없어요' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: '사건 선택' })).toHaveCount(0);
+  await expect(page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' })).toBeVisible();
 });
 
 test('로그인: 게스트로 시작한 사건을 로그인 후 이어서에서 열고, 로그아웃하면 빈 게스트가 된다', async ({
@@ -376,7 +390,7 @@ test('기록 지우기: 게스트가 기록을 지우면 새 게스트로 시작
 
   // 이 기기의 연령 확인 다시 하기(PRD D97)
   await page.getByRole('button', { name: '이 기기의 연령 확인 다시 하기' }).click();
-  await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' })).toBeVisible();
 });
 
 test('마이크: 인식한 문장은 입력창에만 넣고 자동으로 보내지 않는다', async ({ page }) => {
@@ -441,7 +455,7 @@ test('모바일: 가상 방향키로 걸어가 조사하고, 맵은 화면 폭 �
   const intro = page.locator('details', { hasText: '사건 개요' });
   await expect(intro).not.toHaveAttribute('open');
   await intro.getByText('사건 개요').tap();
-  await expect(intro.getByText(/피아노 교습소를 운영하며/)).toBeVisible();
+  await expect(intro.getByText(/302호만 불이 꺼져 있었다/)).toBeVisible();
   await intro.getByText('사건 개요').tap();
 
   // 시작 (6,6) → 위로 5칸 → 오른쪽 5칸: 전등 스위치 옆
@@ -484,16 +498,15 @@ test('약관: 설정에서 이용약관·개인정보처리방침을 새 탭으�
   await expect(page.locator('mark', { hasText: '[시행일]' }).first()).toBeVisible();
 });
 
-test('18세 확인: 약관·처리방침은 확인 전에도, 차단된 기기에서도 확인 창 없이 읽을 수 있다', async ({
-  page,
-}) => {
+test('18세 확인: 약관·처리방침은 확인 전에도 확인 창 없이 읽을 수 있다', async ({ page }) => {
   await page.goto('/terms');
   await expect(page.getByRole('heading', { name: '이용약관', level: 1 })).toBeVisible();
-  await expect(page.getByRole('dialog', { name: '만 18세 이상인가요?' })).toHaveCount(0);
-
-  await page.goto('/');
-  await page.getByRole('button', { name: '아니요' }).click();
-  await expect(page.getByRole('heading', { name: '이용할 수 없어요' })).toBeVisible();
-  await page.getByRole('link', { name: '개인정보처리방침' }).click();
+  await expect(page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' })).toHaveCount(
+    0,
+  );
+  await page.goto('/privacy');
   await expect(page.getByRole('heading', { name: '개인정보처리방침', level: 1 })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' })).toHaveCount(
+    0,
+  );
 });

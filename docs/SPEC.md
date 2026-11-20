@@ -76,7 +76,7 @@
 - 통계는 비식별 집계만 남긴다. [PRD D47]
 
 ### 3.4 18세 확인 [PRD D33, D60]
-- 브라우저 `localStorage`에 확인 결과(`yes`/`no`)와 시각 저장. `no`면 차단 화면만 보여 준다.
+- 브라우저 `localStorage`에 확인 결과(`yes`)와 시각 저장. `yes`가 아니면 확인 창을 띄운다. '만 18세 이상입니다'에 체크해야 확인 버튼이 켜지고, 확인 전에는 창 밖을 누를 수 없다(포인터 금지 표시). '아니요' 버튼·차단 화면은 없다(2026-11-20, D60 변경 — 잘못 눌러 되돌릴 수 없던 문제). 예전 `no` 저장값도 다시 묻는다.
 - 구현(5단계): Zustand persist(`mt-device`)로 저장. 저장소 복원이 끝난 뒤에만 팝업·차단을 판단해 서버 렌더와 어긋나지 않게 한다. 18세 확인·'탐정 정하기' 창은 게임 화면 묶음(`app/(game)/layout.tsx`)에서만 띄우고, 약관·처리방침(`/terms`, `/privacy`)은 그 밖이라 확인 전·이용 불가 기기에서도 읽을 수 있다. 약관·처리방침은 `frontend/legal/*.md` 문안을 빌드 때 정적 페이지로 만든다. 법률 검토 전 초안이라 위에 안내를 띄우고 `[ ]` 자리표시를 강조한다(설정에도 링크).
 - 로그인 시 확인 여부·시각을 계정에 기록. 서버는 확인 기록이 없는 요청에도 게임 API를 막지 않는다(클라이언트 게이트, 법률 검토 전 단계). 연령 검증 수준은 [미정].
 
@@ -94,7 +94,7 @@
 | 테이블 | 주요 필드 |
 |---|---|
 | `case` | id, slug UNIQUE, is_tutorial, title, summary(한 줄 요약), intro(도입 이야기), case_no(카드 번호, D98), cover(대표 그림 파일 이름, 선택, D98), element_count(공개하는 정답 요소 개수 = 필수 요소 수, D100), difficulty, base_questions(B), rating(NORMAL/STRONG), tags[], genres[], explanation, current_version, is_published |
-| `case_version` | case_id, version, facts_json, elements_json(정답 요소·키워드), hints_json, content_hash, published_at |
+| `case_version` | case_id, version, facts_json, elements_json(정답 요소·키워드), hints_json, background(AI 판정·채점에만 쓰는 상세 개요, 없으면 화면용 intro. 2026-11-20), content_hash, published_at |
 | `case_asset` | (case_id, version, name) PK, mime, bytes, sha256. 힌트·단서 이미지(D92·D93). 사건 버전과 함께 적재(버전 삭제 시 함께 삭제) |
 | (현장 조사) | 4단계 구현: 맵·구역 해금 조건·조사 대상·NPC·단서·시작 위치는 별도 테이블 대신 `case_version.explore_json`에 버전과 함께 저장한다(사실 목록처럼 D59 버전 규칙을 그대로 따르고, 적재 전 검사로 정합성을 보장) |
 
@@ -287,7 +287,7 @@ content/public/tutorial/
 ## 12. 화면 구성 [확정]
 | 화면 | 내용 |
 |---|---|
-| 18세 확인 | 팝업, 약관·처리방침 새 탭 링크, '아니오'면 차단 화면 [D33, D60] |
+| 18세 확인 | 팝업, 약관·처리방침 새 탭 링크, '만 18세 이상입니다' 체크 후 확인(아니요·차단 화면 없음, 2026-11-20) [D33, D60 변경] |
 | 메인 | 배너, 새 스토리 / 이어서 / 공지 / 설정 [§2]. 구현(5단계): `/` 메인 메뉴 + 계정 상태(로그인·로그아웃), `/cases` 사건 선택, `/continue` 이어서. 공지·설정은 '준비 중' |
 | 사건 선택 | 장르 필터, 사건 카드(대표 그림 자리·CASE 번호·제목·난이도·수위 배지·상태·최고 등급). 대표 그림이 없으면 장르 색 + 번호 임시 그림. 첫 방문 시 튜토리얼 권장 [D55, D98] |
 | 사건 소개 | 그림 자리·번호·제목·한 줄 요약, 사건 정보 한 줄, 수위·태그, 기록(최고 등급·달성 회차·총 회차), 사건 개요(도입), 시작/이어서 [D98] |
