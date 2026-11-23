@@ -21,7 +21,8 @@ export function EndingView() {
 
   if (session.isPending || (finished && ending.isPending))
     return <p className="text-cream-2">{t.common.loading}</p>;
-  if (session.error || ending.error)
+  // 처음 불러오기에 실패했을 때만 오류 화면. 이미 받은 데이터가 있으면 그대로 보여 준다(코드 검수 2026-11-23)
+  if ((session.error && !session.data) || (ending.error && !ending.data))
     return (
       <p role="alert" className="paper p-4 text-bad">
         {(session.error ?? ending.error)?.message}{' '}

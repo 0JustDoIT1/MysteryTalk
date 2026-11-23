@@ -9,7 +9,7 @@ import {
   type SessionState,
 } from '@mysterytalk/shared';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type Dispatch, type SetStateAction } from 'react';
 import { useExploreState, useQuestionLog, useSaveMemo } from '@/lib/api/queries';
 import { t } from '@/i18n/ko';
 import { CaseImage, clueImageUrl, hintImageUrl } from './CaseImage';
@@ -30,6 +30,9 @@ export function Notebook({ session }: { session: SessionState }) {
   const filter = (QUESTION_LABELS as readonly string[]).includes(filterParam ?? '')
     ? (filterParam as QuestionLabel)
     : undefined;
+  // 메모 초안은 탭과 상관없이 여기서 들고 있는다. 탭을 옮기면 메모 칸이 사라져 저장 전 글이 없어졌다
+  // (코드 검수 2026-11-23). null이면 서버에 저장된 메모를 그대로 보여 준다.
+  const [memoDraft, setMemoDraft] = useState<string | null>(null);
 
   function setParams(next: Record<string, string | null>) {
     const q = new URLSearchParams(params.toString());
@@ -102,7 +105,7 @@ export function Notebook({ session }: { session: SessionState }) {
             onFilter={(f) => setParams({ filter: f ?? null })}
           />
         )}
-        {tab === 'memo' && <Memo key={session.memo} session={session} />}
+        {tab === 'memo' && <Memo session={session} draft={memoDraft} onDraft={setMemoDraft} />}
       </div>
     </section>
   );
@@ -163,15 +166,24 @@ function QuestionLog({
   );
 }
 
-function Memo({ session }: { session: SessionState }) {
-  const [memo, setMemo] = useState(session.memo);
+function Memo({
+  session,
+  draft,
+  onDraft,
+}: {
+  session: SessionState;
+  draft: string | null;
+  onDraft: Dispatch<SetStateAction<string | null>>;
+}) {
+  const memo = draft ?? session.memo;
   const save = useSaveMemo(session.sessionId);
   return (
     <form
       className="flex flex-col gap-2"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate(memo);
+        // 저장이 끝났을 때 그 사이 더 쓴 글이 없으면 초안을 비워 서버 값을 따르고, 더 썼으면 초안을 그대로 둔다
+        save.mutate(memo, { onSuccess: (_, saved) => onDraft((d) => (d === saved ? null : d)) });
       }}
     >
       <label htmlFor="memo" className="text-sm text-ink-2">
@@ -181,7 +193,7 @@ function Memo({ session }: { session: SessionState }) {
         id="memo"
         value={memo}
         maxLength={MEMO_MAX_LENGTH}
-        onChange={(e) => setMemo(e.target.value)}
+        onChange={(e) => onDraft(e.target.value)}
         rows={8}
         className="field text-sm"
       />
@@ -213,6 +225,13 @@ function ClueList({ session }: { session: SessionState }) {
   const sessionId = session.sessionId;
   const explore = useExploreState(sessionId);
   if (explore.isPending) return <p className="text-sm text-ink-3">{t.common.loading}</p>;
+  // 불러오지 못했으면 '찾은 단서 없음'으로 보이지 않게 오류를 알린다(코드 검수 2026-11-23)
+  if (explore.error && !explore.data)
+    return (
+      <p role="alert" className="text-sm text-bad">
+        {explore.error.message}
+      </p>
+    );
   const clues = explore.data?.clues ?? [];
   const hints = session.hints.filter((h) => h.viewed);
   if (!clues.length && !hints.length)

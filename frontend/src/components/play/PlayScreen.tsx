@@ -30,13 +30,15 @@ export function PlayScreen() {
   const [dialog, setDialog] = useState<'submit' | 'abandon' | null>(null);
   // 수사 안내 팝업: 이 기기에서 처음 사건을 열 때 한 번, 이후에는 '도움말'로 연다
   const hydrated = useDeviceHydrated();
-  const { guideSeen, setGuideSeen } = useDeviceStore();
+  const { age, guideSeen, setGuideSeen } = useDeviceStore();
   const [helpOpen, setHelpOpen] = useState(false);
   useDocumentTitle(detail.data?.title);
 
   if (session.isPending || (session.data && detail.isPending))
     return <p className="text-cream-2">{t.common.loading}</p>;
-  if (session.error || detail.error)
+  // 처음 불러오기에 실패했을 때만 화면 전체를 오류로 바꾼다. 이미 받은 데이터가 있으면 화면(입력 중인 질문·답안,
+  // 재시도용 멱등성 키)을 그대로 두고 오류는 알림으로만 보여 준다(코드 검수 2026-11-23).
+  if ((session.error && !session.data) || (detail.error && !detail.data))
     return (
       <p role="alert" className="paper p-4 text-bad">
         {(session.error ?? detail.error)?.message}{' '}
@@ -48,6 +50,7 @@ export function PlayScreen() {
   const s = session.data!;
   const c = detail.data!;
   const active = s.status === 'ACTIVE';
+  const refetchError = session.error ?? detail.error;
 
   return (
     <div className="flex flex-col gap-4">
@@ -75,6 +78,11 @@ export function PlayScreen() {
           </button>
         </div>
       </header>
+      {refetchError && (
+        <p role="alert" className="paper-inset px-3 py-2 text-sm text-bad">
+          {refetchError.message}
+        </p>
+      )}
 
       {!active && (
         <p className="paper p-3">
@@ -149,7 +157,8 @@ export function PlayScreen() {
       </div>
 
       <PlayGuide
-        open={helpOpen || (hydrated && !guideSeen)}
+        // 18세 확인 창보다 먼저 뜨지 않게 확인을 마친 뒤에만 자동으로 연다
+        open={helpOpen || (hydrated && age === 'yes' && !guideSeen)}
         onClose={() => {
           setGuideSeen();
           setHelpOpen(false);

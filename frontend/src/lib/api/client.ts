@@ -64,6 +64,16 @@ export async function apiRequest<S extends z.ZodType>(
         message: ERROR_MESSAGES[err.data.code],
       };
     }
+    // 오류 상태인데 JSON 본문이 없으면(프록시 500·502 등) 서버에 닿지 못한 것으로 본다.
+    // 본문이 없는 응답을 기대하는 요청(z.null)이 이를 성공으로 받던 문제(코드 검수 2026-11-23).
+    if (body === null) {
+      return {
+        ok: false,
+        status: res.status,
+        code: 'NETWORK',
+        message: '서버에 연결할 수 없어요.',
+      };
+    }
   }
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

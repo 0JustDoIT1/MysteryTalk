@@ -34,6 +34,11 @@ export function AgeGate({ children }: { children: ReactNode }) {
         aria-describedby="age-body"
         // Esc로 닫지 못하게 한다(확인해야만 넘어간다)
         onCancel={(e) => e.preventDefault()}
+        // 최신 크롬은 사용자 조작 전의 Esc를 막지 못해 창이 닫힐 수 있다(CloseWatcher).
+        // 확인 전에 어떤 이유로든 닫히면 다시 연다(코드 검수 2026-11-23).
+        onClose={(e) => {
+          if (ask) e.currentTarget.showModal();
+        }}
         className="paper m-auto w-[min(28rem,92vw)] p-6 backdrop:cursor-not-allowed backdrop:bg-black/90"
       >
         <h2 id="age-heading" className="text-xl font-bold text-ink">

@@ -234,7 +234,9 @@ export function ExploreView({ session }: { session: SessionState }) {
     onContextMenu: (e: MouseEvent<HTMLButtonElement>) => e.preventDefault(),
   });
 
-  if (explore.error)
+  // 처음 불러오기에 실패했을 때만 맵 대신 오류 문구. 이미 맵이 있으면 캔버스(Phaser가 붙어 있음)를 그대로 두고
+  // 오류는 아래 알림으로만 보여 준다. 캔버스가 사라지면 복구 뒤에도 빈 화면이 됐다(코드 검수 2026-11-23).
+  if (explore.error && !explore.data)
     return (
       <p className="text-sm text-ink-3">
         {explore.error instanceof ApiError && explore.error.code === 'NOT_FOUND'
@@ -273,6 +275,11 @@ export function ExploreView({ session }: { session: SessionState }) {
           </p>
         )}
       </div>
+      {explore.error && (
+        <p role="alert" className="text-sm text-bad">
+          {explore.error.message}
+        </p>
+      )}
       {active && (
         <div
           role="group"

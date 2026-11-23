@@ -39,6 +39,10 @@ export function DetectiveSetup() {
         e.preventDefault();
         setDetectiveAsked();
       }}
+      // Esc가 막히지 않고 창이 그냥 닫힌 경우(최신 크롬)도 '나중에 할게요'로 본다
+      onClose={() => {
+        if (show) setDetectiveAsked();
+      }}
       className="paper m-auto w-[min(40rem,94vw)] p-6 backdrop:bg-black/80"
     >
       <h2

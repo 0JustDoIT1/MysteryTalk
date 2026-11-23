@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { healthResponseSchema, meResponseSchema } from '@mysterytalk/shared';
+import { z } from 'zod';
 import { ApiError, apiGet, apiOrThrow, apiRequest, isRetryable } from './client';
 
 const json = (status: number, body: unknown) =>
@@ -60,6 +61,13 @@ describe('apiGet', () => {
       ok: false,
       code: 'INVALID_RESPONSE',
     });
+  });
+
+  // 코드 검수(2026-11-23) 재현: 본문 없는 응답을 기대하는 요청(z.null)이 500 텍스트 응답을 성공으로 받았다
+  it('오류 상태인데 본문이 JSON이 아니면(프록시 500 등) 성공으로 보지 않는다', async () => {
+    const f = vi.fn().mockResolvedValue(new Response('Internal Server Error', { status: 500 }));
+    const r = await apiRequest('/auth/logout', z.null(), { method: 'POST' }, f);
+    expect(r).toMatchObject({ ok: false, status: 500, code: 'NETWORK' });
   });
 
   it('네트워크 오류는 NETWORK', async () => {

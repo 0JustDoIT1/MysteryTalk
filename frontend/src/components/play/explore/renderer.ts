@@ -74,6 +74,28 @@ export async function createRenderer(
     );
   }
 
+  /**
+   * 그림 하나를 불러온다. 성공·실패를 그 파일의 이벤트로만 받는다. 로더 전체의 'complete'·'loaderror'에
+   * once로 걸면 다른 파일(예: NPC 그림)의 실패에도 배경 실패 처리가 같이 실행돼 배경이 도형에 덮였다
+   * (코드 검수 2026-11-23).
+   */
+  function loadImage(s: Scene, key: string, url: string, onLoad: () => void, onError: () => void) {
+    const fail = (file: { key: string }) => {
+      if (file.key !== key) return;
+      s.load.off('loaderror', fail);
+      s.load.off(`filecomplete-image-${key}`, ok);
+      onError();
+    };
+    const ok = () => {
+      s.load.off('loaderror', fail);
+      onLoad();
+    };
+    s.load.once(`filecomplete-image-${key}`, ok);
+    s.load.on('loaderror', fail);
+    s.load.image(key, url);
+    s.load.start();
+  }
+
   /** 배경 그림을 불러와 맨 아래에 깐다. 그 사이 다른 맵으로 옮겼으면 버린다. */
   function drawBackground(s: Scene, map: ExploreMap, width: number, height: number, mark: string) {
     const key = `bg:${map.key}`;
@@ -82,13 +104,10 @@ export async function createRenderer(
       s.add.image(0, 0, key).setOrigin(0).setDisplaySize(width, height).setDepth(-10);
     };
     if (s.textures.exists(key)) return place();
-    s.load.image(key, opts.backgroundUrl(map.key));
-    s.load.once('complete', place);
     // 불러오지 못하면 도형으로 대신 그린다
-    s.load.once('loaderror', () => {
+    loadImage(s, key, opts.backgroundUrl(map.key), place, () => {
       if (drawnMap === mark) drawShapes(s, map);
     });
-    s.load.start();
   }
 
   /** NPC 그림을 불러와 그린다. 이미 대화한 NPC는 조금 어둡게. 그 사이 다른 맵으로 옮겼으면 버린다. */
@@ -107,13 +126,10 @@ export async function createRenderer(
       if (talked) img.setTint(0xb0b0b0);
     };
     if (s.textures.exists(key)) return place();
-    s.load.image(key, npcSpriteUrl(name));
-    s.load.once('complete', place);
     // 그림이 없거나 못 불러오면 색 입힌 탐정 그림으로 대신 그린다
-    s.load.once('loaderror', () => {
+    loadImage(s, key, npcSpriteUrl(name), place, () => {
       if (drawnMap === mark) drawTintedNpc(s, x, y, talked);
     });
-    s.load.start();
   }
 
   function drawTintedNpc(s: Scene, x: number, y: number, talked: boolean) {

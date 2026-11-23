@@ -538,3 +538,84 @@ test('18세 확인: 약관·처리방침은 확인 전에도 확인 창 없이 �
     0,
   );
 });
+
+// ── 코드 검수(2026-11-23) 재현 테스트: 프론트 오류 처리·상태 ──
+
+test('18세 확인: 확인 전에 창이 어떤 이유로든 닫히면 다시 연다', async ({ page }) => {
+  await page.goto('/');
+  const gate = page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' });
+  await expect(gate).toBeVisible();
+  // 최신 크롬은 사용자 조작 전 Esc를 막을 수 없다(CloseWatcher). 닫힘 자체를 재현한다.
+  await page.evaluate(() =>
+    document.querySelector<HTMLDialogElement>('dialog[aria-labelledby="age-heading"]')!.close(),
+  );
+  await expect(gate).toBeVisible();
+});
+
+test('18세 확인: 사건 링크로 바로 들어와도 확인 창이 먼저이고, 수사 안내는 확인한 뒤에 뜬다', async ({
+  page,
+}) => {
+  await page.goto('/terms');
+  await page.request.get('/api/me');
+  const res = await page.request.post('/api/cases/sample-blackout-302/sessions');
+  const { sessionId } = (await res.json()) as { sessionId: string };
+  await page.goto(`/play/${sessionId}`);
+  const gate = page.getByRole('dialog', { name: '탐정님, 시작 전에 확인해 주세요' });
+  await expect(gate).toBeVisible();
+  await expect(page.getByLabel('예/아니오로 답할 수 있는 질문')).toBeAttached();
+  await expect(page.getByRole('dialog', { name: /수사 안내/ })).toBeHidden();
+  await gate.getByRole('checkbox', { name: '본인은 만 18세 이상입니다.' }).check();
+  await gate.getByRole('button', { name: '확인', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: /수사 안내/ })).toBeVisible();
+});
+
+/** 세션 상태(GET /api/sessions/:id) 또는 현장 조사(GET .../explore) 응답을 프록시 500처럼 바꾼다 */
+async function failGet(page: Page, pattern: RegExp) {
+  await page.route(pattern, (route) =>
+    route.request().method() === 'GET'
+      ? route.fulfill({ status: 500, body: 'Internal Server Error' })
+      : route.continue(),
+  );
+}
+
+test('추리 화면: 다시 불러오기가 실패해도 화면과 입력 중인 질문이 남는다', async ({ page }) => {
+  await openCase(page, '302호의 정전');
+  const input = page.getByLabel('예/아니오로 답할 수 있는 질문');
+  await input.fill('입력 중인 질문인가요?');
+  await failGet(page, /\/api\/sessions\/[0-9a-f-]+$/);
+  // 힌트를 열면 세션 정보를 다시 받는다 → 실패
+  await page.getByRole('button', { name: '힌트 1 보기 (−10점)' }).click();
+  await expect(
+    page.getByRole('alert').filter({ hasText: '서버에 연결할 수 없어요' }),
+  ).toBeVisible();
+  await expect(input).toHaveValue('입력 중인 질문인가요?');
+  await expect(page.getByRole('heading', { name: '사건 개요' })).toBeVisible();
+});
+
+test('현장 조사: 다시 불러오기가 실패해도 맵 화면이 남는다', async ({ page }) => {
+  await openCase(page, '302호의 정전');
+  await expect(page.locator('canvas')).toHaveCount(1);
+  await failGet(page, /\/api\/sessions\/[0-9a-f-]+\/explore$/);
+  await page.getByRole('button', { name: '힌트 1 보기 (−10점)' }).click();
+  await expect(
+    page.getByRole('alert').filter({ hasText: '서버에 연결할 수 없어요' }),
+  ).toBeVisible();
+  await expect(page.locator('canvas')).toHaveCount(1);
+});
+
+test('수첩: 단서를 불러오지 못하면 "찾은 단서 없음" 대신 오류를 보여 준다', async ({ page }) => {
+  await failGet(page, /\/api\/sessions\/[0-9a-f-]+\/explore$/);
+  await openCase(page, '302호의 정전');
+  const panel = page.getByRole('tabpanel');
+  await expect(panel.getByRole('alert')).toBeVisible();
+  await expect(panel.getByText('아직 찾은 단서가 없어요.', { exact: false })).toHaveCount(0);
+});
+
+test('수첩: 저장하지 않은 메모는 다른 탭에 다녀와도 남는다', async ({ page }) => {
+  await openCase(page, '302호의 정전');
+  await page.getByRole('tab', { name: '메모' }).click();
+  await page.getByLabel('메모(AI에게 전달되지 않아요)').fill('관리인이 수상하다');
+  await page.getByRole('tab', { name: '단서' }).click();
+  await page.getByRole('tab', { name: '메모' }).click();
+  await expect(page.getByLabel('메모(AI에게 전달되지 않아요)')).toHaveValue('관리인이 수상하다');
+});
