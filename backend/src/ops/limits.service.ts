@@ -10,6 +10,12 @@ import { estimateCostKrw } from './pricing.js';
 
 type Subject = { subjectType: 'IP' | 'PLAYER'; subjectHash: string };
 
+/** 일일 한도에서 잡은 질문 자리 1개 */
+export type QuestionReservation = {
+  where: Subject & { day: Date };
+  column: 'questions' | 'tutorialQuestions';
+};
+
 /**
  * 비용·악용 방지(SPEC §10, PRD D44·D46·D58·D72·D83).
  * - 일일 질문 한도: 게스트는 IP, 로그인은 계정 단위. 튜토리얼은 따로 센다. AI에 보낸 질문만 센다.
@@ -29,29 +35,51 @@ export class LimitsService {
     return { subjectType: 'IP', subjectHash: ipHash(ip || 'unknown', secret, dayKey(now)) };
   }
 
-  /** 질문을 AI에 보내기 전 확인. 막히면 429. */
-  async assertCanAsk(
+  /**
+   * 질문을 AI에 보내기 전에 일일 한도 자리를 원자적으로 하나 잡는다. 막히면 429.
+   * '확인 후 나중에 증가'는 동시 요청이 모두 통과했다(코드 검수 2026-11-23) → 조건부 증가로 한 번에 처리한다.
+   * 잡은 자리는 판정이 실패하거나 결과가 버려지면 releaseQuestion으로 돌려준다.
+   * 반환값은 releaseQuestion에 넘길 표식(같은 날짜·대상에서 되돌리기 위해).
+   */
+  async reserveQuestion(
     player: Player,
     ip: string,
     tutorial: boolean,
     now = new Date(),
-  ): Promise<void> {
+  ): Promise<QuestionReservation> {
+    // 월 예산은 호출 비용이 끝나야 알 수 있어 미리 잡지 않는다. 동시에 처리 중인 질문만큼 넘을 수 있다.
+    if (!(await this.withinBudget('JUDGE', now))) {
+      throw new AppException(429, 'MONTHLY_BUDGET_REACHED');
+    }
     const subject = this.subject(player, ip, now);
+    const day = new Date(dayKey(now));
     const limit = tutorial
       ? this.config.get('DAILY_LIMIT_TUTORIAL', { infer: true })
       : player.kind === 'USER'
         ? this.config.get('DAILY_LIMIT_USER', { infer: true })
         : this.config.get('DAILY_LIMIT_GUEST', { infer: true });
-    if (limit > 0) {
-      const row = await this.prisma.usageDaily.findUnique({
-        where: { day_subjectType_subjectHash: { day: new Date(dayKey(now)), ...subject } },
-      });
-      const used = tutorial ? (row?.tutorialQuestions ?? 0) : (row?.questions ?? 0);
-      if (used >= limit) throw new AppException(429, 'DAILY_LIMIT_REACHED');
-    }
-    if (!(await this.withinBudget('JUDGE', now))) {
-      throw new AppException(429, 'MONTHLY_BUDGET_REACHED');
-    }
+    const column = tutorial ? 'tutorialQuestions' : 'questions';
+    const where = { day, ...subject };
+    // 행이 없으면 0으로 만든다. Prisma upsert는 동시 생성 때 고유 키 충돌(P2002)이 나서
+    // PostgreSQL의 ON CONFLICT DO NOTHING을 쓴다.
+    await this.prisma.$executeRaw`
+      INSERT INTO usage_daily (day, subject_type, subject_hash)
+      VALUES (${day}::date, ${subject.subjectType}::"UsageSubject", ${subject.subjectHash})
+      ON CONFLICT DO NOTHING`;
+    const claimed = await this.prisma.usageDaily.updateMany({
+      where: limit > 0 ? { ...where, [column]: { lt: limit } } : where,
+      data: { [column]: { increment: 1 } },
+    });
+    if (claimed.count === 0) throw new AppException(429, 'DAILY_LIMIT_REACHED');
+    return { where, column };
+  }
+
+  /** reserveQuestion으로 잡은 자리를 돌려준다(판정 실패·결과 폐기·예외). */
+  async releaseQuestion(r: QuestionReservation): Promise<void> {
+    await this.prisma.usageDaily.updateMany({
+      where: { ...r.where, [r.column]: { gt: 0 } },
+      data: { [r.column]: { decrement: 1 } },
+    });
   }
 
   /** 정답 채점 전 확인: 예비 예산까지 쓸 수 있다(D72). */
@@ -59,22 +87,6 @@ export class LimitsService {
     if (!(await this.withinBudget('GRADE', now))) {
       throw new AppException(429, 'MONTHLY_BUDGET_REACHED');
     }
-  }
-
-  /** AI에 보낸 질문 1개를 센다. */
-  async countQuestion(
-    player: Player,
-    ip: string,
-    tutorial: boolean,
-    now = new Date(),
-  ): Promise<void> {
-    const subject = this.subject(player, ip, now);
-    const day = new Date(dayKey(now));
-    await this.prisma.usageDaily.upsert({
-      where: { day_subjectType_subjectHash: { day, ...subject } },
-      create: { day, ...subject, questions: tutorial ? 0 : 1, tutorialQuestions: tutorial ? 1 : 0 },
-      update: tutorial ? { tutorialQuestions: { increment: 1 } } : { questions: { increment: 1 } },
-    });
   }
 
   /** AI 호출 비용을 이번 달 예산에 더한다. 반환값은 호출별 추정 비용(ai_call 기록용). */

@@ -24,6 +24,7 @@ describe('7단계 운영: 일일 한도·월 예산·공지·정리·통계 (e2e
   let prisma: PrismaService;
   const saved: Record<string, string | undefined> = {};
   const grader = new ScriptedGrader();
+  const judge = new ScriptedJudge();
   let h: typeof import('./helpers.js');
   const http = () => request(app.getHttpServer());
 
@@ -62,11 +63,12 @@ describe('7단계 운영: 일일 한도·월 예산·공지·정리·통계 (e2e
       process.env[k] = v;
     }
     h = await import('./helpers.js');
-    ({ app, prisma } = await h.createTestApp({ judge: new ScriptedJudge(), grader }));
+    ({ app, prisma } = await h.createTestApp({ judge, grader }));
   });
 
   beforeEach(async () => {
     grader.reset();
+    judge.reset();
     await h.resetDb(prisma);
     await h.loadTutorial(prisma);
     await h.loadSample(prisma);
@@ -95,6 +97,29 @@ describe('7단계 운영: 일일 한도·월 예산·공지·정리·통계 (e2e
       expect((await ask(g, id, '씨발 범인 누구야').expect(200)).body.label).toBe('RETRY');
       // 정답 제출은 일일 한도와 무관
       await submit(g, id).expect(200);
+    });
+
+    // 코드 검수(2026-11-23) 재현 테스트: 확인 후 나중에 세던 방식은 동시 요청이 모두 통과했다
+    it('같은 IP에서 동시에 질문해도 한도를 넘기지 않는다', async () => {
+      judge.setDelay(200);
+      const guests = await Promise.all([1, 2, 3, 4, 5].map(() => guest('10.0.0.7')));
+      const ids = await Promise.all(guests.map((g) => start(g)));
+      const results = await Promise.all(
+        guests.map((g, i) => ask(g, ids[i]!, `동시 질문 ${i + 1}번인가요?`)),
+      );
+      const statuses = results.map((r) => r.status).sort((a, b) => a - b);
+      expect(statuses).toEqual([200, 200, 200, 429, 429]);
+      const rows = await prisma.usageDaily.findMany();
+      expect(rows[0]!.questions).toBe(3);
+    });
+
+    it('AI 판정이 실패한 질문은 한도에 세지 않는다', async () => {
+      judge.set('실패하는 질문인가요?', 'fail');
+      const g = await guest('10.0.0.8');
+      const id = await start(g);
+      await ask(g, id, '실패하는 질문인가요?').expect(503);
+      const rows = await prisma.usageDaily.findMany();
+      expect(rows.reduce((a, r) => a + r.questions, 0)).toBe(0);
     });
 
     it('다른 IP는 따로 세고, 같은 IP의 다른 게스트는 함께 센다', async () => {

@@ -24,13 +24,14 @@ export class MockJudge implements Judge {
 export class ScriptedJudge implements Judge {
   readonly model = 'scripted';
   readonly received: JudgeInput[] = [];
-  private readonly script = new Map<string, JudgeResult | 'fail'>();
+  /** 'fail': 정상적인 판정 실패(timeout), 'throw': 예상 못 한 예외 */
+  private readonly script = new Map<string, JudgeResult | 'fail' | 'throw'>();
   /** 부정형 재확인 응답(질문별). 정하지 않은 질문은 판단 불가(UNKNOWN) */
   private readonly positive = new Map<string, { truth: 'TRUE' | 'FALSE'; factIds: string[] }>();
   readonly positiveChecked: string[] = [];
   private delayMs = 0;
 
-  set(question: string, outcome: JudgeResult | 'fail'): this {
+  set(question: string, outcome: JudgeResult | 'fail' | 'throw'): this {
     this.script.set(question, outcome);
     return this;
   }
@@ -53,6 +54,7 @@ export class ScriptedJudge implements Judge {
     if (this.delayMs) await new Promise((r) => setTimeout(r, this.delayMs));
     const meta = { model: this.model, latencyMs: this.delayMs, tokensIn: null, tokensOut: null };
     const outcome = this.script.get(input.question);
+    if (outcome === 'throw') throw new Error('scripted unexpected error');
     if (outcome === 'fail') {
       return { ok: false, reason: 'timeout', calls: [{ ...meta, ok: false }] };
     }

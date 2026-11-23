@@ -119,6 +119,11 @@ export class SessionsService {
     const previousViewed = hints.filter((h) => h.no < no).every((h) => h.viewed);
     if (!previousViewed) throw new AppException(409, 'HINT_LOCKED');
     const unlockedMaps = await this.prisma.$transaction(async (tx) => {
+      // 위의 상태 확인 뒤 정답 제출로 세션이 끝났을 수 있다. 행을 잠그고 다시 확인해
+      // 끝난 세션에 감점 없는 힌트 기록이 생기지 않게 한다(코드 검수 2026-11-23).
+      const rows = await tx.$queryRaw<{ status: string }[]>`
+        SELECT status FROM play_session WHERE id = ${s.id}::uuid FOR UPDATE`;
+      if (rows[0]?.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
       const inserted = await tx.hintView.createMany({
         data: [{ sessionId: s.id, hintNo: no }],
         skipDuplicates: true,

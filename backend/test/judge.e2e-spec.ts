@@ -348,6 +348,91 @@ describe('2단계 질문 판정 파이프라인 (e2e, SPEC §6)', () => {
       expect((await prisma.playSession.findUniqueOrThrow({ where: { id } })).questionsUsed).toBe(0);
     });
 
+    // 코드 검수(2026-11-23) 재현 테스트
+    it('판정 중 예상 못 한 예외가 나도 선점을 풀어, 바로 다음 질문을 받을 수 있다', async () => {
+      judge.set('예외가 나는 질문인가요?', 'throw');
+      const cookie = await newPlayer();
+      const id = await startSession(cookie);
+      await ask(cookie, id, '예외가 나는 질문인가요?').expect(500);
+      const session = await prisma.playSession.findUniqueOrThrow({ where: { id } });
+      expect(session).toMatchObject({ questionsUsed: 0, inFlightKey: null });
+      await ask(cookie, id, '다음 질문은 받나요?').expect(200);
+    });
+
+    it('선점 직전에 같은 문장이 기록됐으면, 선점 뒤 다시 확인해 판정·차감 없이 이전 답을 준다', async () => {
+      const cookie = await newPlayer();
+      const id = await startSession(cookie);
+      await ask(cookie, id, '먼저 한 질문인가요?').expect(200);
+      judge.reset();
+      // 사전 검사 뒤·선점 전에 다른 탭의 같은 질문이 확정된 상황: 선점(updateMany) 직전에 기록을 끼워 넣는다
+      const original = prisma.playSession.updateMany.bind(prisma.playSession);
+      const spy = vi.spyOn(prisma.playSession, 'updateMany').mockImplementationOnce((async (
+        args: unknown,
+      ) => {
+        await prisma.questionLog.create({
+          data: {
+            sessionId: id,
+            idempotencyKey: randomUUID(),
+            question: '동시에 보낸 질문인가요?',
+            normalized: '동시에보낸질문인가요',
+            label: 'NO',
+            factIds: [],
+            counted: true,
+            turnNo: 2,
+            caseVersion: 1,
+            response: {},
+          },
+        });
+        await prisma.playSession.update({ where: { id }, data: { questionsUsed: 2 } });
+        return original(args as never);
+      }) as never);
+      const r = await ask(cookie, id, '동시에 보낸 질문인가요?').expect(200);
+      spy.mockRestore();
+      expect(r.body).toMatchObject({ duplicate: true, counted: false, questionsUsed: 2 });
+      expect(judge.received).toHaveLength(0);
+      const session = await prisma.playSession.findUniqueOrThrow({ where: { id } });
+      expect(session).toMatchObject({ questionsUsed: 2, inFlightKey: null });
+    });
+
+    it('선점 직전에 질문 상한에 닿았으면, 선점 뒤 다시 확인해 판정하지 않고 409', async () => {
+      const cookie = await newPlayer();
+      const id = await startSession(cookie);
+      const original = prisma.playSession.updateMany.bind(prisma.playSession);
+      const spy = vi.spyOn(prisma.playSession, 'updateMany').mockImplementationOnce((async (
+        args: unknown,
+      ) => {
+        await prisma.playSession.update({ where: { id }, data: { questionsUsed: 45 } });
+        return original(args as never);
+      }) as never);
+      const r = await ask(cookie, id, '상한 직전 질문인가요?').expect(409);
+      spy.mockRestore();
+      expect(r.body.code).toBe('QUESTION_CAP_REACHED');
+      expect(judge.received).toHaveLength(0);
+      const session = await prisma.playSession.findUniqueOrThrow({ where: { id } });
+      expect(session).toMatchObject({ questionsUsed: 45, inFlightKey: null });
+    });
+
+    it('힌트를 여는 사이에 세션이 끝났으면 409, 끝난 세션에 힌트 기록이 생기지 않는다', async () => {
+      const cookie = await newPlayer();
+      const id = await startSession(cookie);
+      // 상태 확인 뒤·기록 전에 정답 제출로 세션이 끝난 상황: 열람 목록 조회 때 세션을 끝낸다
+      const original = prisma.hintView.findMany.bind(prisma.hintView);
+      const spy = vi.spyOn(prisma.hintView, 'findMany').mockImplementationOnce((async (
+        args: unknown,
+      ) => {
+        await prisma.playSession.update({
+          where: { id },
+          data: { status: 'SOLVED', finishedAt: new Date() },
+        });
+        return original(args as never);
+      }) as never);
+      const r = await http().post(`/sessions/${id}/hints/1`).set('Cookie', cookie);
+      spy.mockRestore();
+      expect(r.status).toBe(409);
+      expect(r.body.code).toBe('SESSION_FINISHED');
+      expect(await prisma.hintView.count({ where: { sessionId: id } })).toBe(0);
+    });
+
     it('질문 상한 3B에 도달하면 409 QUESTION_CAP_REACHED(정답 제출만 가능)', async () => {
       const cookie = await newPlayer();
       const id = await startSession(cookie);

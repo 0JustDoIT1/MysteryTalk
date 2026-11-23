@@ -72,126 +72,133 @@ export class SubmissionsService {
       idempotencyKey,
       leaseMsFor(this.config.get('LLM_TIMEOUT_MS', { infer: true })),
     );
-    const caseVersion = session.case.currentVersion;
-    const data = await loadVersion(this.prisma, session.case.id, caseVersion);
-    // 재작성 요청을 다 썼으면 마지막 판정: AI는 MATCH/NO_MATCH만 고른다(D23).
-    // 선점을 잡은 뒤에 다시 읽는다(선점 중에는 다른 제출이 이 값을 바꾸지 못한다).
-    const { detailRequestsUsed } = await this.prisma.playSession.findUniqueOrThrow({
-      where: { id: session.id },
-      select: { detailRequestsUsed: true },
-    });
-    const final = detailRequestsUsed >= MAX_DETAIL_REQUESTS;
-    const outcome = await this.grader.grade({
-      intro: data.background ?? session.case.intro,
-      facts: data.facts,
-      elements: data.elements.map((e) => ({
-        id: e.id,
-        description: e.description,
-        keywordGroups: e.keywordGroups,
-      })),
-      answer,
-      final,
-    });
-    const costs = await this.limits.spend('GRADE', outcome.calls);
-    await recordAiCalls(this.prisma, 'GRADE', session.id, outcome.calls, costs);
-    if (!outcome.ok) {
-      // 7. 실패: 미차감·기록 없음 → 같은 키로 재시도(D73)
-      this.logger.warn(`grade failed (${outcome.reason}) session=${session.id}`);
-      await releaseLease(this.prisma, session.id, idempotencyKey);
-      throw new AppException(503, 'AI_UNAVAILABLE');
-    }
-
-    // 4~8. 확정(짧은 트랜잭션): 선점 재확인 → 합의·결과 결정 → 기록 → 필요하면 종료
-    return this.prisma.$transaction(async (tx) => {
-      const rows = await tx.$queryRaw<
-        {
-          status: string;
-          in_flight_key: string | null;
-          questions_used: number;
-          wrong_submissions: number;
-          detail_requests_used: number;
-        }[]
-      >`SELECT status, in_flight_key, questions_used, wrong_submissions, detail_requests_used
-        FROM play_session WHERE id = ${session.id}::uuid FOR UPDATE`;
-      const row = rows[0];
-      if (row && row.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
-      if (!row || row.in_flight_key !== idempotencyKey) {
-        throw new AppException(409, 'SESSION_BUSY');
-      }
-
-      // 마지막 판정이면 키워드와 엇갈린 요소도 AI 판정으로 확정한다(D23).
-      const decision = decide(data.elements, answer, outcome.verdicts, final);
-      let wrong = row.wrong_submissions;
-      let details = row.detail_requests_used;
-      let status: SubmitAnswerResponse['status'] = 'ACTIVE';
-      if (decision.result === 'WRONG') wrong += 1;
-      if (decision.result === 'NEEDS_DETAIL') details += 1;
-
-      await tx.playSession.update({
+    // 선점 뒤에는 예상 못 한 예외가 나도 선점을 푼다(코드 검수 2026-11-23). 확정에 성공하면 트랜잭션이 이미 풀었다.
+    try {
+      const caseVersion = session.case.currentVersion;
+      const data = await loadVersion(this.prisma, session.case.id, caseVersion);
+      // 재작성 요청을 다 썼으면 마지막 판정: AI는 MATCH/NO_MATCH만 고른다(D23).
+      // 선점을 잡은 뒤에 다시 읽는다(선점 중에는 다른 제출이 이 값을 바꾸지 못한다).
+      const { detailRequestsUsed } = await this.prisma.playSession.findUniqueOrThrow({
         where: { id: session.id },
-        data: {
-          wrongSubmissions: wrong,
-          detailRequestsUsed: details,
-          caseVersion,
-          inFlightKey: null,
-          inFlightUntil: null,
-          lastActiveAt: new Date(),
-        },
+        select: { detailRequestsUsed: true },
       });
-
-      const finishWith =
-        decision.result === 'SOLVED'
-          ? 'SOLVED'
-          : decision.result === 'WRONG' && wrong >= MAX_SUBMISSIONS
-            ? failedStatus(decision.matchedCount, decision.totalCount)
-            : null;
-      if (finishWith) {
-        // 해결 시 점수의 오답 감점은 '해결 전 오답'만 센다(SPEC §8).
-        await finishSession(tx, {
-          sessionId: session.id,
-          playerId: session.playerId,
-          caseId: session.caseId,
-          isTutorial: session.case.isTutorial,
-          playNo: session.playNo,
-          status: finishWith,
-          baseQuestions: session.case.baseQuestions,
-          questionsUsed: row.questions_used,
-          wrongSubmissions: wrong,
-        });
-        status = finishWith;
+      const final = detailRequestsUsed >= MAX_DETAIL_REQUESTS;
+      const outcome = await this.grader.grade({
+        intro: data.background ?? session.case.intro,
+        facts: data.facts,
+        elements: data.elements.map((e) => ({
+          id: e.id,
+          description: e.description,
+          keywordGroups: e.keywordGroups,
+        })),
+        answer,
+        final,
+      });
+      const costs = await this.limits.spend('GRADE', outcome.calls);
+      await recordAiCalls(this.prisma, 'GRADE', session.id, outcome.calls, costs);
+      if (!outcome.ok) {
+        // 7. 실패: 미차감·기록 없음 → 같은 키로 재시도(D73). 선점 해제는 아래 catch가 한다.
+        this.logger.warn(`grade failed (${outcome.reason}) session=${session.id}`);
+        throw new AppException(503, 'AI_UNAVAILABLE');
       }
 
-      const isWrong = decision.result === 'WRONG';
-      const response: SubmitAnswerResponse = {
-        result: decision.result,
-        detailReason:
-          decision.result === 'NEEDS_DETAIL'
-            ? outcome.form === 'STATEMENT'
-              ? 'DETAIL'
-              : 'FORM'
-            : null,
-        // 개수는 오답일 때만(재작성 요청과 함께는 표시하지 않음, D21)
-        matchedCount: isWrong ? decision.matchedCount : null,
-        totalCount: isWrong ? decision.totalCount : null,
-        submissionsLeft: MAX_SUBMISSIONS - wrong,
-        status,
-      };
-      await tx.submission.create({
-        data: {
-          sessionId: session.id,
-          idempotencyKey,
-          answer,
+      // 4~8. 확정(짧은 트랜잭션): 선점 재확인 → 합의·결과 결정 → 기록 → 필요하면 종료
+      return await this.prisma.$transaction(async (tx) => {
+        const rows = await tx.$queryRaw<
+          {
+            status: string;
+            in_flight_key: string | null;
+            questions_used: number;
+            wrong_submissions: number;
+            detail_requests_used: number;
+          }[]
+        >`SELECT status, in_flight_key, questions_used, wrong_submissions, detail_requests_used
+          FROM play_session WHERE id = ${session.id}::uuid FOR UPDATE`;
+        const row = rows[0];
+        if (row && row.status !== 'ACTIVE') throw new AppException(409, 'SESSION_FINISHED');
+        if (!row || row.in_flight_key !== idempotencyKey) {
+          throw new AppException(409, 'SESSION_BUSY');
+        }
+
+        // 마지막 판정이면 키워드와 엇갈린 요소도 AI 판정으로 확정한다(D23).
+        const decision = decide(data.elements, answer, outcome.verdicts, final);
+        let wrong = row.wrong_submissions;
+        let details = row.detail_requests_used;
+        let status: SubmitAnswerResponse['status'] = 'ACTIVE';
+        if (decision.result === 'WRONG') wrong += 1;
+        if (decision.result === 'NEEDS_DETAIL') details += 1;
+
+        await tx.playSession.update({
+          where: { id: session.id },
+          data: {
+            wrongSubmissions: wrong,
+            detailRequestsUsed: details,
+            caseVersion,
+            inFlightKey: null,
+            inFlightUntil: null,
+            lastActiveAt: new Date(),
+          },
+        });
+
+        const finishWith =
+          decision.result === 'SOLVED'
+            ? 'SOLVED'
+            : decision.result === 'WRONG' && wrong >= MAX_SUBMISSIONS
+              ? failedStatus(decision.matchedCount, decision.totalCount)
+              : null;
+        if (finishWith) {
+          // 해결 시 점수의 오답 감점은 '해결 전 오답'만 센다(SPEC §8).
+          await finishSession(tx, {
+            sessionId: session.id,
+            playerId: session.playerId,
+            caseId: session.caseId,
+            isTutorial: session.case.isTutorial,
+            playNo: session.playNo,
+            status: finishWith,
+            baseQuestions: session.case.baseQuestions,
+            questionsUsed: row.questions_used,
+            wrongSubmissions: wrong,
+          });
+          status = finishWith;
+        }
+
+        const isWrong = decision.result === 'WRONG';
+        const response: SubmitAnswerResponse = {
           result: decision.result,
-          matched: decision.elements,
-          matchedCount: decision.matchedCount,
-          totalCount: decision.totalCount,
-          caseVersion,
-          model: this.grader.model,
-          promptVersion: GRADE_PROMPT_VERSION,
-          response,
-        },
+          detailReason:
+            decision.result === 'NEEDS_DETAIL'
+              ? outcome.form === 'STATEMENT'
+                ? 'DETAIL'
+                : 'FORM'
+              : null,
+          // 개수는 오답일 때만(재작성 요청과 함께는 표시하지 않음, D21)
+          matchedCount: isWrong ? decision.matchedCount : null,
+          totalCount: isWrong ? decision.totalCount : null,
+          submissionsLeft: MAX_SUBMISSIONS - wrong,
+          status,
+        };
+        await tx.submission.create({
+          data: {
+            sessionId: session.id,
+            idempotencyKey,
+            answer,
+            result: decision.result,
+            matched: decision.elements,
+            matchedCount: decision.matchedCount,
+            totalCount: decision.totalCount,
+            caseVersion,
+            model: this.grader.model,
+            promptVersion: GRADE_PROMPT_VERSION,
+            response,
+          },
+        });
+        return response;
       });
-      return response;
-    });
+    } catch (e) {
+      await releaseLease(this.prisma, session.id, idempotencyKey).catch((err: unknown) =>
+        this.logger.error(`lease release failed session=${session.id}`, err as Error),
+      );
+      throw e;
+    }
   }
 }

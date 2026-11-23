@@ -34,7 +34,13 @@ export async function releaseLease(
   });
 }
 
-/** 선점 시간 = AI 타임아웃 × 2(1회 재시도) + 여유 15초 */
-export function leaseMsFor(llmTimeoutMs: number): number {
-  return llmTimeoutMs * 2 + 15_000;
+/**
+ * 질문 판정의 최대 단계 수: 첫 판정 → 복합 질문 재판정(compound-guard) → 부정형 재확인(negation).
+ * 단계마다 1회 재시도까지 하므로 최대 6회 호출된다.
+ */
+export const JUDGE_MAX_STAGES = 3;
+
+/** 선점 시간 = AI 타임아웃 × 2(1회 재시도) × 단계 수 + 여유 15초. 채점은 1단계. */
+export function leaseMsFor(llmTimeoutMs: number, stages = 1): number {
+  return llmTimeoutMs * 2 * stages + 15_000;
 }

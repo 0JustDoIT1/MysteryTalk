@@ -13,17 +13,40 @@ import { duplicateKey, normalizeQuestion } from '../judge/normalize.js';
 import { prefilterRetry } from '../judge/prefilter.js';
 import { JUDGE, PROMPT_VERSION, type Judge, type JudgeResult } from '../judge/judge.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { LimitsService } from '../ops/limits.service.js';
+import { LimitsService, type QuestionReservation } from '../ops/limits.service.js';
 import { recordAiCalls } from './ai-calls.js';
 import { loadVersion, questionCap } from './case-data.js';
 import { unlockZones } from './zones.js';
 import { applyCompoundGuard } from '../judge/compound-guard.js';
 import { applyNegationCheck } from '../judge/negation.js';
 import { applyPartialRule } from '../judge/partial-rule.js';
-import { claimLease, leaseMsFor, releaseLease } from './session-lease.js';
+import { JUDGE_MAX_STAGES, claimLease, leaseMsFor, releaseLease } from './session-lease.js';
 import { SessionsService } from './sessions.service.js';
 
 const uuid = z.uuid();
+
+type OwnedSession = Awaited<ReturnType<SessionsService['loadOwned']>>;
+type SameQuestion = Pick<AskQuestionResponse, 'label' | 'retryReason' | 'turnNo'>;
+
+/** 같은 문장 재질문 응답: 이전 판정 재표시, 미차감(D5) */
+function duplicateResponse(
+  same: SameQuestion,
+  questionsUsed: number,
+  baseQuestions: number,
+  cap: number,
+): AskQuestionResponse {
+  return {
+    label: same.label,
+    retryReason: same.retryReason,
+    duplicate: true,
+    counted: false,
+    turnNo: same.turnNo,
+    questionsUsed,
+    baseQuestions,
+    questionCap: cap,
+    unlockedMaps: [],
+  };
+}
 
 /**
  * 질문 판정 파이프라인(SPEC §6, PRD §5.2).
@@ -74,40 +97,80 @@ export class QuestionsService {
     const normalized = duplicateKey(question);
 
     // 4. 같은 문장 재질문: 이전 판정 재표시, 미차감, AI 호출 없음(D5)
-    const same = await this.prisma.questionLog.findFirst({
-      where: { sessionId: session.id, normalized },
-      orderBy: { createdAt: 'asc' },
-      select: { label: true, retryReason: true, turnNo: true },
-    });
-    if (same) {
-      return {
-        label: same.label,
-        retryReason: same.retryReason,
-        duplicate: true,
-        counted: false,
-        turnNo: same.turnNo,
-        questionsUsed: session.questionsUsed,
-        baseQuestions: base,
-        questionCap: cap,
-        unlockedMaps: [],
-      };
-    }
+    const same = await this.findSame(session.id, normalized);
+    if (same) return duplicateResponse(same, session.questionsUsed, base, cap);
 
-    // 5. 서버 상한 3B(D49). 6. 일일·월 한도는 7단계에서 이 위치에 추가한다(SPEC §10).
+    // 5. 서버 상한 3B(D49)
     if (session.questionsUsed >= cap) throw new AppException(409, 'QUESTION_CAP_REACHED');
-    // 6. 일일 한도·월 예산(D58·D72·D83): AI에 보낼 질문만 확인한다(사전 필터에 걸리는 질문은 AI를 쓰지 않음).
     const prefiltered = prefilterRetry(question);
     const usesAi = prefiltered === null;
-    if (usesAi) await this.limits.assertCanAsk(player, ip, session.case.isTutorial);
 
-    // 8. 처리 중 선점(원자적). 다른 요청이 처리 중이면 409.
+    // 8. 처리 중 선점(원자적). 다른 요청이 처리 중이면 409. 판정은 최대 3단계라 그만큼 길게 잡는다.
     await claimLease(
       this.prisma,
       session.id,
       idempotencyKey,
-      leaseMsFor(this.config.get('LLM_TIMEOUT_MS', { infer: true })),
+      leaseMsFor(this.config.get('LLM_TIMEOUT_MS', { infer: true }), JUDGE_MAX_STAGES),
     );
+    // 선점 뒤에는 선점 해제(와 잡은 한도 자리 반환)를 반드시 한다. 예상 못 한 예외도 마찬가지(코드 검수 2026-11-23).
+    let reservation: QuestionReservation | null = null;
+    try {
+      // 4·5 재확인: 위의 검사는 선점 전 값이라, 그 사이 다른 탭의 질문이 확정됐을 수 있다.
+      // 선점을 잡은 동안에는 다른 요청이 질문을 확정할 수 없으므로 여기서 한 번 더 보면 충분하다.
+      const fresh = await this.prisma.playSession.findUniqueOrThrow({
+        where: { id: session.id },
+        select: { questionsUsed: true },
+      });
+      const sameNow = await this.findSame(session.id, normalized);
+      if (sameNow) {
+        await releaseLease(this.prisma, session.id, idempotencyKey);
+        return duplicateResponse(sameNow, fresh.questionsUsed, base, cap);
+      }
+      if (fresh.questionsUsed >= cap) throw new AppException(409, 'QUESTION_CAP_REACHED');
 
+      // 6. 일일 한도·월 예산(D58·D72·D83): AI에 보낼 질문만, 한도 자리를 원자적으로 잡는다.
+      if (usesAi)
+        reservation = await this.limits.reserveQuestion(player, ip, session.case.isTutorial);
+      return await this.judgeAndCommit(session, idempotencyKey, question, normalized, prefiltered);
+    } catch (e) {
+      await this.cleanup(session.id, idempotencyKey, reservation);
+      throw e;
+    }
+  }
+
+  /** 같은 정규화 문장의 첫 기록 */
+  private findSame(sessionId: string, normalized: string) {
+    return this.prisma.questionLog.findFirst({
+      where: { sessionId, normalized },
+      orderBy: { createdAt: 'asc' },
+      select: { label: true, retryReason: true, turnNo: true },
+    });
+  }
+
+  /** 실패·폐기 시 선점 해제와 한도 자리 반환. 정리 중 오류는 원래 오류를 가리지 않게 기록만 한다. */
+  private async cleanup(
+    sessionId: string,
+    key: string,
+    reservation: QuestionReservation | null,
+  ): Promise<void> {
+    try {
+      await releaseLease(this.prisma, sessionId, key);
+      if (reservation) await this.limits.releaseQuestion(reservation);
+    } catch (err) {
+      this.logger.error(`cleanup failed session=${sessionId}`, err as Error);
+    }
+  }
+
+  /** 7·9·10·11단계: 판정(트랜잭션 밖) → 확정. 선점을 잡은 상태에서만 부른다. */
+  private async judgeAndCommit(
+    session: OwnedSession,
+    idempotencyKey: string,
+    question: string,
+    normalized: string,
+    prefiltered: JudgeResult['retryReason'] | null,
+  ): Promise<AskQuestionResponse> {
+    const base = session.case.baseQuestions;
+    const cap = questionCap(base);
     // 7. 사전 필터(욕설·조작 지시, 확실한 복합·열린 질문) → AI 없이 '다시 질문'. 9. 아니면 AI 판정(트랜잭션 밖)
     // 사건 내용이 수정됐으면 진행 중 세션에도 최신 버전을 적용하고, 판정 당시 버전을 기록한다(D59).
     const caseVersion = session.case.currentVersion;
@@ -127,9 +190,8 @@ export class QuestionsService {
       const costs = await this.limits.spend('JUDGE', outcome.calls);
       await recordAiCalls(this.prisma, 'JUDGE', session.id, outcome.calls, costs);
       if (!outcome.ok) {
-        // 10. 실패: 선점 해제, 미차감, 기록 없음 → 같은 키로 재시도 가능(D6)
+        // 10. 실패: 미차감, 기록 없음 → 같은 키로 재시도 가능(D6). 선점 해제·한도 반환은 호출부(cleanup)가 한다.
         this.logger.warn(`judge failed (${outcome.reason}) session=${session.id}`);
-        await releaseLease(this.prisma, session.id, idempotencyKey);
         throw new AppException(503, 'AI_UNAVAILABLE');
       }
       // 접속 표현이 없는데 복합 질문이라 하면 '다시 질문' 없이 한 번 더 판정한다(compound-guard).
@@ -146,7 +208,6 @@ export class QuestionsService {
       }
       // 근거가 전부 부분 사실인 예/아니오는 그럴 수도로 바꾼다(부분 사실 보정, AI 호출 없음)
       result = applyPartialRule(data.facts, negation.result).result;
-      await this.limits.countQuestion(player, ip, session.case.isTutorial);
       model = this.judge.model;
     }
 
@@ -163,6 +224,8 @@ export class QuestionsService {
         throw new AppException(409, 'SESSION_BUSY');
       }
       const counted = COUNTED_LABELS.includes(result.label);
+      // 상한은 확정 시점 값으로도 지킨다(선점이 만료돼 다른 요청과 겹친 경우 대비)
+      if (counted && row.questions_used >= cap) throw new AppException(409, 'QUESTION_CAP_REACHED');
       const used = row.questions_used + (counted ? 1 : 0);
       // 사실 해금(D26, D74): '예' 판정만, 근거 사실 + 질문 키워드 검사. 이유는 응답에 넣지 않는다(D81).
       const unlockedMaps =
