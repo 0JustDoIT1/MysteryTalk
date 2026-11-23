@@ -60,3 +60,4 @@
 - 2026-11-20 | 알림을 sonner로 교체, 화면 테마 '책상 위의 수사 서류' | 알림이 저절로 닫히지 않던 문제, 디자인 정리 | frontend, docs/SPEC.md
 - 2026-11-23 | 가드레일 기계적 강제: Bash 가드 훅(Co-Authored-By·main 직접 커밋·.env·db push·migrate reset·강제 푸시·reset --hard 차단), /refine 자동 상기 훅, ask에 PRD·마이그레이션 편집·브랜치 삭제·Claude 평가 추가, .env 셸 차단을 deny 패턴에서 훅으로 이전(process.env 오차단 해소), CI에 `npm run guard` | 문서 규칙만으로는 지켜지지 않는 항목이 있음 | .claude/settings.json, .claude/hooks/, scripts/guard.mjs, ci.yml, CLAUDE.md
 - 2026-11-23 | 가드 보완: git 전역 옵션·환경변수 뒤 하위 명령까지 판정, 묶인 `-uf` 강제 푸시, `.env*`·셸 확장 차단, main에서 merge·cherry-pick·revert·am 차단(`--ff-only`·pull 허용), 커밋 메시지 속 `.env` 언급 허용, guard 스크립트 한글 경로·지운 파일·skip 변형 처리 | 코드 검수에서 우회 8건 발견 | .claude/hooks/, scripts/guard.mjs, CLAUDE.md
+- 2026-11-23 | 글자 로고 → 그림 로고(메인 조합 로고, 추리 화면 머리 글자 로고, 탭 아이콘은 사용자가 교체한 favicon.ico), 원본은 `frontend/public/images/logo/` | 사용자 요청 | app/(game)/page.tsx, PlayScreen, ASSETS.md
