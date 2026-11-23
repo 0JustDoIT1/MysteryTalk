@@ -123,7 +123,7 @@ function QuestionLog({
   const log = useQuestionLog(sessionId, filter);
   return (
     <div className="flex flex-col gap-2">
-      <div role="group" aria-label="판정별 보기" className="flex flex-wrap gap-1">
+      <div role="group" aria-label={t.notebook.filterLabel} className="flex flex-wrap gap-1">
         {[undefined, ...QUESTION_LABELS].map((l) => (
           <button
             key={l ?? 'ALL'}

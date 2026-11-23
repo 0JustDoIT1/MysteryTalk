@@ -17,7 +17,7 @@ export function EndingView() {
   const finished = !!session.data && session.data.status !== 'ACTIVE';
   const ending = useEnding(sessionId, finished);
   const again = useStartSession(session.data?.caseSlug ?? '');
-  useDocumentTitle(ending.data ? `${ending.data.title} 결과` : undefined);
+  useDocumentTitle(ending.data ? t.ending.pageTitle(ending.data.title) : undefined);
 
   if (session.isPending || (finished && ending.isPending))
     return <p className="text-cream-2">{t.common.loading}</p>;

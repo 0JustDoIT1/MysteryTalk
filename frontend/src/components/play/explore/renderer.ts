@@ -10,17 +10,28 @@ type Sprite = InstanceType<PhaserModule['GameObjects']['Sprite']>;
  * 배경이 없는 맵은 임시 도형으로 그린다. 캐릭터는 쯔꾸르식 스프라이트 시트(가로 3프레임 × 세로 4방향).
  */
 export const TILE = MAP_TILE_PX;
-const COLORS = {
-  wall: 0x292524,
-  floor: 0x57534e,
-  floorAlt: 0x524e49,
-  exit: 0x78716c,
-  exitLocked: 0x7f1d1d,
-  object: 0xd97706,
-  objectDone: 0x92400e,
-  npcTint: 0x7dd3c0,
-  npcTalkedTint: 0x4b8f84,
-};
+/**
+ * 맵 색은 globals.css의 :root 토큰(--map-*)에서 읽는다(색은 테마 토큰으로만, CLAUDE.md).
+ * 브라우저에서 렌더러를 만들 때 한 번 읽는다. Phaser 도형은 0xRRGGBB 숫자, 글자·배경은 #RRGGBB 문자열을 쓴다.
+ */
+function readMapColors() {
+  const css = getComputedStyle(document.documentElement);
+  const hex = (name: string) => css.getPropertyValue(name).trim();
+  const num = (name: string) => parseInt(hex(name).replace('#', ''), 16);
+  return {
+    bg: hex('--map-bg'),
+    wall: num('--map-wall'),
+    floor: num('--map-floor'),
+    floorAlt: num('--map-floor-alt'),
+    exit: num('--map-exit'),
+    exitLocked: num('--map-exit-locked'),
+    object: num('--map-object'),
+    objectDone: num('--map-object-done'),
+    npcTint: num('--map-npc-tint'),
+    npcTalkedTint: num('--map-npc-talked-tint'),
+    npcSpriteTalked: num('--map-npc-sprite-talked'),
+  };
+}
 /**
  * 탐정 걷기 그림(가로 3프레임 × 세로 4방향). 캐릭터 그림은 칸의 2배(64px)로 받아 32px 칸에 맞춰 그린다(D102).
  * 그림은 탐정 캐릭터별 시트(frontend/public/sprites/detectives/<id>.png, D103, 출처는 ASSETS.md).
@@ -55,6 +66,7 @@ export async function createRenderer(
   opts: { backgroundUrl: (mapKey: string) => string; character: string },
 ): Promise<ExploreRenderer> {
   const Phaser: PhaserModule = await import('phaser');
+  const COLORS = readMapColors();
   let pending: { map: ExploreMap; pos: Position; facing: Dir } | null = null;
   let scene: Scene | null = null;
   let drawnMap: string | null = null;
@@ -123,7 +135,7 @@ export async function createRenderer(
     const place = () => {
       if (drawnMap !== mark || !s.textures.exists(key)) return;
       const img = s.add.image(center(x), center(y), key).setDisplaySize(TILE, TILE).setDepth(5);
-      if (talked) img.setTint(0xb0b0b0);
+      if (talked) img.setTint(COLORS.npcSpriteTalked);
     };
     if (s.textures.exists(key)) return place();
     // 그림이 없거나 못 불러오면 색 입힌 탐정 그림으로 대신 그린다
@@ -194,7 +206,7 @@ export async function createRenderer(
         s.add
           .text(center(o.x), center(o.y), o.name.slice(0, 1), {
             fontSize: '14px',
-            color: '#1c1917',
+            color: COLORS.bg,
             fontStyle: 'bold',
           })
           .setOrigin(0.5);
@@ -233,7 +245,7 @@ export async function createRenderer(
 
   function onCreate(created: Scene) {
     scene = created;
-    created.cameras.main.setBackgroundColor('#1c1917');
+    created.cameras.main.setBackgroundColor(COLORS.bg);
     if (pending) {
       const p = pending;
       pending = null;
@@ -264,7 +276,7 @@ export async function createRenderer(
     parent,
     width: VIEW.width,
     height: VIEW.height,
-    backgroundColor: '#1c1917',
+    backgroundColor: COLORS.bg,
     pixelArt: true,
     // 키 입력은 React가 받는다(질문 입력과 충돌하지 않게). Phaser 키보드·마우스 입력은 끈다.
     input: { keyboard: false, mouse: false, touch: false, gamepad: false },

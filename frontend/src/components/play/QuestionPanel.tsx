@@ -22,13 +22,12 @@ type Shown = { question: string; response: AskQuestionResponse; seq: number };
 
 /** 답변이 온 순간 화면 가장자리를 빛낼 색(판정별) */
 const EDGE: Record<QuestionLabel, string> = {
-  // 어두운 책상 배경에서도 보이도록 판정 색보다 밝은 같은 계열의 빛을 쓴다
-  YES: 'shadow-[inset_0_0_0_6px_rgb(95_191_110/0.9),inset_0_0_220px_70px_rgb(95_191_110/0.6)]',
-  NO: 'shadow-[inset_0_0_0_6px_rgb(224_96_90/0.9),inset_0_0_220px_70px_rgb(224_96_90/0.6)]',
-  MAYBE: 'shadow-[inset_0_0_0_6px_rgb(224_164_58/0.9),inset_0_0_220px_70px_rgb(224_164_58/0.6)]',
-  IRRELEVANT:
-    'shadow-[inset_0_0_0_6px_rgb(191_174_150/0.9),inset_0_0_220px_70px_rgb(191_174_150/0.5)]',
-  RETRY: 'shadow-[inset_0_0_0_6px_rgb(90_160_214/0.9),inset_0_0_220px_70px_rgb(90_160_214/0.6)]',
+  // 색은 globals.css의 --glow-* 토큰(.edge-glow)
+  YES: 'edge-glow [--glow:var(--glow-yes)]',
+  NO: 'edge-glow [--glow:var(--glow-no)]',
+  MAYBE: 'edge-glow [--glow:var(--glow-maybe)]',
+  IRRELEVANT: 'edge-glow [--glow:var(--glow-irrelevant)] [--glow-soft:50%]',
+  RETRY: 'edge-glow [--glow:var(--glow-retry)]',
 };
 
 /** 판정 도장 색. 글자(판정 문구)와 함께 보여 색만으로 구분하지 않는다(D66) */
@@ -89,7 +88,7 @@ export function QuestionPanel({ session }: { session: SessionState }) {
         // 답이 오기 전에는 상자를 접어 둔다(알림 영역은 남겨 화면 낭독기가 답을 읽는다)
         className={
           ask.isPending || shown || ask.error
-            ? 'min-h-36 border border-line bg-paper-input bg-[repeating-linear-gradient(transparent_0_27px,rgb(156_131_92/0.18)_27px_28px)] p-4 shadow-inner'
+            ? 'min-h-36 border border-line bg-paper-input ruled p-4 shadow-inner'
             : undefined
         }
       >

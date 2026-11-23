@@ -1,5 +1,6 @@
 import { ERROR_MESSAGES, errorResponseSchema, type ErrorCode } from '@mysterytalk/shared';
 import type { z } from 'zod';
+import { t } from '@/i18n/ko';
 
 export type ApiErrorCode = ErrorCode | 'NETWORK' | 'INVALID_RESPONSE';
 
@@ -50,7 +51,7 @@ export async function apiRequest<S extends z.ZodType>(
       credentials: 'same-origin',
     });
   } catch {
-    return { ok: false, status: 0, code: 'NETWORK', message: '서버에 연결할 수 없어요.' };
+    return { ok: false, status: 0, code: 'NETWORK', message: t.common.networkError };
   }
   const body: unknown = await res.json().catch(() => null);
 
@@ -71,7 +72,7 @@ export async function apiRequest<S extends z.ZodType>(
         ok: false,
         status: res.status,
         code: 'NETWORK',
-        message: '서버에 연결할 수 없어요.',
+        message: t.common.networkError,
       };
     }
   }
@@ -81,7 +82,7 @@ export async function apiRequest<S extends z.ZodType>(
       ok: false,
       status: res.status,
       code: 'INVALID_RESPONSE',
-      message: '서버 응답 형식이 올바르지 않아요.',
+      message: t.common.invalidResponse,
     };
   }
   return { ok: true, status: res.status, data: parsed.data };

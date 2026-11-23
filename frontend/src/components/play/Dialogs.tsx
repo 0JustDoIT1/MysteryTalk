@@ -7,6 +7,7 @@ import { isRetryable } from '@/lib/api/client';
 import { useAbandon, useSubmitAnswer } from '@/lib/api/queries';
 import { useSfx } from '@/lib/audio/use-sfx';
 import { keyFor, type PendingRequest } from '@/lib/play/idempotency';
+import { submitErrorMessage } from '@/lib/play/submit-error';
 import { t } from '@/i18n/ko';
 
 /** 네이티브 <dialog> 모달: 포커스 가두기·ESC 닫기를 브라우저가 처리한다(D66 키보드 조작). */
@@ -150,7 +151,7 @@ export function SubmitDialog({
           {result?.result === 'SOLVED' && <p className="text-ok">{t.submit.solved}</p>}
           {submit.error && (
             <p role="alert" className="text-bad">
-              {submit.error.message}
+              {submitErrorMessage(submit.error)}
             </p>
           )}
         </div>

@@ -37,7 +37,7 @@ export function CaseList() {
         <h1 id="cases-heading" className="text-2xl font-bold">
           {t.cases.heading}
         </h1>
-        <div role="group" aria-label="장르" className="flex gap-1">
+        <div role="group" aria-label={t.cases.genreLabel} className="flex gap-1">
           {GENRES_WITH_ALL.map((g) => (
             <button
               key={g}

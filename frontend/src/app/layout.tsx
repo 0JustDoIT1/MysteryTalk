@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Noto_Serif_KR } from 'next/font/google';
 import { BgmPlayer } from '@/components/BgmPlayer';
 import { Toasts } from '@/components/Toasts';
+import { t } from '@/i18n/ko';
 import { Providers } from './providers';
 import './globals.css';
 
@@ -15,8 +16,8 @@ const serif = Noto_Serif_KR({
 
 export const metadata: Metadata = {
   // 화면마다 '사건 선택 · MysteryTalk'처럼 제목을 붙인다(PRD D66)
-  title: { default: 'MysteryTalk', template: '%s · MysteryTalk' },
-  description: '질문으로 진실을 찾는 픽셀아트 추리 게임',
+  title: { default: t.app.title, template: `%s · ${t.app.title}` },
+  description: t.app.description,
 };
 
 export default function RootLayout({ children }: LayoutProps<'/'>) {

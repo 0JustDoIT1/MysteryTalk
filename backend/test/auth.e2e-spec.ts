@@ -3,6 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import request, { type Response } from 'supertest';
 import { GoogleAuthProvider } from '../src/auth/auth-provider.js';
 import { mergeGuestInto } from '../src/auth/merge.js';
+import { AuthService } from '../src/auth/auth.service.js';
 import { ScriptedGrader } from '../src/grade/mock.grader.js';
 import { ScriptedJudge } from '../src/judge/mock.judge.js';
 import type { PrismaService } from '../src/prisma/prisma.service.js';
@@ -125,6 +126,20 @@ describe('5단계 로그인·기록 이전 (e2e, SPEC §3, PRD D29~D33·D82)', (
     const noFlow = await http().get('/auth/google/callback?code=fake:bob&state=x');
     expect(noFlow.headers['location']).toContain('login=failed');
     expect(await prisma.authSession.count()).toBe(0);
+  });
+
+  // 코드 검수(2026-11-23) 재현: 기록 이전이 실패하면 리디렉트 대신 JSON 500 화면이 보였다
+  it('로그인 처리(기록 이전) 중 오류가 나면 실패 안내로 돌려보내고 게스트 쿠키는 그대로 둔다', async () => {
+    const jar = await browser();
+    const guestCookie = jar.get('mt_guest');
+    const spy = vi
+      .spyOn(app.get(AuthService), 'login')
+      .mockRejectedValueOnce(new Error('merge conflict'));
+    const result = await login(jar, 'carol');
+    spy.mockRestore();
+    expect(result).toBe('failed');
+    expect(jar.get('mt_guest')).toBe(guestCookie);
+    expect(jar.has('mt_session')).toBe(false);
   });
 
   it('게스트 기록 이전: 진행 중 충돌은 최근 쪽만 남기고, 회차·기록을 시작 시각 순으로 다시 계산한다(D82)', async () => {

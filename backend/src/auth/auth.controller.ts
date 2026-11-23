@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, Inject, Post, Query, Req, Res } from '@nestjs/common';
+import { Controller, Get, HttpCode, Inject, Logger, Post, Query, Req, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Request, Response } from 'express';
 import type { Env } from '../config/env.js';
@@ -21,6 +21,8 @@ import { AuthService } from './auth.service.js';
  */
 @Controller('auth')
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(
     private readonly auth: AuthService,
     private readonly players: PlayerService,
@@ -67,7 +69,15 @@ export class AuthController {
 
     const guestToken = readGuestToken(req);
     const guest = guestToken ? await this.players.findGuest(guestToken) : null;
-    const { token } = await this.auth.login(result.sub, guest);
+    // 기록 이전 중 오류(고유 키 충돌 등)는 브라우저에 JSON 500 대신 실패 안내로 돌려보낸다.
+    // 게스트 쿠키는 그대로 두어 게스트로 계속할 수 있다(코드 검수 2026-11-23).
+    let token: string;
+    try {
+      ({ token } = await this.auth.login(result.sub, guest));
+    } catch (error) {
+      this.logger.error('login failed', error as Error);
+      return this.back(res, 'failed');
+    }
     writeSessionCookie(res, token, this.secure);
     // 게스트 기록은 계정으로 옮겼으므로 게스트 쿠키는 지운다.
     res.clearCookie(GUEST_COOKIE, {

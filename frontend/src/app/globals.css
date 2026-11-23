@@ -102,6 +102,26 @@ h3 {
 /* 슬라이더·체크박스 등 기본 입력의 강조색 */
 :root {
   accent-color: var(--color-accent);
+
+  /* 판정 순간 화면 가장자리 빛(QuestionPanel). 어두운 책상에서도 보이게 판정 색보다 밝은 같은 계열 */
+  --glow-yes: #5fbf6e;
+  --glow-no: #e0605a;
+  --glow-maybe: #e0a43a;
+  --glow-irrelevant: #bfae96;
+  --glow-retry: #5aa0d6;
+
+  /* 현장 조사 맵(Phaser, renderer.ts가 시작할 때 읽는다). 배경 그림이 없는 맵의 임시 도형과 표시 색 */
+  --map-bg: #1c1917;
+  --map-wall: #292524;
+  --map-floor: #57534e;
+  --map-floor-alt: #524e49;
+  --map-exit: #78716c;
+  --map-exit-locked: #7f1d1d;
+  --map-object: #d97706;
+  --map-object-done: #92400e;
+  --map-npc-tint: #7dd3c0;
+  --map-npc-talked-tint: #4b8f84;
+  --map-npc-sprite-talked: #b0b0b0;
 }
 
 :focus-visible {
@@ -110,6 +130,21 @@ h3 {
 }
 
 @layer components {
+  /* 판정 순간 화면 가장자리 빛. 색은 --glow(판정별 :root 토큰), 안쪽 번짐 진하기는 --glow-soft */
+  .edge-glow {
+    box-shadow:
+      inset 0 0 0 6px color-mix(in srgb, var(--glow) 90%, transparent),
+      inset 0 0 220px 70px color-mix(in srgb, var(--glow) var(--glow-soft, 60%), transparent);
+  }
+
+  /* 줄 공책처럼 28px마다 옅은 가로줄(판정 상자) */
+  .ruled {
+    background-image: repeating-linear-gradient(
+      transparent 0 27px,
+      color-mix(in srgb, var(--color-line-strong) 18%, transparent) 27px 28px
+    );
+  }
+
   /* 종이 한 장. 내용 글자는 잉크색 */
   .paper {
     color: var(--color-ink);

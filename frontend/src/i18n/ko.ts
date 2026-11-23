@@ -8,6 +8,8 @@ export const ko = {
   app: {
     title: 'MysteryTalk',
     tagline: '질문으로 진실을 찾는 추리 게임',
+    /** 검색·공유 미리보기용 설명(layout metadata) */
+    description: '질문으로 진실을 찾는 픽셀아트 추리 게임',
     stamp: '수사 기밀',
   },
   age: {
@@ -120,6 +122,9 @@ export const ko = {
     notifications: '알림',
     back: '목록으로',
     loadFailed: '불러오지 못했어요.',
+    /** API 호출부(lib/api/client.ts)의 네트워크·형식 오류 */
+    networkError: '서버에 연결할 수 없어요.',
+    invalidResponse: '서버 응답 형식이 올바르지 않아요.',
   },
   difficulty: { EASY: '쉬움', NORMAL: '보통', HARD: '어려움', label: '난이도' },
   verdict: {
@@ -132,6 +137,7 @@ export const ko = {
   rating: { NORMAL: '수위 보통', STRONG: '수위 강함' },
   genre: { ALL: '전체', MYSTERY: '미스터리', HORROR: '공포', CRIME: '범죄' },
   cases: {
+    genreLabel: '장르',
     heading: '사건 선택',
     tutorialBadge: '튜토리얼',
     tutorialHint: '처음이라면 튜토리얼부터 해 보세요. 건너뛰어도 괜찮아요.',
@@ -239,6 +245,7 @@ export const ko = {
     zoom: (label: string) => `${label} 이미지 크게 보기`,
   },
   notebook: {
+    filterLabel: '판정별 보기',
     heading: '수첩',
     tabs: { clues: '단서', questions: '질문 기록', memo: '메모' },
     noClues: '아직 찾은 단서가 없어요. 현장을 조사해 보세요.',
@@ -264,6 +271,10 @@ export const ko = {
     needsForm:
       '단어만 나열하거나 여러 가능성을 함께 쓰면 채점할 수 없어요. 한 가지 진상을 문장으로 써 주세요. 제출 기회는 줄지 않았어요.',
     solved: '진상을 밝혔어요!',
+    /** 제출에서 다르게 안내해야 하는 서버 오류(lib/play/submit-error.ts) */
+    budgetReached:
+      '이번 달 운영 예산을 모두 써서 지금은 채점할 수 없어요. 다음 달에 다시 시도해 주세요.',
+    aiUnavailable: '채점이 잠시 지연되고 있어요. 제출 기회는 줄지 않았어요. 다시 시도해 주세요.',
   },
   abandon: {
     heading: '수사를 포기할까요?',
@@ -307,6 +318,7 @@ export const ko = {
     ],
   },
   ending: {
+    pageTitle: (title: string) => `${title} 결과`,
     heading: '사건 결과',
     status: {
       SOLVED: '해결',
