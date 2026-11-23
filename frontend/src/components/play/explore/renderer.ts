@@ -23,7 +23,7 @@ const COLORS = {
 };
 /**
  * 탐정 걷기 그림(가로 3프레임 × 세로 4방향). 캐릭터 그림은 칸의 2배(64px)로 받아 32px 칸에 맞춰 그린다(D102).
- * 기본은 자체 제작(frontend/scripts/make-detective-sprite.mjs), AI 생성 그림으로 같은 파일을 바꿔 끼운다.
+ * 그림은 탐정 캐릭터별 시트(frontend/public/sprites/detectives/<id>.png, D103, 출처는 ASSETS.md).
  */
 const SPRITE_PX = 64;
 const SHEET = { key: 'detective' };
