@@ -62,3 +62,4 @@
 - 2026-11-23 | 가드 보완: git 전역 옵션·환경변수 뒤 하위 명령까지 판정, 묶인 `-uf` 강제 푸시, `.env*`·셸 확장 차단, main에서 merge·cherry-pick·revert·am 차단(`--ff-only`·pull 허용), 커밋 메시지 속 `.env` 언급 허용, guard 스크립트 한글 경로·지운 파일·skip 변형 처리 | 코드 검수에서 우회 8건 발견 | .claude/hooks/, scripts/guard.mjs, CLAUDE.md
 - 2026-11-23 | 글자 로고 → 그림 로고(메인 조합 로고, 추리 화면 머리 글자 로고, 탭 아이콘은 사용자가 교체한 favicon.ico), 원본은 `frontend/public/images/logo/` | 사용자 요청 | app/(game)/page.tsx, PlayScreen, ASSETS.md
 - 2026-11-23 | PRD v1.13: 구현된 [미정] 확정(이동·수첩·재조사), 제작 일정·힌트 완료 표시, 탐정 명칭 '탐정·형사'·이름 칸 비움(D103 수정), 그림 로고(D108), E3·개발 진행·남은 결정 표 갱신 | PRD를 구현 상태에 맞춤 | docs/PRD.md
+- 2026-11-23 | AI 판정·채점 통과 기준 확정(판정 정확도 90% 유지, 정반대·인젝션·부당 해결 0, 변동 3% 이하, 채점 95% 이상, P95 5초), 사건마다·AI 교체 시 13건 재측정 | 실제로 쓰던 기준을 PRD에 확정 기록(PRD v1.14) | docs/PRD.md §12·§15, docs/SPEC.md §14, backend/src/eval/criteria.ts

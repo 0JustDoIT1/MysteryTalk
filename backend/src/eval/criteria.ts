@@ -1,8 +1,8 @@
 import type { EvalSummary } from './metrics.js';
 
 /**
- * AI 판정·채점 통과 기준(판정 안정성 작업에서 정함, 권장 기준). 사건을 공개하기 전 평가 세트로 확인한다(PRD D65).
- * 수치를 바꾸면 이 파일과 SPEC §14를 함께 고친다.
+ * AI 판정·채점 통과 기준(판정 안정성 작업에서 정함, PRD §12 확정 v1.14). 사건을 공개하기 전 평가 세트로 확인한다(PRD D65).
+ * 수치를 바꾸면 이 파일과 PRD §12, SPEC §14를 함께 고친다.
  */
 export const JUDGE_CRITERIA = {
   minAccuracy: 0.9,
