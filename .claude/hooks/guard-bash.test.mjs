@@ -21,6 +21,26 @@ const blocked = [
   ['git commit -m "feat: x\n\nCo-Authored-By: Claude <noreply@anthropic.com>"', onFeature],
   ['git commit -m "feat: x"', onMain],
   ['cd /d/Project/MysteryTalk && git add -A && git commit -m "x"', onMain],
+  // 코드 검수(2026-11-23)에서 찾은 우회
+  ['cat backend/.env*', onFeature],
+  ['cat .env*', onFeature],
+  ['cat .env.*', onFeature],
+  ['cat `echo .env`', onFeature],
+  ['cat {.env,x}', onFeature],
+  ['node -e "require(\'fs\').readFileSync(\'.env\')"', onFeature],
+  ['git -c core.quotepath=off commit -m "x"', onMain],
+  ['git --no-pager commit -m "x"', onMain],
+  ['GIT_AUTHOR_NAME=a git commit -m "x"', onMain],
+  ['git -c k=v commit -m "x\n\nCo-Authored-By: a"', onFeature],
+  ['git -C . push --force', onFeature],
+  ['git -C . reset --hard', onFeature],
+  ['git reset -q --hard', onFeature],
+  ['git push -uf origin main', onFeature],
+  ['git push -fu origin main', onFeature],
+  ['git push --force-with-lease', onFeature],
+  ['git merge feature/x', onMain],
+  ['git cherry-pick abc123', onMain],
+  ['git revert HEAD', onMain],
 ];
 const allowed = [
   ['cat .env.example', onFeature],
@@ -33,6 +53,15 @@ const allowed = [
   ['git push -u origin feature/x', onFeature],
   ['npm run migrate:dev -w backend', onFeature],
   ['git status', onMain],
+  ['git commit -m "fix: .env 누락 시 오류 문구"', onFeature],
+  ["git commit -m 'docs: backend/.env 설명'", onFeature],
+  ["rg -g '!.env*' KEY", onFeature],
+  ['grep -r --exclude-dir=node_modules --exclude=.env KEY .', onFeature],
+  ['git merge --ff-only feature/x', onMain],
+  ['git pull', onMain],
+  ['git push --follow-tags', onFeature],
+  ['git -C ../MysteryTalk-cases commit -m "x"', casesOnMain],
+  ['echo $NODE_ENV', onFeature],
 ];
 
 let fail = 0;

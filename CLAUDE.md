@@ -142,7 +142,7 @@ eval-reports/      AI 평가 결과(커밋하지 않음). 기준 회차는 비�
   - 화면 문구는 `frontend/src/i18n/ko.ts`에, 색은 테마 토큰(`frontend/src/app/globals.css`)으로만 쓴다.
   - 답변과 보고는 한국어로 한다.
   - **작업 요청은 `/refine` 절차로 받는다**: 코드·설정·문서를 바꾸는 새 요청은 사용자가 `/refine`을 붙이지 않아도 `.claude/commands/refine.md`대로 해석 → 기존 해법 확인 → 작업 프롬프트 제시 → 승인 후 구현한다. 예외: 질문·조회, 실행·커밋·푸시 요청, 직전 제안의 승인, 오타 수준의 수정. `UserPromptSubmit` 훅이 매 요청마다 이 규칙을 상기시킨다.
-- 기계적 강제(`.claude/settings.json`): 권한 deny·ask 규칙과 훅(`.claude/hooks/`)이 막는다. Bash 가드 훅은 Co-Authored-By 커밋, 공개 저장소 main 직접 커밋, `.env` 비밀 파일을 다루는 셸 명령(`.env.example`·`process.env`는 허용), `prisma db push`·`migrate reset`, 강제 푸시, `reset --hard`를 막는다. 막혔으면 우회하지 말고 이유를 보고한다.
+- 기계적 강제(`.claude/settings.json`): 권한 deny·ask 규칙과 훅(`.claude/hooks/`)이 막는다. Bash 가드 훅은 Co-Authored-By 커밋, 공개 저장소 main에서 커밋을 만드는 명령(commit·merge·cherry-pick·revert·am, `merge --ff-only`·`pull`은 허용), `.env` 비밀 파일을 다루는 셸 명령(`.env.example`·`process.env`·커밋 메시지 속 언급·검색 제외 패턴은 허용), `prisma db push`·`migrate reset`, 강제 푸시, `reset --hard`를 막는다. 막혔으면 우회하지 말고 이유를 보고한다.
 
 ## 적용 모듈
 @docs/modules/llm.md
