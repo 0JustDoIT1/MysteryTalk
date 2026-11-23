@@ -58,3 +58,4 @@
 - 2026-11-20 | 튜토리얼 안내 띠 → 처음 사건을 열 때 '수사 안내' 팝업(실제 화면 캡처 5장, 도움말로 다시 보기), 조사 지점 점 표시 삭제, 알림 2.5초, 답변 순간 화면 가장자리 빛 | 불필요한 스크롤, 찾는 재미 | PlayGuide, PlayScreen, renderer, Toasts, frontend/public/guide/. PRD D78 반영(v1.12)
 - 2026-11-20 | 화면에서 '샘플' 표시 삭제, 지하주차장의 경비원 '사건 11'·302호의 정전 '사건 12' 번호 부여, 추리 화면 머리는 로고 + 목록으로·탐정·도움말(사건명은 왼쪽 서류 위) | 내부 구분이 이용자에게 보이지 않게 | lib/play/cases.ts, PlayScreen, case.json(버전 올림), 공지
 - 2026-11-20 | 알림을 sonner로 교체, 화면 테마 '책상 위의 수사 서류' | 알림이 저절로 닫히지 않던 문제, 디자인 정리 | frontend, docs/SPEC.md
+- 2026-11-23 | 가드레일 기계적 강제: Bash 가드 훅(Co-Authored-By·main 직접 커밋·.env·db push·migrate reset·강제 푸시·reset --hard 차단), /refine 자동 상기 훅, ask에 PRD·마이그레이션 편집·브랜치 삭제·Claude 평가 추가, .env 셸 차단을 deny 패턴에서 훅으로 이전(process.env 오차단 해소), CI에 `npm run guard` | 문서 규칙만으로는 지켜지지 않는 항목이 있음 | .claude/settings.json, .claude/hooks/, scripts/guard.mjs, ci.yml, CLAUDE.md

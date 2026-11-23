@@ -101,6 +101,7 @@
 - 실행: `npm run dev` (backend 4000, frontend 3000, `/api/*` 프록시). 브라우저 E2E 전에는 개발 서버를 끈다.
 - 테스트: `npm test` · `npm run test:e2e`(DATABASE_URL_TEST 필요, DB 이름은 `_test`로 끝나야 함) · 브라우저 E2E `npm run test:browser`(DATABASE_URL_BROWSER 필요, `_test`로 끝나는 DB. 최초 1회 `npx playwright install chromium`. 3100/4100 포트, AI는 Mock)
 - 린트 / 포맷: `npm run lint` · `npm run typecheck` · `npm run format:check`
+- 저장소 규칙 검사: `npm run guard` (테스트 `.only`/`.skip` 금지, `content/public`은 튜토리얼·샘플만, 가드 훅 규칙 검사. CI에서도 실행)
 - 빌드: `npm run build -w frontend`
 - 사건 데이터 검사(DB 불필요): `npm run content:check -w backend` (비공개 사건 포함: `CASE_DATA_DIR=D:/Project/MysteryTalk-cases`, 절대 경로) / 적재: `npm run content:load -w backend`
 - AI 평가(로컬 Ollama): 판정 `npm run eval -w backend -- --case sample --repeat 3`, 채점 `npm run eval:grade -w backend -- --case sample --repeat 3`. Claude는 `--provider anthropic`(API 키 필요, 비용 발생)
@@ -140,6 +141,8 @@ eval-reports/      AI 평가 결과(커밋하지 않음). 기준 회차는 비�
   - Next.js/React: 서버·클라이언트 경계와 데이터 접근 권한을 분명히 한다. Phaser는 게임 화면, React는 UI를 맡는다.
   - 화면 문구는 `frontend/src/i18n/ko.ts`에, 색은 테마 토큰(`frontend/src/app/globals.css`)으로만 쓴다.
   - 답변과 보고는 한국어로 한다.
+  - **작업 요청은 `/refine` 절차로 받는다**: 코드·설정·문서를 바꾸는 새 요청은 사용자가 `/refine`을 붙이지 않아도 `.claude/commands/refine.md`대로 해석 → 기존 해법 확인 → 작업 프롬프트 제시 → 승인 후 구현한다. 예외: 질문·조회, 실행·커밋·푸시 요청, 직전 제안의 승인, 오타 수준의 수정. `UserPromptSubmit` 훅이 매 요청마다 이 규칙을 상기시킨다.
+- 기계적 강제(`.claude/settings.json`): 권한 deny·ask 규칙과 훅(`.claude/hooks/`)이 막는다. Bash 가드 훅은 Co-Authored-By 커밋, 공개 저장소 main 직접 커밋, `.env` 비밀 파일을 다루는 셸 명령(`.env.example`·`process.env`는 허용), `prisma db push`·`migrate reset`, 강제 푸시, `reset --hard`를 막는다. 막혔으면 우회하지 말고 이유를 보고한다.
 
 ## 적용 모듈
 @docs/modules/llm.md

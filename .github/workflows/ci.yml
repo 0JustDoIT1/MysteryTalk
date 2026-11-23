@@ -40,6 +40,8 @@ jobs:
       # 타입 기반 린트가 Prisma 생성 타입을 볼 수 있게 먼저 생성한다.
       - run: npm run prisma:generate -w backend
       - run: npm run format:check
+      # 저장소 규칙: 테스트 .only/.skip 금지, content/public 은 튜토리얼·샘플만, Claude Code 가드 훅 규칙
+      - run: npm run guard
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

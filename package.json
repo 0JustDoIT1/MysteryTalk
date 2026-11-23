@@ -23,7 +23,8 @@
     "test:e2e": "npm run build:shared && npm run test:e2e -w backend",
     "test:browser": "npm run build:shared && npm run test:browser -w frontend",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "guard": "node scripts/guard.mjs"
   },
   "devDependencies": {
     "concurrently": "^10.0.7",

@@ -68,14 +68,11 @@
       "Bash(docker compose down -v*)",
       "Bash(docker system prune*)",
       "Bash(supabase db reset --linked*)",
-      "Bash(cat *.env*)",
-      "Bash(head *.env*)",
-      "Bash(tail *.env*)",
-      "Bash(less *.env*)",
-      "Bash(more *.env*)",
-      "Bash(grep *.env*)",
-      "Bash(source *.env*)",
-      "Bash(type *.env*)"
+      "Bash(git push * +*)",
+      "Bash(prisma db push*)",
+      "Bash(npx prisma db push*)",
+      "Bash(prisma migrate reset*)",
+      "Bash(npx prisma migrate reset*)"
     ],
     "ask": [
       "Bash(git commit*)",
@@ -99,7 +96,39 @@
       "Bash(npx npm@12.2.2 install*)",
       "Bash(npm run migrate:dev*)",
       "Bash(npm run migrate:deploy*)",
-      "Bash(npm run cleanup:guests*)"
+      "Bash(npm run cleanup:guests*)",
+      "Bash(git branch -d*)",
+      "Bash(git branch -D*)",
+      "Bash(git branch --delete*)",
+      "Bash(npm run eval*anthropic*)",
+      "Edit(./docs/PRD.md)",
+      "Edit(./backend/prisma/migrations/**)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-bash.mjs\"",
+            "timeout": 10,
+            "statusMessage": "가드 검사 중"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/refine-reminder.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }
