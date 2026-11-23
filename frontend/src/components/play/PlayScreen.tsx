@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -13,6 +14,7 @@ import { ExploreView } from './explore/ExploreView';
 import { Notebook } from './Notebook';
 import { PlayGuide } from './PlayGuide';
 import { PlayStatus } from './PlayStatus';
+import wordmark from '../../../public/images/logo/wordmark.png';
 import { QuestionPanel } from './QuestionPanel';
 import { caseLabel } from '@/lib/play/cases';
 
@@ -51,8 +53,9 @@ export function PlayScreen() {
     <div className="flex flex-col gap-4">
       {/* 머리: 로고(메인으로) · 목록으로·탐정·도움말을 한 줄에. 사건명은 왼쪽 서류 맨 위 */}
       <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-cream/20 pb-2">
-        <Link href="/" className="font-serif text-xl font-bold text-cream hover:text-cream-2">
-          {t.app.title}
+        <Link href="/" className="rounded-sm hover:opacity-85">
+          {/* 글자 로고. 대체 글이 링크 이름이 된다('MysteryTalk') */}
+          <Image src={wordmark} alt={t.app.title} sizes="96px" className="h-8 w-auto" />
         </Link>
         <div className="flex items-center gap-3">
           <Link href="/cases" className="back-link">
