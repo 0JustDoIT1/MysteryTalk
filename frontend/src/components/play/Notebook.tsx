@@ -15,7 +15,7 @@ import { t } from '@/i18n/ko';
 import { CaseImage, clueImageUrl, hintImageUrl } from './CaseImage';
 import { VerdictBadge } from './VerdictBadge';
 
-const TABS = ['clues', 'questions', 'memo'] as const;
+const TABS = ['clues', 'hints', 'questions', 'memo'] as const;
 type Tab = (typeof TABS)[number];
 
 /** 수첩(PRD D75·D48·D62·D99): 단서(진술 포함)·질문 기록·메모. 탭과 필터는 URL 상태(?tab=&filter=). */
@@ -98,6 +98,7 @@ export function Notebook({ session }: { session: SessionState }) {
         className="border border-line-strong bg-paper-input p-3"
       >
         {tab === 'clues' && <ClueList session={session} />}
+        {tab === 'hints' && <HintList session={session} />}
         {tab === 'questions' && (
           <QuestionLog
             sessionId={session.sessionId}
@@ -219,8 +220,36 @@ function Memo({
   );
 }
 
-/** 찾은 단서(조사·NPC 진술). 미끼 여부는 엔딩에서만 공개한다. */
-/** 단서 탭: 찾은 단서(진술 포함) + 열람한 힌트(D92, '놓친 단서'에는 넣지 않음) */
+/**
+ * 힌트 탭(2026-11-24, PRD D109): 연 힌트를 번호 순으로. 그림 힌트는 눌러서 크게 본다.
+ * 예전에는 단서 탭에 섞여 있었다. '놓친 단서'에는 넣지 않는다(D92).
+ */
+function HintList({ session }: { session: SessionState }) {
+  const hints = session.hints.filter((h) => h.viewed);
+  if (!hints.length) return <p className="text-sm text-ink-3">{t.notebook.noHints}</p>;
+  return (
+    <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
+      {hints.map((h) => (
+        <li key={h.no} className="border-b border-dashed border-line pb-2">
+          <p className="font-semibold text-ink">{t.hints.label(h.no)}</p>
+          <div className="mt-1">
+            {h.image ? (
+              <CaseImage
+                src={hintImageUrl(session.sessionId, h.no)}
+                alt={h.alt ?? ''}
+                label={t.hints.label(h.no)}
+              />
+            ) : (
+              <p className="text-ink-2">{h.text}</p>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** 단서 탭: 찾은 단서(조사·NPC 진술·연쇄). 미끼 여부는 엔딩에서만 공개한다. */
 function ClueList({ session }: { session: SessionState }) {
   const sessionId = session.sessionId;
   const explore = useExploreState(sessionId);
@@ -233,32 +262,9 @@ function ClueList({ session }: { session: SessionState }) {
       </p>
     );
   const clues = explore.data?.clues ?? [];
-  const hints = session.hints.filter((h) => h.viewed);
-  if (!clues.length && !hints.length)
-    return <p className="text-sm text-ink-3">{t.notebook.noClues}</p>;
+  if (!clues.length) return <p className="text-sm text-ink-3">{t.notebook.noClues}</p>;
   return (
     <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto text-sm">
-      {hints.map((h) => (
-        <li key={`hint-${h.no}`} className="border-b border-dashed border-line pb-2">
-          <p className="font-semibold text-ink">
-            <span className="mr-2 rounded bg-warn-bg px-1.5 py-0.5 text-xs text-ink">
-              {t.notebook.hintTag}
-            </span>
-            {t.hints.label(h.no)}
-          </p>
-          <div className="mt-1">
-            {h.image ? (
-              <CaseImage
-                src={hintImageUrl(sessionId, h.no)}
-                alt={h.alt ?? ''}
-                label={t.hints.label(h.no)}
-              />
-            ) : (
-              <p className="text-ink-2">{h.text}</p>
-            )}
-          </div>
-        </li>
-      ))}
       {clues.map((c) => (
         <li key={c.key} className="border-b border-dashed border-line pb-2">
           <p className="font-semibold text-ink">

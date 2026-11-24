@@ -74,17 +74,29 @@ test('본편 샘플: 질문 → 힌트 → 질문 기록 → 오답 → 정답 �
   await expect(verdict.getByText('관계없음')).toBeVisible();
   await expect(verdict.getByText('사건과 관계없습니다.')).toBeVisible();
 
-  // 힌트는 질문 수와 상관없이 언제든 열 수 있고(2026-11-20), 연 내용은 수첩 단서 탭에 쌓인다
+  // 힌트는 질문 수와 상관없이 언제든 열 수 있고(2026-11-20), 열면 그 자리에서 크게 보여 준 뒤
+  // 수첩의 힌트 탭에 남는다. 단서 탭에는 섞이지 않는다(2026-11-24, D109)
   await page.getByRole('button', { name: '힌트 1 보기 (−10점)' }).click();
-  await expect(
-    page.getByRole('region', { name: /^알림/ }).getByText('힌트 1을 수첩에 적었어요.'),
-  ).toBeVisible();
-  await expect(page.getByText(/정전은 정말 건물 전체에/)).toHaveCount(1);
+  const hintDialog = page.getByRole('dialog', { name: '힌트 1' });
+  await expect(hintDialog.getByText(/정전은 정말 건물 전체에/)).toBeVisible();
+  await expect(hintDialog.getByText('수첩의 힌트 탭에서 다시 볼 수 있어요.')).toBeVisible();
+  await hintDialog.getByRole('button', { name: '닫기' }).click();
+  await expect(hintDialog).toBeHidden();
   await expect(page.getByText('힌트 1/3')).toBeVisible();
   await expect(page.getByRole('button', { name: '힌트 2 보기 (−15점)' })).toBeEnabled();
+  const panel = page.getByRole('tabpanel');
+  await expect(panel.getByText(/정전은 정말 건물 전체에/)).toHaveCount(0);
+  await page.getByRole('tab', { name: '힌트', exact: true }).click();
+  await expect(panel.getByText(/정전은 정말 건물 전체에/)).toBeVisible();
 
-  // 수첩 탭·필터는 URL 상태. 탭은 방향키로도 바꾼다(D66)
-  await page.getByRole('tab', { name: '단서' }).focus();
+  // 수첩 탭·필터는 URL 상태. 탭은 방향키로도 바꾼다(D66): 단서 → 힌트 → 질문 기록
+  // (방향키는 선택된 탭 기준이라 단서 탭을 먼저 선택한다)
+  await page.getByRole('tab', { name: '단서' }).click();
+  await expect(page.getByRole('tab', { name: '단서' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page).not.toHaveURL(/tab=/);
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: '힌트', exact: true })).toBeFocused();
+  await expect(page).toHaveURL(/tab=hints/);
   await page.keyboard.press('ArrowRight');
   await expect(page.getByRole('tab', { name: '질문 기록' })).toBeFocused();
   await expect(page).toHaveURL(/tab=questions/);

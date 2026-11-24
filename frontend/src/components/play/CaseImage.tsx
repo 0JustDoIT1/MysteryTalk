@@ -22,6 +22,9 @@ export function CaseImage({ src, alt, label }: { src: string; alt: string; label
       >
         {/* eslint-disable-next-line @next/next/no-img-element -- 세션 인증이 필요한 동적 이미지라 최적화 대상이 아니다 */}
         <img src={src} alt={alt} className="h-24 w-36 object-cover" />
+        <span aria-hidden="true" className="block pt-1 text-center text-xs text-ink-3">
+          {t.image.zoomCue}
+        </span>
       </button>
       <Modal open={open} onClose={() => setOpen(false)} labelledBy={headingId}>
         {/* 내용은 열 때만 만든다(닫힌 동안 같은 제목·큰 이미지가 숨은 채 겹쳐 있지 않게) */}

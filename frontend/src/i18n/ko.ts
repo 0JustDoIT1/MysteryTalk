@@ -237,19 +237,21 @@ export const ko = {
     open: (no: number, penalty: number) => `힌트 ${no} 보기 (−${penalty}점)`,
     allViewed: '힌트를 모두 봤어요',
     // 숫자 읽기에 맞춘 조사(일·삼 → 을, 이 → 를)
-    viewedToast: (no: number) =>
-      `힌트 ${no}${[2, 4, 5, 9].includes(no % 10) ? '를' : '을'} 수첩에 적었어요.`,
+    /** 힌트를 연 직후 큰 창 아래 안내(PRD D109) */
+    savedNote: '수첩의 힌트 탭에서 다시 볼 수 있어요.',
     label: (no: number) => `힌트 ${no}`,
   },
   image: {
     zoom: (label: string) => `${label} 이미지 크게 보기`,
+    /** 썸네일 아래에 보이는 안내(누르면 크게 볼 수 있음을 드러냄) */
+    zoomCue: '눌러서 크게 보기',
   },
   notebook: {
     filterLabel: '판정별 보기',
     heading: '수첩',
-    tabs: { clues: '단서', questions: '질문 기록', memo: '메모' },
+    tabs: { clues: '단서', hints: '힌트', questions: '질문 기록', memo: '메모' },
     noClues: '아직 찾은 단서가 없어요. 현장을 조사해 보세요.',
-    hintTag: '힌트',
+    noHints: '아직 연 힌트가 없어요. 막히면 위쪽의 힌트 보기를 눌러 보세요.',
     clueKind: { ITEM: '물건', RECORD: '기록', TESTIMONY: '진술' },
     filterAll: '전체',
     noQuestions: '아직 질문 기록이 없어요.',
@@ -307,8 +309,8 @@ export const ko = {
       },
       {
         title: '힌트',
-        body: '막히면 위쪽의 힌트 보기를 눌러 보세요. 언제든 열 수 있지만 열 때마다 점수가 조금 깎여요.',
-        alt: '진행 막대와 힌트 보기 버튼',
+        body: '막히면 위쪽의 힌트 보기를 눌러 보세요. 언제든 열 수 있지만 열 때마다 점수가 조금 깎여요. 연 힌트는 크게 보여 주고, 수첩의 힌트 탭에 남아요.',
+        alt: '진행 막대의 힌트 보기 버튼과, 연 힌트가 남아 있는 수첩의 힌트 탭',
       },
       {
         title: '정답 제출',

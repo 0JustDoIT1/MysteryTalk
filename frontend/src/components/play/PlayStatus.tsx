@@ -1,14 +1,16 @@
 'use client';
 
-import type { SessionState } from '@mysterytalk/shared';
+import { useState } from 'react';
+import type { HintState, SessionState } from '@mysterytalk/shared';
 import { useViewHint } from '@/lib/api/queries';
 import { useToastStore } from '@/stores/toast';
 import { t } from '@/i18n/ko';
+import { HintModal } from './HintView';
 
 /**
  * 추리 화면 오른쪽 맨 위(2026-11-20): 질문 진행 막대와 힌트 보기. 정답 제출·포기는 질문 칸 아래에 있다.
  * 점수·등급은 숨기고 진행 수치만 보여 준다(D76). 힌트는 언제든 순서대로 열고, 열 때마다 감점(D15).
- * 연 힌트 내용은 수첩 '단서' 탭에 쌓인다.
+ * 힌트를 열면 그 자리에서 크게 보여 주고, 닫으면 수첩 '힌트' 탭에 남는다(2026-11-24, PRD D109).
  */
 export function PlayStatus({ session }: { session: SessionState }) {
   const view = useViewHint(session.sessionId);
@@ -19,6 +21,7 @@ export function PlayStatus({ session }: { session: SessionState }) {
   const viewed = session.hints.filter((h) => h.viewed).length;
   const next = session.hints.find((h) => !h.viewed);
   const over = used > base;
+  const [shown, setShown] = useState<HintState | null>(null);
 
   return (
     <section aria-label={t.play.statusLabel} className="flex flex-col gap-3">
@@ -56,7 +59,7 @@ export function PlayStatus({ session }: { session: SessionState }) {
               next &&
               view.mutate(next.no, {
                 onSuccess: (r) => {
-                  pushToast(t.hints.viewedToast(next.no));
+                  setShown(r);
                   if (r.unlockedMaps.length) pushToast(t.explore.unlocked(r.unlockedMaps));
                 },
               })
@@ -67,6 +70,7 @@ export function PlayStatus({ session }: { session: SessionState }) {
           </button>
         </div>
       )}
+      <HintModal sessionId={session.sessionId} hint={shown} onClose={() => setShown(null)} />
       {view.error && (
         <p role="alert" className="text-sm text-bad">
           {view.error.message}
