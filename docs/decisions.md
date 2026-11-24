@@ -63,3 +63,5 @@
 - 2026-11-23 | 글자 로고 → 그림 로고(메인 조합 로고, 추리 화면 머리 글자 로고, 탭 아이콘은 사용자가 교체한 favicon.ico), 원본은 `frontend/public/images/logo/` | 사용자 요청 | app/(game)/page.tsx, PlayScreen, ASSETS.md
 - 2026-11-23 | PRD v1.13: 구현된 [미정] 확정(이동·수첩·재조사), 제작 일정·힌트 완료 표시, 탐정 명칭 '탐정·형사'·이름 칸 비움(D103 수정), 그림 로고(D108), E3·개발 진행·남은 결정 표 갱신 | PRD를 구현 상태에 맞춤 | docs/PRD.md
 - 2026-11-23 | AI 판정·채점 통과 기준 확정(판정 정확도 90% 유지, 정반대·인젝션·부당 해결 0, 변동 3% 이하, 채점 95% 이상, P95 5초), 사건마다·AI 교체 시 13건 재측정 | 실제로 쓰던 기준을 PRD에 확정 기록(PRD v1.14) | docs/PRD.md §12·§15, docs/SPEC.md §14, backend/src/eval/criteria.ts
+- 2026-11-24 | 수첩 힌트 탭 분리(단서·힌트·질문 기록·메모), 힌트를 열면 큰 창으로 바로 보여 주기(알림 대신), 썸네일에 '눌러서 크게 보기', 수사 안내 힌트 단계 캡처 교체 | 힌트가 단서와 섞여 찾기 어렵고 확대 기능을 알기 어려움(사용자 요청, PRD D109·v1.15) | Notebook, PlayStatus, HintView, CaseImage, ko.ts, frontend/public/guide/step-4.png, docs/PRD.md, docs/SPEC.md
+- 2026-11-24 | settings ask 목록에서 `Edit(./docs/PRD.md)` 제거(PRD는 계속 '제안 → 대화 승인 → 수정', 마이그레이션 편집 ask는 유지) | PRD를 고칠 때마다 VS Code에 비교 탭이 열려 창이 넘어감(사용자 요청) | .claude/settings.json

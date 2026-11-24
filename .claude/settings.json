@@ -101,7 +101,6 @@
       "Bash(git branch -D*)",
       "Bash(git branch --delete*)",
       "Bash(npm run eval*anthropic*)",
-      "Edit(./docs/PRD.md)",
       "Edit(./backend/prisma/migrations/**)"
     ]
   },
