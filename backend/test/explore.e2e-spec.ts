@@ -314,7 +314,8 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
 
       const ok = await image(cookie, path).expect(200);
       expect(ok.headers['content-type']).toBe('image/png');
-      expect(ok.headers['cache-control']).toBe('private, max-age=3600');
+      // 본인 브라우저에만 저장하되 매번 바뀌었는지 확인한다(2026-11-24: 사건 그림을 고치면 예전 그림이 1시간 남던 문제)
+      expect(ok.headers['cache-control']).toBe('private, no-cache');
       expect(ok.headers['x-content-type-options']).toBe('nosniff');
       expect(Buffer.compare(ok.body as Buffer, png())).toBe(0);
 
@@ -323,6 +324,32 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
       // 이미지가 없는 단서·없는 단서
       await image(cookie, `/sessions/${id}/clues/breaker/image`).expect(404);
       await image(cookie, `/sessions/${id}/clues/NOPE/image`).expect(422);
+    });
+
+    // 재현(2026-11-24): 사건 그림을 고쳐도 브라우저가 1시간 동안 예전 그림을 보여 줬다
+    it('그림이 그대로면 304로 다시 받지 않고, 그림이 바뀌면 새 그림을 준다(ETag)', async () => {
+      const { cookie, id } = await setup();
+      const path = `/sessions/${id}/clues/light-switch/image`;
+      await prisma.playSession.update({
+        where: { id },
+        data: { startedAt: new Date(Date.now() - 1000) },
+      });
+      await inspect(cookie, id, 'switch', 'living', 11, 1).expect(200);
+
+      const first = await image(cookie, path).expect(200);
+      const etag = first.headers['etag'] as string;
+      expect(etag).toMatch(/^"[0-9a-f]{64}"$/);
+      const same = await image(cookie, path).set('If-None-Match', etag).expect(304);
+      expect((same.body as Buffer).length).toBe(0);
+
+      // 사건 수정으로 그림이 바뀐 상황
+      await prisma.caseAsset.updateMany({
+        where: { name: 'light-switch.png' },
+        data: { bytes: Buffer.from('changed'), sha256: 'f'.repeat(64) },
+      });
+      const changed = await image(cookie, path).set('If-None-Match', etag).expect(200);
+      expect((changed.body as Buffer).toString()).toBe('changed');
+      expect(changed.headers['etag']).toBe(`"${'f'.repeat(64)}"`);
     });
 
     it('카드 대표 그림(D98)은 세션 없이 공개 사건이면 내려주고, 목록·소개에 그림 버전을 준다', async () => {
@@ -405,7 +432,8 @@ describe('4단계 현장 조사 (e2e, SPEC §9.2, PRD §6)', () => {
         .set('Cookie', cookie)
         .expect(200);
       expect(living.headers['content-type']).toBe('image/png');
-      expect(living.headers['cache-control']).toBe('private, max-age=3600');
+      expect(living.headers['cache-control']).toBe('private, no-cache');
+      expect(living.headers['etag']).toMatch(/^"[0-9a-f]{64}"$/);
       await http().get(`/sessions/${id}/maps/office/background`).set('Cookie', cookie).expect(404);
       await http().get(`/sessions/${id}/maps/bedroom/background`).set('Cookie', cookie).expect(404);
       await http().get(`/sessions/${id}/maps/hall/background`).set('Cookie', cookie).expect(200);

@@ -138,7 +138,7 @@
 | GET | `/sessions/{id}/questions` | 질문 기록(순번·질문·판정, 판정별 필터) [D48] |
 | POST | `/sessions/{id}/questions` | `{question}` → 판정(§6) |
 | POST | `/sessions/{id}/hints/{no}` | 힌트 열람(해금된 것만, 순서대로). 글 힌트는 text, 이미지 힌트는 image=true·alt [D15, D92] |
-| GET | `/sessions/{id}/hints/{no}/image` | 열람한 이미지 힌트의 이미지. 열람 전·글 힌트·남의 세션은 404. `Cache-Control: private` [D92, D93] |
+| GET | `/sessions/{id}/hints/{no}/image` | 열람한 이미지 힌트의 이미지. 열람 전·글 힌트·남의 세션은 404. 사건 그림 응답(카드·맵 배경·단서·힌트) 공통: `Cache-Control: private, no-cache` + `ETag`(그림 내용 지문 sha256). 그대로면 304, 사건 수정으로 바뀌면 새 그림(2026-11-24) [D92, D93] |
 | GET | `/sessions/{id}/clues/{key}/image` | 얻은 단서의 이미지. 얻기 전·이미지 없음·남의 세션은 404 [D93] |
 | GET | `/sessions/{id}/maps/{key}/background` | 열린 맵의 배경 그림. 닫힌 맵·배경 없음·남의 세션은 404 [D94] |
 | POST | `/sessions/{id}/move` | `{mapKey, x, y}` 맵 이동·위치 저장(구역 해금 검사) |

@@ -14,7 +14,7 @@ import {
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { loadAsset, loadVersion } from './case-data.js';
+import { loadAsset, loadVersion, type CaseImage } from './case-data.js';
 import { SessionsService } from './sessions.service.js';
 import { openMapKeys, unlockZones } from './zones.js';
 
@@ -200,11 +200,7 @@ export class ExploreService {
   }
 
   /** 열린 맵의 배경 그림(D94). 닫힌 맵이거나 배경이 없으면 404 */
-  async mapBackground(
-    player: Player,
-    sessionId: string,
-    key: string,
-  ): Promise<{ mime: string; bytes: Uint8Array }> {
+  async mapBackground(player: Player, sessionId: string, key: string): Promise<CaseImage> {
     const { s, e, open } = await this.context(player, sessionId);
     const map = e.maps.find((m) => m.key === key);
     if (!map?.background || !open.has(key)) throw new AppException(404, 'NOT_FOUND');
@@ -212,11 +208,7 @@ export class ExploreService {
   }
 
   /** 얻은 단서의 이미지(D93). 얻기 전이거나 이미지가 없으면 404 */
-  async clueImage(
-    player: Player,
-    sessionId: string,
-    key: string,
-  ): Promise<{ mime: string; bytes: Uint8Array }> {
+  async clueImage(player: Player, sessionId: string, key: string): Promise<CaseImage> {
     const { s, e, found } = await this.context(player, sessionId);
     const clue = e.clues.find((c) => c.key === key);
     if (!clue?.image || !found.has(key)) throw new AppException(404, 'NOT_FOUND');

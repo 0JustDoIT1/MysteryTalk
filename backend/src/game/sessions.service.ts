@@ -13,7 +13,13 @@ import { z } from 'zod';
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { loadAsset, loadVersion, questionCap, type CaseVersionData } from './case-data.js';
+import {
+  loadAsset,
+  loadVersion,
+  questionCap,
+  type CaseVersionData,
+  type CaseImage,
+} from './case-data.js';
 import { finishSession } from './finish.js';
 import { unlockZones } from './zones.js';
 import { computeScore, SCORE_RULES } from './scoring.js';
@@ -141,11 +147,7 @@ export class SessionsService {
   }
 
   /** 열람한 이미지 힌트의 이미지(D92·D93). 열람 전이거나 글 힌트면 404(존재 여부를 알리지 않음) */
-  async hintImage(
-    player: Player,
-    sessionId: string,
-    no: number,
-  ): Promise<{ mime: string; bytes: Uint8Array }> {
+  async hintImage(player: Player, sessionId: string, no: number): Promise<CaseImage> {
     const s = await this.loadOwned(player, sessionId);
     const data = await loadVersion(this.prisma, s.case.id, s.case.currentVersion);
     const hint = data.hints.find((h) => h.no === no);

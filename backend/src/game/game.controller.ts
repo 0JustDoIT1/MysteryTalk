@@ -44,6 +44,7 @@ import { z } from 'zod';
 import type { Player } from '../generated/prisma/client.js';
 import { CurrentPlayer } from '../player/current-player.decorator.js';
 import { PlayerGuard } from '../player/player.guard.js';
+import type { CaseImage } from './case-data.js';
 import { CasesService } from './cases.service.js';
 import { ExploreService } from './explore.service.js';
 import { QuestionsService } from './questions.service.js';
@@ -78,7 +79,7 @@ export class GameController {
   async caseCover(
     @Param('slug') slug: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  ): Promise<StreamableFile | undefined> {
     return imageFile(res, await this.cases.cover(slug));
   }
 
@@ -135,7 +136,7 @@ export class GameController {
     @Param('id') id: string,
     @Param('no', { schema: hintNoSchema }) no: number,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  ): Promise<StreamableFile | undefined> {
     return imageFile(res, await this.sessions.hintImage(player, id, no));
   }
 
@@ -210,7 +211,7 @@ export class GameController {
     @Param('id') id: string,
     @Param('key', { schema: clueKeySchema }) key: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  ): Promise<StreamableFile | undefined> {
     return imageFile(res, await this.explore.mapBackground(player, id, key));
   }
 
@@ -221,16 +222,27 @@ export class GameController {
     @Param('id') id: string,
     @Param('key', { schema: clueKeySchema }) key: string,
     @Res({ passthrough: true }) res: Response,
-  ): Promise<StreamableFile> {
+  ): Promise<StreamableFile | undefined> {
     return imageFile(res, await this.explore.clueImage(player, id, key));
   }
 }
 
-/** 이미지 응답: 본인 브라우저에만 캐시(공유 캐시 금지), 형식 추측 금지 */
-function imageFile(res: Response, img: { mime: string; bytes: Uint8Array }): StreamableFile {
+/**
+ * 이미지 응답: 본인 브라우저에만 저장(공유 캐시 금지), 형식 추측 금지.
+ * 저장은 하되 매번 바뀌었는지 묻게 한다(no-cache + ETag=내용 지문). 그림이 그대로면 304로 본문 없이 끝내고,
+ * 사건 수정으로 그림이 바뀌면 새 그림을 준다(2026-11-24: 예전 그림이 최대 1시간 남던 문제).
+ */
+function imageFile(res: Response, img: CaseImage): StreamableFile | undefined {
+  const etag = `"${img.sha256}"`;
   res.set({
-    'Cache-Control': 'private, max-age=3600',
+    'Cache-Control': 'private, no-cache',
+    ETag: etag,
     'X-Content-Type-Options': 'nosniff',
   });
+  const sent = res.req.headers['if-none-match'];
+  if (sent && sent.split(',').some((t) => t.trim().replace(/^W\//, '') === etag)) {
+    res.status(304);
+    return undefined;
+  }
   return new StreamableFile(Buffer.from(img.bytes), { type: img.mime });
 }

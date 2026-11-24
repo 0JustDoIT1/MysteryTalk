@@ -43,15 +43,18 @@ export async function loadVersion(
 }
 
 /** 사건 이미지(D92·D93) 한 장. 없으면 404 */
+/** 사건 그림 한 장. sha256은 내용 지문이라 응답의 ETag로 쓴다(바뀌면 브라우저가 새로 받음). */
+export type CaseImage = { mime: string; bytes: Uint8Array; sha256: string };
+
 export async function loadAsset(
   prisma: Pick<PrismaService, 'caseAsset'>,
   caseId: string,
   version: number,
   name: string,
-): Promise<{ mime: string; bytes: Uint8Array }> {
+): Promise<CaseImage> {
   const row = await prisma.caseAsset.findUnique({
     where: { caseId_version_name: { caseId, version, name } },
-    select: { mime: true, bytes: true },
+    select: { mime: true, bytes: true, sha256: true },
   });
   if (!row) throw new AppException(404, 'NOT_FOUND');
   return row;

@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { AppException } from '../common/app-exception.js';
 import type { Player } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { loadAsset, questionCap } from './case-data.js';
+import { loadAsset, questionCap, type CaseImage } from './case-data.js';
 
 const genresSchema = z.array(genreSchema);
 
@@ -89,7 +89,7 @@ export class CasesService {
   }
 
   /** 카드 대표 그림(D98). 시작 전에 보여 주는 그림이라 세션 없이 공개 사건이면 내려준다 */
-  async cover(slug: string): Promise<{ mime: string; bytes: Uint8Array }> {
+  async cover(slug: string): Promise<CaseImage> {
     const c = await this.prisma.mysteryCase.findFirst({
       where: { slug, isPublished: true },
       select: { id: true, cover: true, currentVersion: true },
