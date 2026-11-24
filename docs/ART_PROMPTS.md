@@ -191,7 +191,3 @@ No readable text, no letters, no numbers, no logos, no watermark, no blood, no g
 ## 3. 캐릭터
 
 탐정 캐릭터 2종·NPC 프롬프트는 [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)로 옮겼다.
-
-## 3. 캐릭터
-
-탐정 캐릭터 2종·NPC 프롬프트는 [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)로 옮겼다.
