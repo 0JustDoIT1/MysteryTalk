@@ -20,7 +20,7 @@ function Inline({ text }: { text: string }) {
   );
 }
 
-/** 약관·개인정보처리방침 본문(PRD §1). 법률 검토 전 초안임을 위에 표시한다. */
+/** 약관·개인정보처리방침 본문(PRD §1). 공개 전 초안임을 위에 표시한다. */
 export function LegalDocument({ name }: { name: 'terms' | 'privacy' }) {
   const { meta, blocks } = readLegal(name);
   return (

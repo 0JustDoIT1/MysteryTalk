@@ -9,7 +9,7 @@ import { t } from '@/i18n/ko';
  * 18세 확인(PRD D33, SPEC §3.4): 기기당 처음 한 번 묻고 결과를 기억한다.
  * '만 18세 이상입니다'에 체크해야만 확인 버튼이 켜지고, 확인 전에는 창 밖을 누를 수 없다(포인터도 금지 표시).
  * '아니요' 버튼과 차단 화면은 두지 않는다(2026-11-20, D60 변경): 잘못 눌러 되돌릴 수 없게 되는 일을 없앤다.
- * 예전에 '아니요'를 저장한 기기도 다시 묻는다. 연령 검증 수준은 법률 검토 대상(docs/LEGAL_REVIEW.md).
+ * 예전에 '아니요'를 저장한 기기도 다시 묻는다. 연령 검증 수준은 법규 확인 대상(docs/LEGAL_REVIEW.md).
  */
 export function AgeGate({ children }: { children: ReactNode }) {
   const { age, setAge } = useDeviceStore();

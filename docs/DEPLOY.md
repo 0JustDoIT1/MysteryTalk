@@ -104,4 +104,4 @@ docker compose -f docker-compose.prod.yml --env-file deploy.env exec db \
 - [ ] HTTPS, `COOKIE_SECURE=true`, 실제 클라이언트 IP가 한도 집계에 잡히는지
 - [ ] 마이그레이션 적용, 사건 13건 적재, `/health` 정상
 - [ ] 백업·정리 주기 작업
-- [ ] 약관·개인정보처리방침(외부 AI로 질문·답안 전송 고지 포함), 연령 확인, 등급분류(법률 검토)
+- [ ] 약관·개인정보처리방침(외부 AI로 질문·답안 전송 고지 포함), 연령 확인, 등급분류(법규 확인)

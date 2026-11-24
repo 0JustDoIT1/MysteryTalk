@@ -65,3 +65,4 @@
 - 2026-11-23 | AI 판정·채점 통과 기준 확정(판정 정확도 90% 유지, 정반대·인젝션·부당 해결 0, 변동 3% 이하, 채점 95% 이상, P95 5초), 사건마다·AI 교체 시 13건 재측정 | 실제로 쓰던 기준을 PRD에 확정 기록(PRD v1.14) | docs/PRD.md §12·§15, docs/SPEC.md §14, backend/src/eval/criteria.ts
 - 2026-11-24 | 수첩 힌트 탭 분리(단서·힌트·질문 기록·메모), 힌트를 열면 큰 창으로 바로 보여 주기(알림 대신), 썸네일에 '눌러서 크게 보기', 수사 안내 힌트 단계 캡처 교체 | 힌트가 단서와 섞여 찾기 어렵고 확대 기능을 알기 어려움(사용자 요청, PRD D109·v1.15) | Notebook, PlayStatus, HintView, CaseImage, ko.ts, frontend/public/guide/step-4.png, docs/PRD.md, docs/SPEC.md
 - 2026-11-24 | settings ask 목록에서 `Edit(./docs/PRD.md)` 제거(PRD는 계속 '제안 → 대화 승인 → 수정', 마이그레이션 편집 ask는 유지) | PRD를 고칠 때마다 VS Code에 비교 탭이 열려 창이 넘어감(사용자 요청) | .claude/settings.json
+- 2026-11-24 | '출시 전 법률 검토' → '공개 전 법규 확인'(화면 안내 '공개 전 초안이에요') | 변호사 자문으로 오해되지 않게, 실제 절차(법령·기관 안내 직접 확인, 게임물관리위원회 확인 신청)에 맞춤(PRD v1.16) | docs/PRD.md, docs/LEGAL_REVIEW.md, docs/SPEC.md, docs/DEPLOY*.md, ASSETS.md, frontend ko.ts·법률 문서 주석, e2e
