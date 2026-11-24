@@ -176,6 +176,18 @@ warm amber and dark brown palette, tense mood.
 No people, no characters, no animals, no bodies, no blood, no text, no letters, no numbers, no logos, no watermark.
 ```
 
+#### 단서 그림 `light-switch.png` (단서 '켜져 있는 전등 스위치', 960×640)
+
+alt: 거실 벽의 전등 스위치 사진. 스위치가 켜짐 쪽에 올라가 있다. (2026-11-24 적용, 힌트 스타일 블록을 따름)
+
+```
+Pixel art evidence image for a detective game, 16-bit style, 3:2, 960x640,
+looks like a case file photo, clear readable composition, limited palette, clean pixel edges.
+Close-up of a light switch on a living room wall in an old apartment. The toggle is clearly flipped UP to the ON position,
+but the whole room around it is completely dark, lit only by a narrow flashlight beam from the side.
+No readable text, no letters, no numbers, no logos, no watermark, no blood, no gore, no visible faces.
+```
+
 ## 3. 캐릭터
 
 탐정 캐릭터 2종·NPC 프롬프트는 [CHARACTER_PROMPTS.md](CHARACTER_PROMPTS.md)로 옮겼다.
