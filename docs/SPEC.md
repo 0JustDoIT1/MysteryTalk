@@ -24,7 +24,7 @@
 | `frontend/` | Next.js(App Router) + TypeScript. 화면, Phaser 탐색 화면(클라이언트 전용 로드) |
 | `backend/` | NestJS + TypeScript. API, 판정·채점, 세션, 인증, 비용 관리 |
 | `shared/` | FE·BE 공용 타입·검증 스키마(요청·응답·사건 데이터), 고정 문구 코드 |
-| `content/public/` | 튜토리얼·샘플 사건 데이터(공개 저장소) [PRD D85] |
+| `content/public/` | 튜토리얼·샘플 사건 데이터(공개 저장소) [PRD D85]. 화면에서는 '샘플' 표시 없이 사건 11·12로 보여 준다(`lib/play/cases.ts`) |
 | `docs/` | PRD, SPEC, 사건 작성 규칙 |
 | `docker-compose.yml` | 로컬 PostgreSQL |
 

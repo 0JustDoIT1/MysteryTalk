@@ -21,9 +21,11 @@
 | 데이터 | DB / ORM / 마이그레이션 도구 | PostgreSQL 17(Docker, 포트 5434) / Prisma 7 / `prisma migrate`(마이그레이션 파일만, db push 금지) |
 | 데이터 | 시드·데이터 입력 방식 | 사건 파일(case.json) → `content:check`로 검사 → `content:load`로 적재. 내용이 바뀌면 `version`을 올린다 |
 | 인증 | 방식과 권한 모델 | 게스트(쿠키 토큰 해시) + 구글 로그인(openid만). 모든 기록은 본인만 접근, 관리자 화면 없음(PRD D29~D31·D41) |
-| 외부 서비스 | 사용 서비스와 월 비용 상한 | 월 1만 원 이하(AI·서버 합산, PRD D46). AI는 개발·평가 로컬 Ollama(gemma3:12b), 배포 후보 Claude Haiku 5.5(연결 구현됨, 실측 미실행). 배포처 미정 |
+| 외부 서비스 | 사용 서비스와 월 비용 상한 | 월 1만 원 이하(AI·서버 합산, PRD D46). AI는 개발·평가 로컬 Ollama(gemma3:12b), 배포 후보 Claude Haiku 5.5(연결 구현됨, 실측 미실행). 배포처 미정. 단가표(`backend/src/ops/pricing.ts`)에 없는 클라우드 모델은 시작 시 거부 |
 | 품질 | 테스트 수준 (L0~L3) | L3(단위 + API·DB 통합 + 브라우저 E2E). AI 판정·채점은 평가 세트로 따로 측정 |
 | 품질 | 린터 / 포매터 | 프론트 ESLint(eslint-config-next), 백엔드 oxlint, 전체 Prettier |
+| 품질 | AI 판정·채점 통과 기준 | PRD §12(판정 정확도 90%, 정반대·인젝션·부당 해결 0, 변동 3% 이하, 채점 95% 이상, P95 5초). 사건 추가·AI 교체 시 13건 재측정 |
+| 품질 | 규칙 강제 | `.claude/settings.json` 권한 + Bash 가드 훅(`.claude/hooks/`) + CI `npm run guard`. PRD 편집은 확인 창 없이 대화 승인, 마이그레이션 편집·브랜치 삭제·Claude 평가는 확인 창 |
 | 코드 규칙 | 에러 처리 / 로깅 / 주석 언어 | 오류 응답은 `{code, message}`로 통일, 예상 못 한 오류만 서버 로그. 질문·답안 원문·비밀값은 로그에 남기지 않는다. 주석·문서는 한국어 |
 | Git | 브랜치 전략 / 커밋 형식 | main + feature/*(2026-11-20부터). `feat|fix|refactor|test|docs|chore: 요약`(한국어). 커밋은 요청·승인 후, 푸시는 사용자 |
 | 배포 | 환경 구분 / CI / 배포 대상 | 개발(로컬)·운영. CI는 GitHub Actions(린트·타입·단위·통합, AI는 Mock). 배포 대상 미정(후보 Oracle 무료 등급, `docs/DEPLOY_OPTIONS.md`) |
@@ -45,24 +47,4 @@
 
 형식: `- YYYY-MM-DD | 결정 | 이유 | 영향 문서`
 
-- 2026-11-20 | 템플릿 공통 v1.1 적용(CLAUDE.md 공통·프로젝트 구역, decisions.md, 모듈 llm·db, 명령 4개, 설정) | 작업 규칙을 템플릿 구조로 통일 | CLAUDE.md, docs/decisions.md, .claude/
-- 2026-11-20 | PRD는 제안 후 승인받으면 Claude가 수정(템플릿 공통 1·8장의 예외) | PRD가 길고 결정 번호로 관리해 직접 수정이 효율적 | CLAUDE.md 프로젝트 구역
-- 2026-11-20 | 브랜치 전략 main 직접 커밋 → main + feature/* | 템플릿 공통 7장 | CLAUDE.md, 결정 시트
-- 2026-11-20 | 비용이 드는 작업(클라우드 AI 실측, 유료 호스팅)은 사용자가 꺼낼 때까지 미룸 | 사용자 요청 | CLAUDE.md 프로젝트 구역
-- 2026-11-20 | 클라우드 AI 연결: Claude(`LLM_PROVIDER=anthropic`), 단가표에 없는 클라우드 모델은 시작 단계에서 거부 | 월 예산(D46)이 0원으로 계산되던 문제 방지 | backend/src/judge, backend/src/ops/pricing.ts, .env.example
-- 2026-11-20 | AI용 상세 개요(`background`)를 화면용 짧은 개요와 분리 | 짧은 개요만 주면 판정·채점 정확도 하락(PRD D106) | docs/SPEC.md, docs/cases/README.md
-- 2026-11-20 | 사건 번호 표기 'CASE 01' → '사건 01', 장식용 영어 문구 삭제 | 화면은 한국어로 통일 | frontend/src/i18n/ko.ts, docs/PRD.md(D98, v1.12)
-- 2026-11-20 | 사건 카드: 난이도는 점 세 개(●○○), 사진 위에 장르 배지·해결/미해결 스티커, 수위는 '강함'일 때만 표시 | 카드 정보 정리, 색 배지가 어색함 | CaseList, CaseIntro, DifficultyDots. PRD D98 반영(v1.12)
-- 2026-11-20 | 힌트는 질문 수와 상관없이 언제든 순서대로 열고, 감점(−10/−15/−20)은 그대로 | 사용자 요청 | backend sessions.service·scoring, PlayStatus. PRD D15·D17·D81 반영(v1.12)
-- 2026-11-20 | 추리 화면 오른쪽 배치: 진행 막대·힌트 보기·정답 제출 → 수첩 → 질문, 판정은 도장 문구가 찍히는 효과 | 사용자 요청 | PlayScreen, PlayStatus, QuestionPanel, globals.css. PRD D99 반영(v1.12)
-- 2026-11-20 | 튜토리얼 안내 띠 → 처음 사건을 열 때 '수사 안내' 팝업(실제 화면 캡처 5장, 도움말로 다시 보기), 조사 지점 점 표시 삭제, 알림 2.5초, 답변 순간 화면 가장자리 빛 | 불필요한 스크롤, 찾는 재미 | PlayGuide, PlayScreen, renderer, Toasts, frontend/public/guide/. PRD D78 반영(v1.12)
-- 2026-11-20 | 화면에서 '샘플' 표시 삭제, 지하주차장의 경비원 '사건 11'·302호의 정전 '사건 12' 번호 부여, 추리 화면 머리는 로고 + 목록으로·탐정·도움말(사건명은 왼쪽 서류 위) | 내부 구분이 이용자에게 보이지 않게 | lib/play/cases.ts, PlayScreen, case.json(버전 올림), 공지
-- 2026-11-20 | 알림을 sonner로 교체, 화면 테마 '책상 위의 수사 서류' | 알림이 저절로 닫히지 않던 문제, 디자인 정리 | frontend, docs/SPEC.md
-- 2026-11-23 | 가드레일 기계적 강제: Bash 가드 훅(Co-Authored-By·main 직접 커밋·.env·db push·migrate reset·강제 푸시·reset --hard 차단), /refine 자동 상기 훅, ask에 PRD·마이그레이션 편집·브랜치 삭제·Claude 평가 추가, .env 셸 차단을 deny 패턴에서 훅으로 이전(process.env 오차단 해소), CI에 `npm run guard` | 문서 규칙만으로는 지켜지지 않는 항목이 있음 | .claude/settings.json, .claude/hooks/, scripts/guard.mjs, ci.yml, CLAUDE.md
-- 2026-11-23 | 가드 보완: git 전역 옵션·환경변수 뒤 하위 명령까지 판정, 묶인 `-uf` 강제 푸시, `.env*`·셸 확장 차단, main에서 merge·cherry-pick·revert·am 차단(`--ff-only`·pull 허용), 커밋 메시지 속 `.env` 언급 허용, guard 스크립트 한글 경로·지운 파일·skip 변형 처리 | 코드 검수에서 우회 8건 발견 | .claude/hooks/, scripts/guard.mjs, CLAUDE.md
-- 2026-11-23 | 글자 로고 → 그림 로고(메인 조합 로고, 추리 화면 머리 글자 로고, 탭 아이콘은 사용자가 교체한 favicon.ico), 원본은 `frontend/public/images/logo/` | 사용자 요청 | app/(game)/page.tsx, PlayScreen, ASSETS.md
-- 2026-11-23 | PRD v1.13: 구현된 [미정] 확정(이동·수첩·재조사), 제작 일정·힌트 완료 표시, 탐정 명칭 '탐정·형사'·이름 칸 비움(D103 수정), 그림 로고(D108), E3·개발 진행·남은 결정 표 갱신 | PRD를 구현 상태에 맞춤 | docs/PRD.md
-- 2026-11-23 | AI 판정·채점 통과 기준 확정(판정 정확도 90% 유지, 정반대·인젝션·부당 해결 0, 변동 3% 이하, 채점 95% 이상, P95 5초), 사건마다·AI 교체 시 13건 재측정 | 실제로 쓰던 기준을 PRD에 확정 기록(PRD v1.14) | docs/PRD.md §12·§15, docs/SPEC.md §14, backend/src/eval/criteria.ts
-- 2026-11-24 | 수첩 힌트 탭 분리(단서·힌트·질문 기록·메모), 힌트를 열면 큰 창으로 바로 보여 주기(알림 대신), 썸네일에 '눌러서 크게 보기', 수사 안내 힌트 단계 캡처 교체 | 힌트가 단서와 섞여 찾기 어렵고 확대 기능을 알기 어려움(사용자 요청, PRD D109·v1.15) | Notebook, PlayStatus, HintView, CaseImage, ko.ts, frontend/public/guide/step-4.png, docs/PRD.md, docs/SPEC.md
-- 2026-11-24 | settings ask 목록에서 `Edit(./docs/PRD.md)` 제거(PRD는 계속 '제안 → 대화 승인 → 수정', 마이그레이션 편집 ask는 유지) | PRD를 고칠 때마다 VS Code에 비교 탭이 열려 창이 넘어감(사용자 요청) | .claude/settings.json
-- 2026-11-24 | '출시 전 법률 검토' → '공개 전 법규 확인'(화면 안내 '공개 전 초안이에요') | 변호사 자문으로 오해되지 않게, 실제 절차(법령·기관 안내 직접 확인, 게임물관리위원회 확인 신청)에 맞춤(PRD v1.16) | docs/PRD.md, docs/LEGAL_REVIEW.md, docs/SPEC.md, docs/DEPLOY*.md, ASSETS.md, frontend ko.ts·법률 문서 주석, e2e
+- 2026-11-25 | 변경 로그 21줄을 결정 시트·PRD·SPEC에 반영하고 정리(이전 줄은 git 기록에 있음) | 20줄 초과 규칙 | docs/decisions.md, docs/SPEC.md
