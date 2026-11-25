@@ -21,14 +21,14 @@
 | 데이터 | DB / ORM / 마이그레이션 도구 | PostgreSQL 17(Docker, 포트 5434) / Prisma 7 / `prisma migrate`(마이그레이션 파일만, db push 금지) |
 | 데이터 | 시드·데이터 입력 방식 | 사건 파일(case.json) → `content:check`로 검사 → `content:load`로 적재. 내용이 바뀌면 `version`을 올린다 |
 | 인증 | 방식과 권한 모델 | 게스트(쿠키 토큰 해시) + 구글 로그인(openid만). 모든 기록은 본인만 접근, 관리자 화면 없음(PRD D29~D31·D41) |
-| 외부 서비스 | 사용 서비스와 월 비용 상한 | 월 1만 원 이하(AI·서버 합산, PRD D46). AI는 개발·평가 로컬 Ollama(gemma3:12b), 배포 후보 Claude Haiku 5.5(연결 구현됨, 실측 미실행). 배포처 미정. 단가표(`backend/src/ops/pricing.ts`)에 없는 클라우드 모델은 시작 시 거부 |
+| 외부 서비스 | 사용 서비스와 월 비용 상한 | 월 1만 원 이하(AI·서버 합산, PRD D46). AI는 개발·평가 로컬 Ollama(gemma3:12b), 배포용 AI Claude Haiku 5.5(잠정, 13건 평가 통과 시 확정). 배포처 Oracle Cloud 무료 등급(PRD D110). 단가표(`backend/src/ops/pricing.ts`)에 없는 클라우드 모델은 시작 시 거부 |
 | 품질 | 테스트 수준 (L0~L3) | L3(단위 + API·DB 통합 + 브라우저 E2E). AI 판정·채점은 평가 세트로 따로 측정 |
 | 품질 | 린터 / 포매터 | 프론트 ESLint(eslint-config-next), 백엔드 oxlint, 전체 Prettier |
 | 품질 | AI 판정·채점 통과 기준 | PRD §12(판정 정확도 90%, 정반대·인젝션·부당 해결 0, 변동 3% 이하, 채점 95% 이상, P95 5초). 사건 추가·AI 교체 시 13건 재측정 |
 | 품질 | 규칙 강제 | `.claude/settings.json` 권한 + Bash 가드 훅(`.claude/hooks/`) + CI `npm run guard`. PRD 편집은 확인 창 없이 대화 승인, 마이그레이션 편집·브랜치 삭제·Claude 평가는 확인 창 |
 | 코드 규칙 | 에러 처리 / 로깅 / 주석 언어 | 오류 응답은 `{code, message}`로 통일, 예상 못 한 오류만 서버 로그. 질문·답안 원문·비밀값은 로그에 남기지 않는다. 주석·문서는 한국어 |
 | Git | 브랜치 전략 / 커밋 형식 | main + feature/*(2026-11-20부터). `feat|fix|refactor|test|docs|chore: 요약`(한국어). 커밋은 요청·승인 후, 푸시는 사용자 |
-| 배포 | 환경 구분 / CI / 배포 대상 | 개발(로컬)·운영. CI는 GitHub Actions(린트·타입·단위·통합, AI는 Mock). 배포 대상 미정(후보 Oracle 무료 등급, `docs/DEPLOY_OPTIONS.md`) |
+| 배포 | 환경 구분 / CI / 배포 대상 | 개발(로컬)·운영. CI는 GitHub Actions(린트·타입·단위·통합, AI는 Mock). 배포 대상 Oracle Cloud 무료 등급(서울, Arm 한 대 + Docker), 대안 AWS Lightsail(`docs/DEPLOY_OPTIONS.md`) |
 
 ## 기본 부품
 
@@ -48,3 +48,4 @@
 형식: `- YYYY-MM-DD | 결정 | 이유 | 영향 문서`
 
 - 2026-11-25 | 변경 로그 21줄을 결정 시트·PRD·SPEC에 반영하고 정리(이전 줄은 git 기록에 있음) | 20줄 초과 규칙 | docs/decisions.md, docs/SPEC.md
+- 2026-11-25 | 배포처 Oracle Cloud 무료 등급(서울) 확정, 배포용 AI Claude Haiku 5.5 잠정(13건 평가 통과 시 확정), 대안 AWS Lightsail | 월 1만 원 안에서 서버 0원 + AI 판당 약 6~14원. AWS는 크레딧 6개월 뒤 월 $7, GCP 무료 서버는 미국 지역·0.25코어(PRD D110, v1.17) | docs/PRD.md, docs/DEPLOY_OPTIONS.md, docs/DEPLOY.md, docs/SPEC.md

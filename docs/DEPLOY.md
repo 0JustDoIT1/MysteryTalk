@@ -1,6 +1,6 @@
 # 배포 안내
 
-배포처는 아직 정하지 않았다(PRD §15). 후보 비교(클라우드 AI·호스팅·월 예산)는 [DEPLOY_OPTIONS.md](DEPLOY_OPTIONS.md). 이 문서는 어느 배포처에서도 쓸 수 있는 Docker 기반 준비물과 절차를 적는다. 배포처·클라우드 AI를 정하면 해당 절을 채운다.
+배포처는 **Oracle Cloud 무료 등급(홈 리전 서울, Arm 서버 한 대)**, 배포용 AI는 **Claude Haiku 5.5(잠정, 13건 평가 통과 시 확정)**로 정했다(PRD D110, 2026-11-25). 대안은 AWS Lightsail. 비교 근거는 [DEPLOY_OPTIONS.md](DEPLOY_OPTIONS.md). 이 문서는 Docker 기반 준비물과 절차를 적고, Oracle 서버 준비 절차는 배포 설정 작업 때 덧붙인다.
 
 ## 1. 구성
 
@@ -66,7 +66,7 @@ rm -rf /tmp/cases
 | `COOKIE_SECURE` | `true` | HTTPS에서만 쿠키 전송 |
 | `TRUST_PROXY` | 기본 `uniquelocal` | 같은 도커 네트워크의 프론트가 넘겨준 실제 IP를 믿기 위해. 배포처 구조가 다르면 바꾼다 |
 | `AUTH_PROVIDER` | `google` + 클라이언트 ID·비밀값 | `fake`는 운영(`NODE_ENV=production`)에서 시작 거부 |
-| `LLM_PROVIDER` | 배포용 클라우드 AI(미정) | 정하기 전에는 `mock`(실제 판정 불가, 시험용) |
+| `LLM_PROVIDER` | `anthropic` + `ANTHROPIC_API_KEY`(Claude Haiku 5.5, PRD D110) | 평가로 확정하기 전 시험 배포는 `mock`(실제 판정 불가)도 가능 |
 | `IP_HASH_SECRET` | 새 무작위 값(16자 이상) | IP는 해시로만 저장 |
 | `DAILY_LIMIT_*`, `MONTHLY_AI_BUDGET_KRW` | 잠정값(60/200/60, 5,000원) | 비용 측정 후 조정(PRD §15) |
 | `DATABASE_URL_TEST`, `DATABASE_URL_BROWSER`, `CASE_DATA_DIR` | 넣지 않음 | 테스트·로컬 적재 전용 |
@@ -81,25 +81,20 @@ docker compose -f docker-compose.prod.yml --env-file deploy.env exec backend npm
 docker compose -f docker-compose.prod.yml --env-file deploy.env exec backend npm run stats
 ```
 
-DB 백업은 배포처를 정할 때 정한다(PRD §15). 선택지: 외부 DB 서비스의 자동 백업, 또는 `pg_dump`를 주기적으로 떠서 서버 밖(객체 저장소)에 보관.
+DB 백업은 `pg_dump`를 하루 한 번 떠서 Oracle 오브젝트 스토리지(무료 20GB)에 보관한다. 보관 기간은 서버를 만든 뒤 정한다(PRD §15).
 
 ```bash
 docker compose -f docker-compose.prod.yml --env-file deploy.env exec db \
   pg_dump -U mysterytalk mysterytalk | gzip > backup-$(date +%F).sql.gz
 ```
 
-## 6. 배포처 후보(참고, 2026-11-18 조사, 결정은 배포 단계에서 공식 가격표로 다시 확인)
+## 6. 배포처
 
-| 후보 | 비용 | 장점 | 단점 |
-|---|---|---|---|
-| VPS 한 대(예: AWS Lightsail 서울)에 이 compose 그대로 | 월 $5 안팎부터 | 잠들지 않음, 서울 리전 | 월 1만 원(D46) 중 AI 몫이 줄어듦, 메모리 1GB는 빠듯할 수 있음, 서버 관리·백업 직접 |
-| Oracle Cloud 무료 ARM | 0원 | 무료 | 2026년 무료 제공량 축소 보도, 춘천 리전 생성·비활성화 문제 사례 |
-| Render 등 PaaS 무료 | 0원 | 간단 | 15분 미사용 시 잠듦(깨는 데 약 1분), 무료 DB 만료, 상시 켜려면 서비스당 월 $7~ |
-| DB만 외부(Neon 무료 1GB) | DB 0원 | DB 관리 불필요 | 미사용 시 DB 정지 후 첫 요청에 재기동, 1GB |
+Oracle Cloud 무료 등급으로 정했다(PRD D110). 서버 생성이 '용량 부족'으로 막히거나, 7일 유휴 회수(CPU·네트워크·메모리 사용률이 모두 20% 미만) 문제가 해결되지 않으면 AWS Lightsail로 바꾼다. 다른 후보와 비교한 결과는 [DEPLOY_OPTIONS.md](DEPLOY_OPTIONS.md).
 
 ## 7. 출시 전 확인
 
-- [ ] 배포용 클라우드 AI 연결·평가(PRD D45, §15). 운영 서버에는 GPU가 없어 Ollama를 쓸 수 없다
+- [ ] Claude Haiku 5.5로 13건 평가 실측 후 배포용 AI 확정(PRD D110, 비용 약 700~1,400원, 실행 전 승인). 운영 서버에는 GPU가 없어 Ollama를 쓸 수 없다
 - [ ] 구글 OAuth 클라이언트 등록(리디렉션 URI = `PUBLIC_BASE_URL` + `/api/auth/google/callback`)
 - [ ] HTTPS, `COOKIE_SECURE=true`, 실제 클라이언트 IP가 한도 집계에 잡히는지
 - [ ] 마이그레이션 적용, 사건 13건 적재, `/health` 정상

@@ -1,6 +1,8 @@
 # 배포 선택지 조사: 클라우드 AI와 호스팅
 
-조사일 2026-11-19. 월 비용 상한 **1만 원(AI·서버 합산, PRD D46)** 안에서 배포용 클라우드 AI(D45)와 배포처(PRD §15 미정)를 고르기 위한 자료다. **아직 결정이 아니다.** AI는 평가 세트로 실측한 뒤, 배포처는 계정 개설·용량 확인 뒤 정한다. 가격은 바뀌므로 정할 때 공식 페이지를 다시 확인한다.
+조사일 2026-11-19(1~5절), 2026-11-25(6절 재조사). 월 비용 상한 **1만 원(AI·서버 합산, PRD D46)** 안에서 배포용 클라우드 AI(D45)와 배포처를 고르기 위한 자료다. 가격은 바뀌므로 실제로 쓸 때 공식 페이지를 다시 확인한다.
+
+> **결정(2026-11-25, PRD D110)**: 배포처는 **Oracle Cloud 무료 등급(홈 리전 서울)**, 막히면 AWS Lightsail. 배포용 AI는 **Claude Haiku 5.5(잠정)**, 13건 평가가 통과 기준을 넘으면 확정한다. 근거는 6절.
 
 - 환율은 1달러 = 1,400원으로 가정했다(실제 환율에 따라 달라짐).
 - 배포 절차 자체는 [DEPLOY.md](DEPLOY.md).
@@ -85,7 +87,38 @@ GCP는 한국 이용자·월 1만 원·서버 한 대 조건에서 Oracle 무료
    - 운영 환경이 HTTPS인지 확인(처리방침 11항에 '모든 통신 암호화'로 적음)
    - 남은 자리는 `parseLegal` + `placeholdersIn`(frontend/src/lib/legal.ts)으로 모아 볼 수 있다.
 
+## 6. 재조사와 결정 (2026-11-25)
+
+공식 페이지를 다시 읽고, AWS·GCP와 Claude 모델별 비용을 더했다. 1판 = 입력 약 9만 2천·출력 약 2천 토큰(1절), 1달러 = 1,400원. 판당 비용은 캐싱이 잘 될 때 / 안 될 때의 추정이다.
+
+**클라우드 AI**
+
+| 후보 | 입력 / 출력(100만 토큰당) | 1판 비용 | 메모 |
+|---|---|---|---|
+| **Claude Haiku 5.5** | $0.10 / $0.50(캐시 읽기 $0.01) | 약 6원 / 14원 | 연결 구현됨. **선택(잠정)** |
+| Claude Sonnet 5.5 | $2 / $10 | 약 100원 / 290원 | 예산 안에서 월 30~90판뿐 |
+| Claude Opus 5.5 | $4 / $20 | 약 200원 / 570원 | 예산 초과 |
+| OpenAI gpt-5-nano | $0.05 / $0.40(캐시 $0.005) | 약 3원 / 8원 | 가장 싸지만 호출부·SDK를 새로 추가해야 하고 품질 미측정. Haiku가 기준을 못 넘으면 다음 후보 |
+| OpenAI gpt-6-luna | $0.10 / $0.50 | Haiku와 같음 | 위와 같음 |
+| Gemini 3.5 Flash-Lite | $0.30 / $2.50 | 약 46원(캐싱 없음) | 비쌈. 무료 등급은 입력을 제품 개선에 씀(공식 명시)이라 쓰지 않음 |
+
+**배포처**
+
+| 후보 | 비용 | 판단 |
+|---|---|---|
+| **Oracle Cloud 무료** | 0원 | Arm 2 OCPU·12GB, 블록 200GB, 오브젝트 20GB, 전송 10TB. 홈 리전에서만 생성. '용량 부족'이 날 수 있고 춘천은 일부 가용 영역에서 Arm 생성 불가(공식). 7일간 CPU·네트워크·메모리(Arm만) 95백분위가 모두 20% 미만이면 회수될 수 있음 → **선택**, 회수 대책은 서버 생성 후 실제 사용률을 보고 정한다 |
+| AWS Lightsail | 크레딧 $100(최대 $200)으로 약 6개월 무료, 이후 1GB 월 $7(≈ 9,800원, 고정 IP 포함) | 서울 지역, 간단. 크레딧이 끝나면 서버비만으로 예산을 거의 다 씀 → **대안** |
+| AWS EC2 | 서버비 + 공인 IPv4 시간당 $0.005(≈ 월 $3.6) | Lightsail보다 이점 없음 |
+| GCP e2-micro 무료 | 서버 0원 + 공인 IPv4 ≈ 월 $3.6 | 무료 지역이 미국 3곳뿐, 공유 코어, 무료 외부 전송 월 1GB(한국행 초과분 GB당 $0.19) → 제외 |
+| GCP Cloud Run + Cloud SQL | 크레딧 $300(90일) 후 Cloud SQL 유료(무료 없음, 30일 체험) | 가격 페이지 확인 실패. DB 비용으로 예산 초과 가능성 → 제외 |
+| Vercel + Render + Neon | 0원 | Render 무료는 15분 무접속 시 잠들고 깨는 데 약 1분, Neon은 5분 후 정지. 구조를 나눠야 함 → 제외 |
+| Vercel + Supabase | 0원 | 백엔드(NestJS)를 서버리스로 다시 작성해야 함. Supabase 무료는 1주 비활성 시 일시 정지 → 제외 |
+| Fly.io | 카드 등록 시 월 $5 사용분 | 싱가포르 1GB가 월 $8.5. 서울·도쿄 지역 미확인 → 제외 |
+
+사건 데이터(그림 포함)는 약 24MB라 어느 DB든 용량 문제는 없다.
+
 ## 출처
 
+- 2026-11-25 재조사: [Claude 가격](https://platform.claude.com/docs/en/about-claude/pricing) · [OpenAI API 가격](https://developers.openai.com/api/docs/pricing) · [Gemini 가격](https://aistudio.google.com/docs/pricing) · [Oracle Always Free](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) · [AWS 무료 등급](https://aws.amazon.com/free/) · [Lightsail 가격](https://aws.amazon.com/lightsail/pricing/) · [AWS VPC 가격](https://aws.amazon.com/vpc/pricing/) · [GCP 무료 기능](https://docs.cloud.google.com/free/docs/free-cloud-features) · [GCP 네트워크 가격](https://cloud.google.com/vpc/network-pricing) · [Vercel Hobby](https://vercel.com/docs/plans/hobby) · [Supabase 가격](https://supabase.com/pricing) · [Neon 가격](https://neon.com/pricing) · [Render 무료](https://render.com/docs/free) · [Fly.io 가격](https://docs.fly.io/about/pricing)
 - AI: [Claude 가격(공식)](https://platform.claude.com/docs/en/about-claude/pricing) · [Gemini API 가격(공식)](https://aistudio.google.com/docs/pricing) · [GPT-5.4 nano(공식)](https://developers.openai.com/api/docs/models/gpt-5.4-nano) · [GPT-5.4 mini(공식)](https://developers.openai.com/api/docs/models/gpt-5.4-mini) · [OpenAI 가격 정리(spendlint)](https://spendlint.dev/pricing/openai-api) · [DeepSeek 가격(benchlm)](https://benchlm.ai/deepseek/api-pricing) · [DeepSeek 가격(costgoat)](https://costgoat.com/pricing/deepseek-api)
 - 호스팅: [Oracle Always Free 자원(공식)](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm) · [Oracle 무료 등급 변경 보도(mrplanb)](https://www.mrplanb.com/datacenter/free-vps-tiers) · [Vultr 서울 요금(GitHub 정리)](https://github.com/jgbdet/vultr-seoul-vps) · [Vultr 요금(costbench)](https://costbench.com/software/cloud-infrastructure/vultr/) · [Lightsail 요금(cloudburn)](https://cloudburn.io/blog/amazon-lightsail-pricing) · [Vercel Hobby 상업 이용(devtoolpick)](https://devtoolpick.com/guides/vercel-hobby-plan-commercial-use/) · [Neon 무료 한도(공식 FAQ)](https://neon.com/faqs/free-plan-limits-and-quotas) · [Hetzner 가격 조정(공식)](https://docs.hetzner.com/general/infrastructure-and-availability/price-adjustment/) · [GCP 무료 등급 e2-micro(yangworks)](https://yangworks.dev/guides/google-cloud-free-tier-e2-micro) · [GCP 무료 등급 정리(agentdeals)](https://agentdeals.dev/gcp-free-tier-2026) · [Cloud Run 가격(공식)](https://cloud.google.com/run/pricing) · [Cloud SQL 가격(bytebase)](https://www.bytebase.com/dbcost/cloudsql-pricing/) · [e2-micro 서울 가격(devzero)](https://www.devzero.io/instances/gcp/e2-micro)
